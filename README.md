@@ -10,7 +10,7 @@ O grupo é formado por três estudantes:
 
 * **Felipe Azoia Ferracioli** - RA: 10736997
 * **Eduardo Braga Sena** - RA: 10436266
-* **João Ricardo** - RA: 
+* **João Ricardo Gomes Ferreira** - RA: 10737497
 
 O **Palpite League** é uma plataforma de criação e gerenciamento de ligas privadas de palpites esportivos focada no Campeonato Brasileiro. O sistema permite que grupos compitam através de apostas com recompensas reais, automatizando a coleta de resultados oficiais, o cálculo de pontuações, a gestão financeira e o ranqueamento dos participantes.
 
