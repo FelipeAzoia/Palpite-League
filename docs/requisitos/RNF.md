@@ -4,7 +4,7 @@
 
 **Tipo EARS: Ubiquitous**
 
-O sistema deverá proteger os dados pessoais, credenciais, informações financeiras, palpites e informações das ligas contra acesso não autorizado durante toda a utilização da plataforma.
+O sistema deverá proteger os dados pessoais, credenciais, informações financeiras, palpites e informações dos bolões contra acesso não autorizado durante toda a utilização da plataforma.
 
 ---
 
@@ -12,7 +12,7 @@ O sistema deverá proteger os dados pessoais, credenciais, informações finance
 
 **Tipo EARS: Ubiquitous**
 
-O sistema deverá garantir a integridade dos dados relacionados a usuários, planos, assinaturas, ligas, participantes, palpites, resultados, pontuações, pagamentos e premiações durante toda sua operação.
+O sistema deverá garantir a integridade dos dados relacionados a usuários, planos, assinaturas, bolões, participantes, palpites, resultados, pontuações, pagamentos e premiações durante toda sua operação.
 
 ---
 

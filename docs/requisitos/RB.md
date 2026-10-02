@@ -72,17 +72,17 @@ Após retornar ao plano Gratuito, o usuário não poderá criar novos bolões ca
 
 ---
 
-## RB13 — Criação da liga
+## RB13 — Criação do bolão
 
-Toda liga deverá possuir um usuário responsável por sua criação, que assumirá automaticamente os papéis de administrador e participante.
+Todo bolão deverá possuir um usuário responsável por sua criação, que assumirá automaticamente os papéis de administrador e participante.
 
 ---
 
-## RB14 — Configuração inicial da liga
+## RB14 — Configuração inicial do bolão
 
 No momento da criação, o administrador deverá definir obrigatoriamente:
 
-- nome da liga;
+- nome do bolão;
 - período de duração;
 - taxa de entrada;
 - modelo de premiação;
@@ -93,7 +93,7 @@ No momento da criação, o administrador deverá definir obrigatoriamente:
 
 ## RB15 — Imutabilidade das regras
 
-Após a criação da liga, a taxa de entrada, o modelo de premiação, o período de duração, as partidas participantes e o critério de desempate não poderão ser alterados pelo administrador ou coadministrador.
+Após a criação do bolão, a taxa de entrada, o modelo de premiação, o período de duração, as partidas participantes e o critério de desempate não poderão ser alterados pelo administrador ou coadministrador.
 
 ---
 
@@ -105,49 +105,49 @@ O administrador poderá promover um participante a coadministrador, concedendo a
 
 ## RB17 — Convite para participação
 
-Somente usuários convidados poderão solicitar entrada em uma liga privada.
+Somente usuários convidados poderão solicitar entrada em um bolão privado.
 
 ---
 
 ## RB18 — Aprovação de participantes
 
-A entrada de um usuário em uma liga dependerá da aprovação do administrador ou coadministrador.
+A entrada de um usuário em um bolão dependerá da aprovação do administrador ou coadministrador.
 
 ---
 
 ## RB19 — Aceite das regras
 
-Antes de participar de uma liga, o usuário deverá visualizar e aceitar as regras estabelecidas pelo administrador, funcionando como um termo de participação da liga.
+Antes de participar de um bolão, o usuário deverá visualizar e aceitar as regras estabelecidas pelo administrador, funcionando como um termo de participação do bolão.
 
 ---
 
 ## RB20 — Entrada tardia
 
-Um usuário poderá entrar em uma liga que já esteja em andamento, desde que seja aprovado e aceite explicitamente a condição de entrada tardia.
+Um usuário poderá entrar em um bolão que já esteja em andamento, desde que seja aprovado e aceite explicitamente a condição de entrada tardia.
 
 ---
 
 ## RB21 — Consequência da entrada tardia
 
-Um participante que ingressar em uma liga após o início de uma ou mais partidas não poderá realizar palpites referentes às partidas cujo prazo já tenha sido encerrado.
+Um participante que ingressar em um bolão após o início de uma ou mais partidas não poderá realizar palpites referentes às partidas cujo prazo já tenha sido encerrado.
 
 ---
 
 ## RB22 — Pagamento da entrada
 
-Quando houver taxa de entrada definida para a liga, o participante deverá realizar o pagamento para ter sua participação financeira confirmada.
+Quando houver taxa de entrada definida para o bolão, o participante deverá realizar o pagamento para ter sua participação financeira confirmada.
 
 ---
 
 ## RB23 — Valor da taxa
 
-A taxa de entrada será única para todos os participantes da mesma liga e não poderá ser alterada após sua criação.
+A taxa de entrada será única para todos os participantes do mesmo bolão e não poderá ser alterada após sua criação.
 
 ---
 
 ## RB24 — Seleção das partidas
 
-O administrador ou coadministrador poderá selecionar individualmente as partidas que participarão da liga ou selecionar todas as partidas de uma ou mais rodadas.
+O administrador ou coadministrador poderá selecionar individualmente as partidas que participarão do bolão ou selecionar todas as partidas de uma ou mais rodadas.
 
 ---
 
@@ -234,7 +234,7 @@ Um palpite do tipo placar exato concederá 0 pontos quando o participante não a
 
 ## RB38 — Ranking
 
-A classificação da liga será determinada pela pontuação acumulada dos participantes durante o período definido para a competição.
+A classificação do bolão será determinada pela pontuação acumulada dos participantes durante o período definido para a competição.
 
 ---
 
@@ -246,7 +246,7 @@ Ao término de cada rodada, o participante que obtiver a maior pontuação naque
 
 ## RB40 — Medalha
 
-O melhor jogador de cada rodada receberá uma medalha visual associada ao seu perfil dentro daquela liga.
+O melhor jogador de cada rodada receberá uma medalha visual associada ao seu perfil dentro daquele bolão.
 
 ---
 
@@ -258,25 +258,25 @@ A medalha terá finalidade exclusivamente visual e de incentivo à competição,
 
 ## RB42 — Critério de desempate
 
-Em caso de empate na classificação, o sistema deverá aplicar o critério de desempate definido pelo administrador no momento da criação da liga.
+Em caso de empate na classificação, o sistema deverá aplicar o critério de desempate definido pelo administrador no momento da criação do bolão.
 
 ---
 
 ## RB43 — Imutabilidade do desempate
 
-O critério de desempate definido na criação da liga não poderá ser alterado durante sua duração.
+O critério de desempate definido na criação do bolão não poderá ser alterado durante sua duração.
 
 ---
 
 ## RB44 — Saída voluntária
 
-Um participante poderá solicitar sua saída da liga a qualquer momento.
+Um participante poderá solicitar sua saída do bolão a qualquer momento.
 
 ---
 
 ## RB45 — Saldo após saída
 
-A saída de um participante não implicará devolução automática do dinheiro associado à liga.
+A saída de um participante não implicará devolução automática do dinheiro associado ao bolão.
 
 ---
 
@@ -288,37 +288,37 @@ Caso um participante queira recuperar valores após solicitar sua saída, dever�
 
 ## RB47 — Autorização de devolução
 
-A devolução do dinheiro de um participante que deixou a liga somente poderá ocorrer mediante autorização do administrador ou coadministrador, respeitando as regras previamente estabelecidas para a liga.
+A devolução do dinheiro de um participante que deixou o bolão somente poderá ocorrer mediante autorização do administrador ou coadministrador, respeitando as regras previamente estabelecidas para o bolão.
 
 ---
 
 ## RB48 — Remoção de participante
 
-O administrador e o coadministrador não poderão remover unilateralmente um participante da liga.
+O administrador e o coadministrador não poderão remover unilateralmente um participante do bolão.
 
 ---
 
-## RB49 — Encerramento da liga
+## RB49 — Encerramento do bolão
 
-A liga será encerrada automaticamente quando atingir o período final definido durante sua criação.
+O bolão será encerrado automaticamente quando atingir o período final definido durante sua criação.
 
 ---
 
 ## RB50 — Determinação do vencedor
 
-Ao encerramento da liga, o sistema deverá determinar o vencedor ou vencedores de acordo com a pontuação acumulada e o critério de desempate definido na criação.
+Ao encerramento do bolão, o sistema deverá determinar o vencedor ou vencedores de acordo com a pontuação acumulada e o critério de desempate definido na criação.
 
 ---
 
 ## RB51 — Modelo de premiação
 
-O valor ou modelo de distribuição da premiação deverá ser definido pelo administrador no momento da criação da liga e não poderá ser alterado posteriormente.
+O valor ou modelo de distribuição da premiação deverá ser definido pelo administrador no momento da criação do bolão e não poderá ser alterado posteriormente.
 
 ---
 
 ## RB52 — Solicitação do prêmio
 
-Após o encerramento da liga, o vencedor poderá solicitar o recebimento da premiação disponível.
+Após o encerramento do bolão, o vencedor poderá solicitar o recebimento da premiação disponível.
 
 ---
 
@@ -330,7 +330,7 @@ Todas as entradas, pagamentos, devoluções, assinaturas e premiações deverão
 
 ## RB54 — Integridade financeira
 
-O sistema deverá manter a correspondência entre os valores financeiros registrados, os participantes, as ligas e as respectivas operações realizadas.
+O sistema deverá manter a correspondência entre os valores financeiros registrados, os participantes, os bolões e as respectivas operações realizadas.
 
 ---
 
@@ -372,28 +372,28 @@ Nenhum usuário com função administrativa poderá alterar manualmente resultad
 
 ## RB61 — Aceite da entrada tardia
 
-O usuário que ingressar em uma liga em andamento deverá confirmar explicitamente que está ciente das oportunidades de palpites que já foram encerradas.
+O usuário que ingressar em um bolão em andamento deverá confirmar explicitamente que está ciente das oportunidades de palpites que já foram encerradas.
 
 ---
 
 ## RB62 — Participação financeira
 
-A confirmação da participação financeira em uma liga dependerá do pagamento da taxa de entrada quando esta estiver definida.
+A confirmação da participação financeira em um bolão dependerá do pagamento da taxa de entrada quando esta estiver definida.
 
 ---
 
 ## RB63 — Vencedor e premiação
 
-Somente participantes elegíveis ao final da competição poderão receber a premiação definida nas regras da liga.
+Somente participantes elegíveis ao final da competição poderão receber a premiação definida nas regras do bolão.
 
 ---
 
 ## RB64 — Histórico das regras
 
-As regras definidas no momento da criação deverão permanecer associadas à liga durante todo o seu ciclo de vida para fins de consulta e rastreabilidade.
+As regras definidas no momento da criação deverão permanecer associadas ao bolão durante todo o seu ciclo de vida para fins de consulta e rastreabilidade.
 
 ---
 
 ## RB65 — Registro do aceite
 
-O sistema deverá manter o registro do aceite das regras realizado por cada participante antes da confirmação de sua entrada na liga.
+O sistema deverá manter o registro do aceite das regras realizado por cada participante antes da confirmação de sua entrada no bolão.
