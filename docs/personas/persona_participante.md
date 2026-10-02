@@ -10,11 +10,11 @@
 
 ## Objetivo
 
-Participar de ligas com seus amigos, realizar palpites nas partidas e acompanhar sua posição no ranking.
+Participar de bolões com seus amigos, realizar palpites nas partidas e acompanhar sua posição no ranking.
 
 ## Necessidades
 
-* Entrar facilmente em ligas por convite;
+* Entrar facilmente em bolões por convite;
 * Conhecer as regras antes de entrar;
 * Fazer palpites de forma rápida;
 * Saber quanto já pontuou;

@@ -10,13 +10,13 @@
 
 ## Objetivo
 
-Criar e administrar uma liga de forma simples, definindo as regras da competição e convidando os participantes.
+Criar e administrar um bolão de forma simples, definindo as regras da competição e convidando os participantes.
 
 ## Necessidades
 
-* Criar uma liga;
+* Criar um bolão;
 * Definir taxa de entrada e premiação;
-* Definir período da liga;
+* Definir período do bolão;
 * Selecionar as partidas;
 * Definir critérios de desempate;
 * Convidar participantes;
