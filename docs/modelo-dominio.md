@@ -3,6 +3,8 @@
 O sistema organiza bolões privados de palpites sobre partidas do Brasileirão, com plano gratuito e premium, taxa de entrada, premiação e apuração automática via API esportiva. Quatorze conceitos sustentam essa organização. Cada um existe por uma razão de negócio, refletindo as regras de negócio (RB) e requisitos funcionais (RF) já definidos para o projeto.
 
 > Nota de nomenclatura: **Bolão** é o termo canônico usado neste modelo para a competição privada de palpites.
+>
+> Diagrama alinhado a este texto: [SVG do modelo conceitual](uml/modelo-conceitual-dominio.svg) · [fonte Mermaid editável](uml/modelo-conceitual-dominio.mmd). O arquivo [dominio-v3.png](uml/dominio-v3.png) é uma versão anterior e deve ser tratado como legado.
 
 ## Os conceitos
 
@@ -58,6 +60,6 @@ Uma **Participacao** pode conquistar de zero a muitas **Medalhas**; cada Medalha
 
 Uma **Participacao** pode gerar de zero a muitas **SolicitacoesDevolucao**, cada uma associada a exatamente uma Participacao (RB46).
 
-Uma **Carteira** registra de zero a muitas **MovimentacoesFinanceiras** (RB53). Cada MovimentacaoFinanceira pode referenciar opcionalmente um **Bolão** (taxa de entrada, devolução ou premiação) ou uma **Assinatura** (pagamento do plano Premium) (RB55, RF30, RF31, RF34).
+Uma **Carteira** registra de zero a muitas **MovimentacoesFinanceiras** (RB53). Cada MovimentacaoFinanceira pode referenciar no máximo um **Bolão** (taxa de entrada, devolução ou premiação) ou uma **Assinatura** (pagamento do plano Premium), nunca ambos; o registro mantém a origem e o identificador externo da operação quando houver integração (RB55, RF30, RF31, RF34).
 
 Um **Usuario** recebe de zero a muitas **Notificacoes** (RF39).
