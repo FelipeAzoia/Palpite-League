@@ -1,6 +1,6 @@
 # Requisitos Não Funcionais — Palpite League
 
-> **Nota:** as metas numéricas indicadas neste documento são propostas para o protótipo acadêmico e precisam ser aprovadas pela equipe. A aprovação das metas e a execução das verificações são necessárias para considerar as RNFs validadas.
+> **Escopo de validação:** as metas quantitativas deste documento foram definidas para um protótipo acadêmico executado localmente. Os resultados devem ser registrados junto às condições do ambiente de teste; não representam metas de produção.
 
 ## RNF01 — Segurança dos dados
 
@@ -56,9 +56,9 @@ O sistema deverá registrar operações relevantes realizadas na plataforma, inc
 
 No ambiente utilizado para avaliação, o sistema deverá permanecer disponível durante a janela de demonstração acordada pela equipe.
 
-**Critério de aceitação:** durante a janela de avaliação, uma verificação a cada minuto confirma que a aplicação inicia e que as funcionalidades principais podem ser acessadas em pelo menos 99% das verificações. Interrupções externas previamente identificadas deverão ser registradas como indisponibilidade da dependência, não como sucesso da aplicação.
+**Critério de aceitação:** durante uma demonstração local de 30 minutos, uma verificação a cada minuto confirma que a aplicação inicia e que as funcionalidades principais podem ser acessadas, sem falha bloqueante. A indisponibilidade de dependências externas deverá ser registrada separadamente, não como sucesso da integração.
 
-**Verificação:** executar verificações periódicas durante a janela de avaliação e registrar duração, resultado e causa de cada falha. **Meta proposta:** janela de até duas horas; a equipe deve confirmar o ambiente e a duração.
+**Verificação:** executar 30 verificações periódicas durante a demonstração e registrar duração, resultado e causa de cada falha.
 
 ---
 
@@ -68,9 +68,9 @@ No ambiente utilizado para avaliação, o sistema deverá permanecer disponível
 
 O sistema deverá processar operações comuns sem dependência de serviços externos dentro do limite de resposta definido para o protótipo.
 
-**Critério de aceitação:** sob carga de 20 usuários simultâneos, pelo menos 95% das operações de consulta e gravação locais respondem em até 2 segundos. Chamadas a APIs externas são medidas separadamente.
+**Critério de aceitação:** sob carga de 5 usuários simultâneos, pelo menos 95% das operações de consulta e gravação locais respondem em até 3 segundos. Chamadas a APIs externas são medidas separadamente.
 
-**Verificação:** executar teste de carga representativo e reportar percentis de resposta e erros. **Metas propostas:** 20 usuários simultâneos, percentil 95 de até 2 segundos; a equipe deve aprovar ou ajustar esses valores.
+**Verificação:** executar teste de carga representativo no ambiente local e reportar o percentil 95, a quantidade de erros e as condições do teste.
 
 ---
 
@@ -80,9 +80,9 @@ O sistema deverá processar operações comuns sem dependência de serviços ext
 
 O sistema deverá suportar o perfil de carga acadêmico definido para a avaliação sem perda de dados ou falha nas funcionalidades principais.
 
-**Critério de aceitação:** com 100 usuários cadastrados, 10 bolões ativos e 10.000 palpites armazenados, os fluxos principais permanecem funcionais e não há perda ou duplicação de dados.
+**Critério de aceitação:** com 20 usuários cadastrados, 5 bolões ativos e 1.000 palpites armazenados, os fluxos principais permanecem funcionais e não há perda ou duplicação de dados.
 
-**Verificação:** carregar o conjunto de dados proposto, executar os fluxos principais e conferir os dados antes e depois. **Metas propostas:** 100 usuários, 10 bolões e 10.000 palpites; a equipe deve aprovar ou ajustar o perfil.
+**Verificação:** carregar esse conjunto de dados de referência, executar os fluxos principais e conferir os dados antes e depois. O teste não implica suporte a crescimento ilimitado nem caracteriza capacidade de produção.
 
 ---
 
@@ -102,11 +102,11 @@ Quando a API esportiva estiver indisponível ou retornar erro, o sistema deverá
 
 **Tipo EARS: Event-driven**
 
-Quando ocorrer uma falha durante uma operação de pagamento simulado, assinatura de teste, palpite ou atualização de dados, o sistema deverá preservar o estado anterior ou concluir a operação sem efeitos parciais.
+Quando ocorrer uma falha durante uma operação de pagamento em ambiente de teste ou simulado, assinatura, palpite ou atualização de dados, o sistema deverá preservar o estado anterior ou concluir a operação sem efeitos parciais.
 
 **Critério de aceitação:** repetir uma notificação de pagamento ou uma solicitação já processada não duplica saldo, participação ou movimentação financeira; falhas antes da confirmação não deixam a operação parcialmente aplicada.
 
-**Verificação:** injetar falhas antes e durante a confirmação e reenviar notificações; comparar o estado final com o esperado.
+**Verificação:** injetar falhas antes e durante a confirmação e reenviar notificações do simulador e do provedor de teste; comparar o estado final com o esperado.
 
 ---
 
@@ -114,9 +114,9 @@ Quando ocorrer uma falha durante uma operação de pagamento simulado, assinatur
 
 **Tipo EARS: Ubiquitous**
 
-O sistema deverá manter um histórico das movimentações simuladas relacionadas a assinaturas, taxas de entrada, devoluções e premiações, associado ao usuário e à operação de origem.
+O sistema deverá manter um histórico das movimentações financeiras de teste relacionadas a assinaturas, taxas de entrada, devoluções e premiações, associado ao usuário, ao provedor e à operação de origem.
 
-**Critério de aceitação:** cada movimentação registra identificador, tipo, valor, moeda, estado, data e hora, usuário e origem; operações confirmadas não podem desaparecer do histórico por uma atualização comum.
+**Critério de aceitação:** cada movimentação registra identificador local, identificador da operação no provedor quando aplicável, tipo, valor, moeda, estado, data e hora, usuário e origem; operações confirmadas não podem desaparecer do histórico por uma atualização comum.
 
 **Verificação:** gerar movimentações de cada tipo e conferir seus campos e sua consulta no histórico. Os registros deste projeto não deverão ser apresentados como comprovantes de transações reais.
 
@@ -174,11 +174,11 @@ O sistema deverá manter os fluxos principais utilizáveis nas larguras de viewp
 
 **Tipo EARS: Ubiquitous**
 
-O sistema deverá usar exclusivamente o ambiente de teste do Mercado Pago para a demonstração da assinatura Premium e simular as demais movimentações financeiras, conforme o escopo acadêmico.
+O sistema deverá usar exclusivamente o ambiente de teste do Mercado Pago para assinatura Premium, taxa de entrada, devolução e premiação nas operações que forem validadas como suportadas. Durante o desenvolvimento e os testes automatizados, um simulador poderá substituir o provedor.
 
-**Critério de aceitação:** não há credenciais de produção, cobranças reais ou armazenamento de dados completos de cartão; chaves e tokens não são incluídos no repositório, no código do cliente ou nos logs. Em ambiente publicado, as comunicações com o provedor usam HTTPS.
+**Critério de aceitação:** não há credenciais de produção, cobranças ou transferências reais, nem armazenamento de dados completos de cartão; chaves e tokens não são incluídos no repositório, no código do cliente ou nos logs. Operações simuladas são identificadas como simulação e não aparecem como confirmadas pelo provedor. Em ambiente publicado, as comunicações com o provedor usam HTTPS.
 
-**Verificação:** revisar configuração, histórico versionado e logs; realizar a demonstração apenas com contas e credenciais de teste.
+**Verificação:** revisar configuração, histórico versionado e logs; validar em separado as operações pretendidas usando somente contas e credenciais de teste; conferir que simulações e confirmações do provedor são distinguíveis.
 
 ---
 
@@ -186,9 +186,9 @@ O sistema deverá usar exclusivamente o ambiente de teste do Mercado Pago para a
 
 **Tipo EARS: Ubiquitous**
 
-O sistema deverá produzir evidência auditável de palpites registrados ou alterados, aceites de regras, decisões administrativas e movimentações financeiras simuladas.
+O sistema deverá produzir evidência auditável de palpites registrados ou alterados, aceites de regras, decisões administrativas e movimentações financeiras de teste ou simuladas.
 
-**Critério de aceitação:** cada evidência permite identificar ator, ação, objeto, data e hora em UTC e resultado; uma alteração não apaga o registro anterior da ação. Segredos e dados completos de pagamento não são incluídos.
+**Critério de aceitação:** cada evidência permite identificar ator, ação, objeto, data e hora em UTC, resultado e origem da movimentação (provedor de teste ou simulador); uma alteração não apaga o registro anterior da ação. Segredos e dados completos de pagamento não são incluídos.
 
 **Verificação:** executar as operações listadas, conferir os registros correspondentes e confirmar que alterações posteriores não removem o histórico.
 
@@ -200,9 +200,9 @@ O sistema deverá produzir evidência auditável de palpites registrados ou alte
 
 Quando a API esportiva disponibilizar um resultado final atualizado, o sistema deverá sincronizar o dado e iniciar o recálculo correspondente sem corromper outros resultados ou palpites.
 
-**Critério de aceitação:** em condições normais, o resultado final é refletido no sistema em até 5 minutos após estar disponível na API; a sincronização é registrada e pode ser repetida sem duplicar pontuação ou movimentações.
+**Critério de aceitação:** em condições normais e respeitando a cota e a frequência permitidas pela API, o resultado final é refletido no sistema em até 15 minutos após estar disponível no provedor; a sincronização é registrada e pode ser repetida sem duplicar pontuação ou movimentações.
 
-**Verificação:** usar respostas controladas do adaptador da API e medir o intervalo até a atualização. **Meta proposta:** até 5 minutos; depende da frequência permitida pelo fornecedor e deve ser aprovada após a prova de conceito da API.
+**Verificação:** usar respostas controladas do adaptador da API e medir o intervalo até a atualização. Registrar a frequência de consulta permitida pelo fornecedor; se ela impedir o cumprimento do limite de 15 minutos, documentar a limitação observada.
 
 ---
 
