@@ -240,13 +240,13 @@ A classificação do bolão será determinada pela pontuação acumulada dos par
 
 ## RB39 — Melhor jogador da rodada
 
-Ao término de cada rodada, o participante que obtiver a maior pontuação naquela rodada será reconhecido como melhor jogador da rodada.
+Ao término de cada rodada, todos os participantes que obtiverem a maior pontuação naquela rodada serão reconhecidos como melhores jogadores da rodada.
 
 ---
 
 ## RB40 — Medalha
 
-O melhor jogador de cada rodada receberá uma medalha visual associada ao seu perfil dentro daquele bolão.
+Cada melhor jogador da rodada receberá uma medalha visual associada ao seu perfil dentro daquele bolão.
 
 ---
 

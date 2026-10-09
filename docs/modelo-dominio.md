@@ -10,7 +10,7 @@ O sistema organiza bolões privados de palpites sobre partidas do Brasileirão, 
 
 **Assinatura** representa a contratação paga do plano Premium, com vigência e cobrança recorrente (RB04, RB55). Existe separada de Usuario porque tem ciclo de vida próprio: pode expirar ou ser cancelada sem afetar bolões já criados (RB09, RB10, RB11).
 
-**Carteira** guarda o saldo em dinheiro real do usuário.
+**Carteira** guarda o saldo financeiro simulado do usuário. Os valores não representam dinheiro real e podem ser atualizados por operações confirmadas no provedor de teste ou pelo simulador de desenvolvimento.
 
 **MovimentacaoFinanceira** registra toda entrada, pagamento, devolução, assinatura ou premiação, vinculada ao usuário e à operação de origem (RB53, RB54, RNF10). Existe separada de Carteira porque o histórico financeiro precisa ser auditável, não apenas o saldo atual.
 
@@ -28,7 +28,7 @@ O sistema organiza bolões privados de palpites sobre partidas do Brasileirão, 
 
 **Palpite** é o registro que um participante faz para uma partida, sendo obrigatoriamente de um único tipo — resultado ou placar exato — nunca os dois (RB25, RB26). Só pode ser criado ou alterado até o início da partida (RB27, RB28) e concentra a regra de pontuação: 2 pontos por acertar o resultado, 5 pontos por acertar o placar exato, 0 pontos em caso de erro (RB34–RB37).
 
-**Medalha** reconhece o melhor jogador de uma rodada dentro de um bolão. Tem finalidade apenas visual e de incentivo, sem efeito na pontuação ou na premiação (RB39, RB40, RB41).
+**Medalha** reconhece todos os participantes empatados na maior pontuação de uma rodada dentro de um bolão. Tem finalidade apenas visual e de incentivo, sem efeito na pontuação ou na premiação (RB39, RB40, RB41).
 
 **SolicitacaoDevolucao** representa o pedido formal de um participante que já saiu do bolão para reaver valores associados a ele, dependente de aprovação administrativa (RB44, RB45, RB46, RB47).
 

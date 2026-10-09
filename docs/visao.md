@@ -1,6 +1,6 @@
 # Visão do Produto — Palpite League
 
-Palpite League é uma plataforma de criação e gerenciamento de bolões privados de palpites esportivos, permitindo que amigos e outros grupos compitam durante o Brasileirão por meio de apostas com dinheiro real.
+Palpite League é uma plataforma de criação e gerenciamento de bolões privados de palpites esportivos, permitindo que amigos e outros grupos compitam durante o Brasileirão. As operações financeiras são acadêmicas: a entrega prevê uma integração com provedor de pagamentos em ambiente de teste, sem movimentação de dinheiro real, e um simulador pode ser usado durante o desenvolvimento.
 
 O usuário poderá criar ou participar de diferentes bolões, recebendo convites por link ou dentro da própria plataforma. Ao criar um bolão, o administrador definirá previamente regras como taxa de entrada, premiação, período de duração, partidas participantes e critérios de desempate, não podendo alterar essas configurações após a criação.
 
@@ -8,4 +8,4 @@ Em cada partida, o participante poderá escolher entre apostar no resultado da p
 
 Durante a competição, os participantes poderão acompanhar sua colocação, pontuação acumulada e desempenho por rodada. O jogador que obtiver a maior pontuação em cada rodada receberá uma medalha visual, incentivando a competição entre os participantes.
 
-Ao final do bolão, o sistema calculará automaticamente o vencedor conforme as regras estabelecidas na criação e disponibilizará ao vencedor a opção de solicitar o recebimento da premiação.
+Ao final do bolão, o sistema calculará automaticamente o vencedor conforme as regras estabelecidas na criação e disponibilizará a opção de solicitar a premiação, processada em ambiente de teste quando suportada pelo provedor integrado.

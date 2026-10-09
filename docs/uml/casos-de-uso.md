@@ -1,69 +1,86 @@
 # Casos de Uso — Palpite League
 
-Este documento descreve os principais fluxos ponta a ponta do Palpite League. Os casos foram derivados dos requisitos funcionais e das regras de negócio existentes; as referências aparecem ao final de cada caso.
+Este documento consolida os principais casos de uso do Palpite League. Os fluxos refletem as regras de negócio e requisitos funcionais atuais, além das decisões confirmadas para a entrega acadêmica.
 
 ## Escopo de pagamentos
 
-Para a entrega final, os casos consideram uma API de pagamentos em ambiente de teste para assinatura Premium, taxa de entrada, devolução e premiação. Durante o desenvolvimento, um simulador poderá substituir essa integração. Não se considera movimentação de dinheiro real.
-
-O fornecedor da API, a confirmação assíncrona de pagamentos e as condições para reprocessar operações pendentes ainda precisam ser definidos nas decisões técnicas e nos ADRs. O escopo acima amplia o ADR-0003 atual, que trata somente da assinatura Premium; esse ADR deverá ser revisado na etapa de arquitetura.
+- A entrega final deverá integrar o Mercado Pago em ambiente de teste para assinatura Premium, taxa de entrada, devolução e premiação.
+- Durante o desenvolvimento e nos testes automatizados, um simulador poderá substituir o provedor externo.
+- Não haverá cobranças, transferências ou movimentação de dinheiro real.
+- A viabilidade de cada operação depende dos recursos efetivamente disponíveis no ambiente de teste do Mercado Pago. A integração de premiação deve ser validada especificamente; não se deve apresentar uma operação simulada como transferência concluída pela API.
+- Operações aguardando confirmação permanecem pendentes. O sistema atualiza seu estado após confirmação verificável e não repete automaticamente uma cobrança ou devolução. Antes de uma nova tentativa, deve consultar o estado da operação anterior para prevenir duplicidade.
 
 ## Atores
 
 | Ator | Responsabilidade |
 | --- | --- |
-| **Usuário** | Pessoa autenticada que cria bolões ou participa deles. |
-| **Administrador** | Criador do bolão; define suas regras, convida pessoas e analisa solicitações. |
-| **Coadministrador** | Participante promovido pelo administrador, com as permissões administrativas definidas pelo sistema. |
-| **Participante** | Usuário aprovado no bolão, responsável por registrar palpites e acompanhar os resultados. |
-| **API de Resultados** | Sistema externo que fornece partidas e resultados oficiais. |
-| **API de Pagamentos** | Sistema externo que processa operações financeiras em ambiente de teste. |
+| **Usuário** | Pessoa autenticada que pode criar bolões, contratar Premium ou solicitar entrada. |
+| **Administrador** | Criador do bolão, responsável por suas configurações imutáveis, convites e análise de solicitações que exigem aprovação. |
+| **Coadministrador** | Participante promovido pelo administrador, com as permissões administrativas atribuídas pelo sistema. |
+| **Participante** | Usuário aprovado em um bolão, que registra palpites, acompanha resultados e pode solicitar saída. |
+| **Vencedor** | Participante elegível identificado pelo sistema após o encerramento do bolão. |
+| **API de Resultados** | Sistema externo que fornece partidas, estados e resultados oficiais. |
+| **Mercado Pago (ambiente de teste)** | Provedor externo para operações de pagamento suportadas e validadas no ambiente de teste. |
+| **Sincronização automática** | Processo iniciado pelo sistema para consultar resultados, recalcular pontuação e encerrar bolões. |
 
-Administrador, coadministrador e participante representam papéis no contexto de um bolão; uma mesma pessoa pode exercer mais de um papel conforme as regras do domínio.
+Administrador, coadministrador e participante são papéis por bolão; uma mesma pessoa pode exercer mais de um papel conforme as regras.
 
 ## Catálogo
 
-| ID | Caso de uso | Ator principal | Resultado |
+| ID | Caso de uso | Ator principal/iniciador | Resultado |
 | --- | --- | --- | --- |
-| UC01 | Criar bolão e convidar participantes | Administrador | Bolão criado com regras definidas e convites disponibilizados. |
-| UC02 | Solicitar entrada e confirmar participação | Participante | Participação confirmada após aceite, aprovação e, quando aplicável, pagamento aprovado. |
-| UC03 | Realizar ou alterar palpite | Participante | Palpite válido registrado antes do início da partida. |
-| UC04 | Apurar partida e atualizar classificação | Sincronização automática | Resultado oficial registrado; pontuações, ranking e medalha da rodada atualizados. |
-| UC05 | Encerrar bolão e solicitar premiação | Participante vencedor | Vencedor(es) determinado(s) e solicitação de premiação processada pela API de Pagamentos em ambiente de teste. |
-| UC06 | Promover participante a coadministrador | Administrador | Participante recebe o papel e as permissões administrativas correspondentes. |
+| UC01 | Criar bolão e convidar participantes | Administrador | Bolão criado com regras e partidas selecionadas; convites disponibilizados. |
+| UC02 | Contratar, consultar ou cancelar Premium | Usuário | Assinatura e recursos Premium refletem o estado confirmado pelo provedor. |
+| UC03 | Solicitar entrada e confirmar participação | Usuário convidado | Participação confirmada após aceite, aprovação e pagamento confirmado, se houver taxa. |
+| UC04 | Realizar ou alterar palpite | Participante | Palpite válido registrado antes do início da partida. |
+| UC05 | Apurar partida e atualizar classificação | Sincronização automática | Resultado oficial processado, pontuações e ranking atualizados e medalhas concedidas. |
+| UC06 | Sair do bolão e solicitar devolução | Participante | Saída registrada; eventual devolução só ocorre após aprovação e confirmação do provedor. |
+| UC07 | Encerrar bolão e solicitar premiação | Sincronização automática / vencedor | Classificação final definida; solicitação elegível processada ou mantida pendente até confirmação. |
+| UC08 | Promover participante a coadministrador | Administrador | Participante recebe o papel e as permissões administrativas correspondentes. |
 
-## Diagrama de contexto
+## Diagrama de casos de uso
 
 ```mermaid
 flowchart LR
+    Usuario[Usuário autenticado]
     Admin[Administrador]
     CoAdmin[Coadministrador]
     Participante[Participante]
-    Resultados[API de Resultados]
-    Pagamentos[API de Pagamentos]
+    Vencedor[Vencedor]
+    Results[API de Resultados]
+    Payments[Mercado Pago - ambiente de teste]
+    Scheduler[Sincronização automática]
 
-    subgraph Sistema["Palpite League"]
-        UC01([UC01 Criar bolão e convidar participantes])
-        UC02([UC02 Solicitar entrada e confirmar participação])
-        UC03([UC03 Realizar ou alterar palpite])
-        UC04([UC04 Apurar partida e atualizar classificação])
-        UC05([UC05 Encerrar bolão e solicitar premiação])
-        UC06([UC06 Promover participante a coadministrador])
+    subgraph PL["Palpite League"]
+        UC01([UC01 Criar bolão e convidar])
+        UC02([UC02 Gerenciar assinatura Premium])
+        UC03([UC03 Solicitar entrada])
+        UC04([UC04 Realizar ou alterar palpite])
+        UC05([UC05 Apurar partida e atualizar classificação])
+        UC06([UC06 Sair e solicitar devolução])
+        UC07([UC07 Encerrar bolão e solicitar prêmio])
+        UC08([UC08 Promover coadministrador])
     end
 
     Admin --- UC01
-    Admin --- UC02
-    CoAdmin --- UC02
-    Participante --- UC02
-    Participante --- UC03
-    Sincronizacao[Sincronização automática] --- UC04
-    Participante --- UC05
-    Admin --- UC05
-    CoAdmin --- UC05
+    Usuario --- UC01
+    Admin --- UC03
+    CoAdmin --- UC03
+    Usuario --- UC02
+    Usuario --- UC03
+    Payments --- UC02
+    Payments --- UC03
+    Participante --- UC04
+    Scheduler --- UC05
+    Results --- UC05
+    Participante --- UC06
     Admin --- UC06
-    UC02 --- Pagamentos
-    UC04 --- Resultados
-    UC05 --- Pagamentos
+    CoAdmin --- UC06
+    Payments --- UC06
+    Scheduler --- UC07
+    Vencedor --- UC07
+    Payments --- UC07
+    Admin --- UC08
 ```
 
 ## UC01 — Criar bolão e convidar participantes
@@ -74,71 +91,123 @@ flowchart LR
 
 ### Pré-condições
 
-- O usuário está autenticado.
-- O usuário não excedeu o limite de bolões permitido pelo plano.
-- As partidas e rodadas necessárias estão disponíveis para seleção.
+- O administrador está autenticado.
+- O usuário está dentro do limite de criação permitido pelo plano.
+- O sistema possui partidas e rodadas disponíveis para seleção.
 
 ### Fluxo principal
 
 1. O administrador solicita a criação de um bolão.
 2. O sistema verifica o limite de criação do plano.
-3. O sistema apresenta as partidas e rodadas disponíveis, obtidas da API de Resultados.
+3. O sistema apresenta as partidas e rodadas disponíveis obtidas da API de Resultados.
 4. O sistema solicita nome, período, taxa de entrada, modelo de premiação, partidas e critério de desempate.
 5. O administrador informa as configurações e seleciona partidas individualmente ou por rodada.
 6. O sistema valida os dados e registra o bolão com as regras definidas.
 7. O sistema cria a participação do criador com os papéis de administrador e participante.
-8. O administrador solicita convites para usuários.
+8. O administrador solicita convites.
 9. O sistema disponibiliza os convites por link ou mecanismo interno.
 
 ### Fluxos alternativos e exceções
 
-- **A1 — Limite do plano atingido (passo 2):** o sistema impede a criação e informa que o usuário precisa se adequar ao limite do plano.
-- **A2 — Configuração inválida (passo 6):** o sistema informa os dados inválidos e não cria o bolão.
+- **A1 — Limite do plano atingido (passo 2):** o sistema impede a criação e informa o limite aplicável.
+- **A2 — Partidas indisponíveis (passo 3):** o sistema informa a indisponibilidade da API, não inventa partidas e permite tentar novamente mais tarde.
+- **A3 — Configuração inválida (passo 6):** o sistema informa os campos inválidos e não cria o bolão.
 
 ### Pós-condições
 
-- O bolão existe com as regras registradas e imutáveis.
+- O bolão existe com regras registradas e imutáveis.
 - O criador possui participação no bolão.
 - Os convites solicitados estão disponíveis.
 
-## UC02 — Solicitar entrada e confirmar participação
+## UC02 — Contratar, consultar ou cancelar Premium
 
-- **Ator principal:** Participante
-- **Atores secundários:** Administrador, coadministrador, API de Pagamentos
-- **Referências:** RF11–RF16, RF30; RB17–RB23, RB59, RB61–RB62
+- **Ator principal:** Usuário
+- **Ator secundário:** Mercado Pago (ambiente de teste)
+- **Referências:** RF05–RF08, RF31; RB01–RB12, RB53–RB56
 
 ### Pré-condições
 
-- O participante está autenticado e possui um convite válido.
-- O participante ainda não está confirmado no bolão.
+- O usuário está autenticado.
+- Para contratação ou cancelamento, o usuário não possui uma operação incompatível já pendente.
 
-### Fluxo principal
+### Fluxo principal — Contratação
 
-1. O participante acessa o convite.
-2. O sistema valida o convite e apresenta as regras, a taxa de entrada e o estado do bolão.
-3. Se o bolão estiver em andamento, o sistema informa quais oportunidades de palpite já foram encerradas.
-4. O participante aceita as regras e, se aplicável, confirma ciência da entrada tardia.
-5. O sistema registra o aceite e a solicitação de entrada.
-6. O administrador ou coadministrador aprova a solicitação.
-7. Se houver taxa de entrada, o sistema encaminha o participante à API de Pagamentos em ambiente de teste.
-8. A API de Pagamentos confirma a operação.
-9. O sistema registra a movimentação e confirma a participação.
+1. O usuário consulta os planos e solicita o Premium.
+2. O sistema apresenta preço, recorrência e condições da assinatura.
+3. O usuário confirma a contratação.
+4. O sistema inicia a assinatura com o Mercado Pago em ambiente de teste e registra a operação como pendente.
+5. O provedor processa a autorização e comunica o estado da assinatura.
+6. O sistema verifica a confirmação recebida e atualiza o estado da assinatura.
+7. Somente após confirmação válida, o sistema ativa os recursos Premium e registra a movimentação.
+
+### Fluxo alternativo — Consulta
+
+1. O usuário solicita os dados da assinatura.
+2. O sistema apresenta plano, estado conhecido, vigência e cobranças registradas, identificando operações ainda pendentes.
+
+### Fluxo alternativo — Cancelamento
+
+1. O usuário solicita o cancelamento.
+2. O sistema apresenta as condições e consequências conhecidas da assinatura.
+3. O usuário confirma o cancelamento.
+4. O sistema solicita o cancelamento ao provedor e mantém a operação pendente até confirmação.
+5. Após confirmação, o sistema atualiza a assinatura e interrompe novas cobranças conforme o estado confirmado pelo provedor.
+6. O sistema mantém os bolões já criados, aplicando as regras de plano gratuito apenas às novas criações.
 
 ### Fluxos alternativos e exceções
 
-- **A1 — Convite inválido ou indisponível (passo 2):** o sistema não registra a solicitação e informa o problema.
-- **A2 — Regras não aceitas (passo 4):** o participante não prossegue e não é incluído no bolão.
-- **A3 — Entrada tardia não confirmada (passo 4):** o sistema não registra a solicitação.
-- **A4 — Solicitação rejeitada (passo 6):** o sistema informa a rejeição e a participação não é confirmada.
-- **A5 — Sem taxa de entrada (passo 7):** o sistema dispensa o pagamento e confirma a participação após a aprovação.
-- **A6 — Pagamento recusado ou ainda não confirmado (passos 8–9):** o sistema não confirma a participação financeira nem a participação no bolão; informa o estado da operação.
+- **A1 — Pagamento recusado:** o sistema não ativa o Premium, registra o estado recusado e informa o usuário.
+- **A2 — Confirmação ainda não recebida:** o sistema mantém a operação pendente e não altera o plano para Premium.
+- **A3 — Provedor indisponível ou resposta inválida:** o sistema registra a falha, preserva o estado anterior e informa que a operação não foi confirmada.
+- **A4 — Cancelamento recusado ou pendente:** a assinatura não é apresentada como cancelada; o estado comunicado pelo provedor permanece visível.
+- **A5 — Nova tentativa:** antes de iniciar outra operação, o sistema consulta a anterior; não repete automaticamente cobrança ou cancelamento.
 
 ### Pós-condições
 
-- Em caso de sucesso, o aceite das regras fica registrado e a participação é confirmada após aprovação e, quando aplicável, confirmação do pagamento.
-- Em caso de falha ou rejeição, a participação permanece não confirmada.
+- O plano muda apenas após confirmação verificável do provedor.
+- O histórico da operação e o estado final ou pendente ficam registrados.
+- O cancelamento não exclui nem encerra bolões existentes.
 
-## UC03 — Realizar ou alterar palpite
+## UC03 — Solicitar entrada e confirmar participação
+
+- **Ator principal:** Usuário convidado
+- **Atores secundários:** Administrador, coadministrador, Mercado Pago (ambiente de teste)
+- **Referências:** RF11–RF16, RF30–RF31; RB17–RB23, RB59, RB61–RB62
+
+### Pré-condições
+
+- O usuário está autenticado e possui convite válido.
+- O usuário ainda não está confirmado no bolão.
+
+### Fluxo principal
+
+1. O usuário acessa o convite.
+2. O sistema valida o convite e apresenta regras, taxa de entrada e estado do bolão.
+3. Se o bolão estiver em andamento, o sistema mostra as oportunidades de palpite já encerradas.
+4. O usuário aceita as regras e, quando aplicável, confirma ciência da entrada tardia.
+5. O sistema registra o aceite e a solicitação de entrada.
+6. O administrador ou coadministrador aprova a solicitação.
+7. Se houver taxa, o sistema inicia a cobrança pelo Mercado Pago em ambiente de teste e registra a operação como pendente.
+8. O Mercado Pago informa o estado da cobrança.
+9. O sistema verifica a confirmação, registra a movimentação e confirma a participação.
+
+### Fluxos alternativos e exceções
+
+- **A1 — Convite inválido, expirado ou indisponível (passo 2):** o sistema não registra a solicitação e informa o problema.
+- **A2 — Regras não aceitas (passo 4):** o fluxo é encerrado sem solicitação.
+- **A3 — Entrada tardia não confirmada (passo 4):** o fluxo é encerrado sem solicitação.
+- **A4 — Solicitação rejeitada (passo 6):** o sistema informa a rejeição e não confirma a participação.
+- **A5 — Sem taxa de entrada (passo 7):** após aprovação, o sistema confirma a participação sem iniciar cobrança.
+- **A6 — Cobrança recusada:** o sistema não confirma a participação, registra o estado e informa o usuário.
+- **A7 — Cobrança pendente ou provedor indisponível:** a participação permanece não confirmada; o sistema apresenta o estado pendente/indisponível e não cria outra cobrança automaticamente.
+- **A8 — Nova tentativa:** antes de permitir uma nova cobrança, o sistema verifica o estado da operação anterior para evitar duplicidade.
+
+### Pós-condições
+
+- Em caso de sucesso, aceite, aprovação e confirmação do pagamento, quando aplicável, estão registrados.
+- Em caso de rejeição, recusa ou pendência de pagamento, a participação não está confirmada.
+
+## UC04 — Realizar ou alterar palpite
 
 - **Ator principal:** Participante
 - **Referências:** RF20–RF22; RB25–RB28
@@ -146,99 +215,150 @@ flowchart LR
 ### Pré-condições
 
 - O participante está aprovado e confirmado no bolão.
-- A partida está selecionada para o bolão.
-- O participante pode palpitar para essa partida, considerando sua data de entrada.
+- A partida está selecionada para o bolão e ainda aceita palpites.
+- A entrada do participante não ocorreu após o encerramento da janela de palpite da partida.
 
 ### Fluxo principal
 
 1. O participante consulta as partidas disponíveis para palpite.
-2. O sistema apresenta a partida e as modalidades permitidas: resultado ou placar exato.
+2. O sistema apresenta uma partida e as modalidades: resultado ou placar exato.
 3. O participante informa um palpite de uma única modalidade.
-4. O sistema valida a participação, a partida, o formato do palpite e se a partida ainda não começou.
-5. O sistema registra o palpite ou substitui o palpite anterior.
-6. O sistema confirma o registro ao participante.
+4. O sistema valida a participação, a partida, o formato e o horário de início.
+5. O sistema registra o palpite ou substitui o anterior.
+6. O sistema confirma a operação ao participante.
 
 ### Fluxos alternativos e exceções
 
-- **A1 — Partida já iniciada (passo 4):** o sistema recusa o registro ou alteração e informa que o prazo foi encerrado.
-- **A2 — Palpite inválido (passo 4):** o sistema informa o erro e não altera o palpite existente.
+- **A1 — Partida já iniciada (passo 4):** o sistema recusa registro ou alteração e informa que o prazo terminou.
+- **A2 — Palpite inválido (passo 4):** o sistema informa o erro e preserva o palpite anterior.
 - **A3 — Participante sem direito a palpitar na partida (passo 4):** o sistema recusa a operação.
 
 ### Pós-condições
 
-- Há no máximo um palpite do participante para aquela partida.
-- O palpite só é criado ou alterado antes do início da partida.
+- Existe no máximo um palpite por participante e partida.
+- Palpites só são criados ou alterados antes do início da partida.
 
-## UC04 — Apurar partida e atualizar classificação
+## UC05 — Apurar partida e atualizar classificação
 
-- **Iniciador:** Sincronização automática do sistema
+- **Iniciador:** Sincronização automática
 - **Ator secundário:** API de Resultados
 - **Referências:** RF23–RF29, RF39–RF40; RB29–RB43, RB60
 
 ### Pré-condições
 
 - A partida selecionada para um ou mais bolões foi iniciada ou encerrada.
-- A integração está autorizada a consultar dados da API de Resultados.
+- A integração está configurada para consultar a API de Resultados.
 
 ### Fluxo principal
 
-1. O sistema consulta a API de Resultados conforme a atualização prevista para a partida.
-2. A API retorna o estado da partida e, quando disponível, o resultado oficial.
-3. O sistema valida e registra os dados recebidos; somente o resultado final é registrado como resultado oficial.
-4. Quando a partida estiver encerrada, o sistema compara o resultado oficial com cada palpite registrado.
-5. O sistema atribui a pontuação definida para cada palpite.
-6. O sistema atualiza a pontuação acumulada e a classificação dos participantes em cada bolão aplicável.
-7. Ao término da rodada, o sistema identifica o participante ou participantes com a maior pontuação na rodada e registra a medalha visual correspondente.
-8. O sistema disponibiliza os resultados atualizados aos participantes.
+1. O sistema consulta o estado da partida e seu resultado na API de Resultados.
+2. A API retorna dados da partida.
+3. O sistema valida a resposta e atualiza o estado da partida. Apenas o placar final é registrado como resultado oficial.
+4. Quando a partida estiver encerrada, o sistema compara o resultado oficial com cada palpite.
+5. O sistema calcula os pontos segundo a modalidade do palpite.
+6. O sistema atualiza a pontuação acumulada e o ranking de cada bolão afetado.
+7. Ao término da rodada, o sistema calcula a pontuação da rodada e concede medalha a todos os participantes empatados na maior pontuação.
+8. O sistema disponibiliza os resultados processados aos participantes.
 
 ### Fluxos alternativos e exceções
 
-- **A1 — Resultado ainda indisponível (passo 2):** o sistema preserva os dados existentes e não calcula pontuação para a partida.
-- **A2 — API indisponível ou resposta inválida (passos 1–2):** o sistema preserva os dados, registra a falha e permite nova sincronização; nenhum resultado é inserido manualmente.
-- **A3 — Bolão sem acompanhamento ao vivo:** o sistema disponibiliza o resultado após o encerramento da partida.
+- **A1 — Resultado ainda indisponível (passo 2):** o sistema mantém os dados existentes e não pontua a partida.
+- **A2 — API indisponível ou resposta inválida (passos 1–2):** o sistema registra a falha, preserva resultados já validados e permite nova sincronização; não permite inserir resultados oficiais manualmente.
+- **A3 — Bolão sem acompanhamento ao vivo:** o resultado é disponibilizado após o encerramento da partida.
+- **A4 — Rodada sem palpites válidos ou sem pontuação apurável:** o sistema não concede medalha sem participante elegível.
 
 ### Pós-condições
 
-- Apenas o resultado final obtido da API de Resultados é registrado como oficial.
-- Pontuações e classificação refletem os resultados oficiais processados.
-- As medalhas não alteram pontuação nem premiação.
+- Apenas resultado final obtido da fonte integrada é tratado como oficial.
+- Pontuação e ranking refletem os resultados oficiais processados.
+- Empate na pontuação máxima da rodada concede medalha a todos os empatados.
 
-## UC05 — Encerrar bolão e solicitar premiação
+## UC06 — Sair do bolão e solicitar devolução
 
-- **Ator principal:** Participante vencedor
-- **Ator secundário:** API de Pagamentos
-- **Referências:** RF19, RF31, RF35–RF37; RB42–RB53, RB63–RB65
+- **Ator principal:** Participante
+- **Atores secundários:** Administrador, coadministrador, Mercado Pago (ambiente de teste)
+- **Referências:** RF19, RF31–RF34; RB44–RB48, RB53–RB54, RB59
 
 ### Pré-condições
 
-- O bolão atingiu o período final definido na criação.
-- Os resultados necessários para a classificação final foram processados.
-- O modelo de premiação está registrado no bolão.
+- O participante está confirmado no bolão.
+- Para solicitar devolução, há uma taxa de entrada efetivamente paga e identificável.
 
-### Fluxo principal
+### Fluxo principal — Saída
 
-1. O sistema encerra o bolão ao atingir seu período final.
-2. O sistema calcula a classificação final e aplica o critério de desempate definido na criação.
-3. O sistema identifica o vencedor ou vencedores elegíveis e apresenta o resultado.
-4. Um vencedor solicita o recebimento da premiação disponível.
-5. O sistema valida a elegibilidade, os dados necessários à operação e a solicitação.
-6. O sistema encaminha a operação à API de Pagamentos em ambiente de teste, de acordo com o modelo de premiação.
-7. A API de Pagamentos confirma a operação.
-8. O sistema registra a movimentação financeira e informa o resultado ao vencedor.
+1. O participante solicita sua saída do bolão.
+2. O sistema apresenta as consequências da saída e informa que ela não gera devolução automática.
+3. O participante confirma a saída.
+4. O sistema registra a saída e encerra a participação nas atividades futuras do bolão.
+
+### Fluxo alternativo — Solicitação de devolução
+
+Este fluxo ocorre após a saída ter sido registrada.
+
+1. O participante solicita formalmente a devolução do valor elegível.
+2. O sistema registra a solicitação e a disponibiliza para análise do administrador ou coadministrador.
+3. O administrador ou coadministrador aprova ou rejeita a solicitação conforme as regras do bolão.
+4. Se aprovada, o sistema solicita ao Mercado Pago a devolução da transação original em ambiente de teste.
+5. O sistema mantém a devolução pendente até confirmação verificável do provedor.
+6. Após confirmação, o sistema registra a movimentação concluída e informa o participante.
 
 ### Fluxos alternativos e exceções
 
-- **A1 — Resultado pendente (passo 2):** o sistema não finaliza a classificação enquanto houver resultados necessários ainda não processados.
-- **A2 — Participante não elegível (passos 3–5):** o sistema impede a solicitação.
-- **A3 — Operação recusada ou ainda não confirmada (passos 6–7):** o sistema mantém a solicitação sem marcar a premiação como concluída e informa seu estado.
+- **A1 — Saída não confirmada (passo 3):** a participação permanece ativa.
+- **A2 — Solicitação de devolução não aprovada (passo 3 do fluxo de devolução):** a solicitação é marcada como rejeitada, sem iniciar devolução.
+- **A3 — Não há valor elegível ou transação localizável (passo 1 do fluxo de devolução):** o sistema informa o motivo e não encaminha a operação ao provedor.
+- **A4 — Devolução recusada:** o sistema registra a recusa e informa o participante; não marca a devolução como concluída.
+- **A5 — Devolução pendente ou API indisponível:** a solicitação permanece pendente, sem repetição automática.
+- **A6 — Nova tentativa:** o sistema consulta a situação da devolução anterior antes de iniciar outra operação.
 
 ### Pós-condições
 
-- O bolão está encerrado e sua classificação final está disponível.
-- Uma premiação só é marcada como concluída após confirmação da operação pela API de Pagamentos.
-- A movimentação correspondente fica registrada para rastreabilidade.
+- A saída não depende da aprovação de devolução e não devolve valores automaticamente.
+- A devolução só é concluída após aprovação administrativa e confirmação do Mercado Pago.
+- Solicitação, decisão e movimentação ficam vinculadas para auditoria.
 
-## UC06 — Promover participante a coadministrador
+## UC07 — Encerrar bolão e solicitar premiação
+
+- **Iniciador:** Sincronização automática
+- **Ator principal:** Vencedor
+- **Ator secundário:** Mercado Pago (ambiente de teste)
+- **Referências:** RF31, RF35–RF37; RB42–RB53, RB63–RB65
+
+### Pré-condições
+
+- O período final do bolão foi atingido.
+- Todos os resultados necessários à classificação final foram processados.
+- O modelo de premiação foi definido na criação e os vencedores são elegíveis.
+
+### Fluxo principal
+
+1. O sistema encerra o bolão automaticamente.
+2. O sistema calcula a classificação final e aplica o critério de desempate definido para o bolão.
+3. O sistema registra e apresenta o vencedor ou vencedores elegíveis e o valor/modelo de premiação correspondente.
+4. Um vencedor solicita o recebimento de sua parte da premiação.
+5. O sistema valida a elegibilidade e os dados necessários à solicitação.
+6. Sem exigir aprovação administrativa adicional, o sistema encaminha a operação ao Mercado Pago em ambiente de teste, se a operação for suportada e estiver validada.
+7. A operação fica pendente até o sistema verificar confirmação do provedor.
+8. Após confirmação, o sistema registra a movimentação como concluída e informa o vencedor.
+
+### Fluxos alternativos e exceções
+
+- **A1 — Resultados necessários pendentes (passo 2):** o sistema não fecha a classificação nem determina o vencedor até processar os resultados.
+- **A2 — Nenhum participante elegível:** o sistema encerra o bolão, registra que não há vencedor elegível e não solicita transferência.
+- **A3 — Participante não elegível ou solicitação duplicada (passos 4–5):** o sistema recusa a solicitação.
+- **A4 — API não oferece a operação de repasse em ambiente de teste:** o sistema informa que a premiação não foi processada pela API; não registra sucesso. O simulador pode ser usado somente em desenvolvimento/testes identificados como simulação.
+- **A5 — Operação recusada:** o sistema registra a recusa e informa o vencedor, mantendo a premiação não concluída.
+- **A6 — Operação pendente ou API indisponível:** o sistema mantém o estado pendente e não envia outra operação automaticamente.
+- **A7 — Nova tentativa:** o sistema verifica primeiro o estado da operação anterior para evitar pagamento duplicado.
+
+### Pós-condições
+
+- A classificação final e o encerramento do bolão estão registrados.
+- Não há aprovação administrativa adicional para o pagamento do vencedor.
+- A premiação é marcada como concluída apenas após confirmação verificável do provedor.
+- Operações simuladas nunca são exibidas como transferências concluídas pelo Mercado Pago.
+
+## UC08 — Promover participante a coadministrador
 
 - **Ator principal:** Administrador
 - **Ator secundário:** Participante selecionado
@@ -246,8 +366,8 @@ flowchart LR
 
 ### Pré-condições
 
-- O administrador está autenticado e possui esse papel no bolão.
-- O usuário selecionado é participante do mesmo bolão.
+- O solicitante está autenticado e é administrador do bolão.
+- O usuário selecionado possui participação no mesmo bolão.
 
 ### Fluxo principal
 
@@ -266,12 +386,40 @@ flowchart LR
 
 - O participante selecionado possui papel de coadministrador naquele bolão.
 
-## Pontos a detalhar na próxima revisão
+## Sequência — Realizar palpite e apurar resultado
 
-- Definir fornecedor e capacidades da API de Pagamentos, inclusive se ela suporta as operações pretendidas em ambiente de teste.
-- Definir como o sistema recebe e verifica confirmações assíncronas de pagamento e como trata retentativas sem duplicar movimentações.
-- Definir regras de elegibilidade, prazo, dados necessários e eventuais aprovações para devoluções e pagamentos de prêmio.
-- Definir o resultado quando houver empate na maior pontuação de uma rodada para concessão da medalha.
-- Detalhar os casos de contratação/cancelamento da assinatura Premium, saída do bolão e solicitação/aprovação de devolução, não incluídos nestes fluxos principais.
-- Definir se a premiação exige aprovação administrativa antes de ser enviada à API de Pagamentos.
-- Atualizar os diagramas PNG existentes para refletir este catálogo e separar a realização do palpite da apuração posterior.
+O palpite e a apuração são processos distintos. O participante registra seu palpite antes da partida; a sincronização e pontuação acontecem depois, quando a API disponibiliza o resultado final.
+
+```mermaid
+sequenceDiagram
+    actor Participante
+    participant Sistema as Palpite League
+    participant API as API de Resultados
+
+    Participante->>Sistema: Consultar partidas disponíveis
+    Sistema-->>Participante: Partidas e modalidades de palpite
+    Participante->>Sistema: Enviar palpite
+    Sistema->>Sistema: Validar participação, formato e prazo
+    alt partida ainda não começou e palpite válido
+        Sistema->>Sistema: Registrar ou substituir palpite
+        Sistema-->>Participante: Confirmar registro
+    else partida iniciada ou palpite inválido
+        Sistema-->>Participante: Recusar e informar o motivo
+    end
+
+    Note over Sistema,API: Após a partida, em processo separado
+    Sistema->>API: Consultar estado e resultado final
+    API-->>Sistema: Estado e placar oficial
+    Sistema->>Sistema: Validar resultado e calcular pontuação
+    Sistema->>Sistema: Atualizar ranking e medalhas da rodada
+    Sistema-->>Participante: Disponibilizar resultado e classificação
+```
+
+## Referências a artefatos gráficos existentes
+
+O arquivo [diagrama_casos_de_uso_realizar_palpite.png](./diagrama_casos_de_uso_realizar_palpite.png) é um diagrama legado: ele associa a consulta do resultado ao fluxo de realização do palpite e não representa o catálogo completo. Os diagramas Mermaid deste documento são a fonte atual e devem ser usados para consulta; não usar o PNG legado como especificação.
+
+## Pendências técnicas que não bloqueiam a especificação dos fluxos
+
+- Validar no ambiente de teste do Mercado Pago as operações de cobrança, assinatura, reembolso e repasse, inclusive seus estados e mecanismos de confirmação.
+- Se alguma operação não estiver disponível nesse ambiente, manter o caso sem sucesso externo e utilizar o simulador apenas em desenvolvimento/testes, sem apresentar simulação como confirmação do provedor.
