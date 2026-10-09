@@ -174,11 +174,11 @@ O sistema deverá manter os fluxos principais utilizáveis nas larguras de viewp
 
 **Tipo EARS: Ubiquitous**
 
-O sistema deverá usar exclusivamente o ambiente de teste do Mercado Pago para assinatura Premium, taxa de entrada, devolução e premiação nas operações que forem validadas como suportadas. Durante o desenvolvimento e os testes automatizados, um simulador poderá substituir o provedor.
+O sistema deverá usar exclusivamente o ambiente de teste do Mercado Pago para assinatura Premium e taxa de entrada e para quaisquer outras operações que forem validadas como suportadas. Durante o desenvolvimento e os testes automatizados, um simulador poderá substituir o provedor. Na demonstração acadêmica, se o sandbox não oferecer repasse posterior de premiação, um simulador poderá demonstrar esse fluxo, explicitamente identificado como simulação e sem contar como integração de premiação atendida.
 
 **Critério de aceitação:** não há credenciais de produção, cobranças ou transferências reais, nem armazenamento de dados completos de cartão; chaves e tokens não são incluídos no repositório, no código do cliente ou nos logs. Operações simuladas são identificadas como simulação e não aparecem como confirmadas pelo provedor. Em ambiente publicado, as comunicações com o provedor usam HTTPS.
 
-**Verificação:** revisar configuração, histórico versionado e logs; validar em separado as operações pretendidas usando somente contas e credenciais de teste; conferir que simulações e confirmações do provedor são distinguíveis.
+**Verificação:** revisar configuração, histórico versionado e logs; validar em separado as operações pretendidas usando somente contas e credenciais de teste; conferir que simulações e confirmações do provedor são distinguíveis e que a premiação simulada não é reportada como integração executada.
 
 ---
 

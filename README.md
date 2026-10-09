@@ -12,7 +12,7 @@ O grupo é formado por três estudantes:
 * **Eduardo Braga Sena** - RA: 10436266
 * **João Ricardo Gomes Ferreira** - RA: 10737497
 
-O **Palpite League** é uma plataforma de criação e gerenciamento de bolões privados de palpites esportivos focada no Campeonato Brasileiro. O sistema automatiza a coleta de resultados oficiais, o cálculo de pontuações e o ranqueamento. As operações financeiras fazem parte de uma simulação acadêmica: a entrega final prevê integração com o Mercado Pago exclusivamente em ambiente de teste, sem movimentação de dinheiro real.
+O **Palpite League** é uma plataforma de criação e gerenciamento de bolões privados de palpites esportivos focada no Campeonato Brasileiro. O sistema automatiza a coleta de resultados oficiais, o cálculo de pontuações e o ranqueamento. As operações financeiras fazem parte de uma simulação acadêmica: a entrega final prevê integração com o Mercado Pago exclusivamente em ambiente de teste, sem movimentação de dinheiro real. A taxa de entrada usará Checkout Pro; se o sandbox não oferecer repasse posterior de premiação, a demonstração poderá usar um simulador claramente identificado, sem alegar que a integração de premiação foi concluída.
 
 ## 🎯 Principais Funcionalidades
 
@@ -28,7 +28,7 @@ O **Palpite League** é uma plataforma de criação e gerenciamento de bolões p
 ## 👥 Perfis de Usuário
 
 * **Administrador / Coadministrador:** Responsável por criar o bolão, configurar as regras iniciais, convidar e aprovar membros, e selecionar os jogos disponíveis para aposta.
-* **Participante:** Usuário que recebe o convite, aceita as regras, aguarda aprovação e, quando houver taxa, conclui o pagamento em ambiente de teste antes de ter a participação confirmada; depois gerencia seus palpites a cada rodada.
+* **Participante:** Usuário que recebe o convite, aceita as regras, aguarda aprovação e, quando houver taxa, conclui o pagamento pelo Checkout Pro em ambiente de teste antes de ter a participação confirmada; depois gerencia seus palpites a cada rodada.
 
 ## 🔄 Fluxo Principal do Sistema
 

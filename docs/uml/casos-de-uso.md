@@ -4,10 +4,10 @@ Este documento consolida os principais casos de uso do Palpite League. Os fluxos
 
 ## Escopo de pagamentos
 
-- A entrega final deverá integrar o Mercado Pago em ambiente de teste para assinatura Premium, taxa de entrada, devolução e premiação.
-- Durante o desenvolvimento e nos testes automatizados, um simulador poderá substituir o provedor externo.
+- A entrega final prevê a API de Assinaturas em ambiente de teste para Premium e Checkout Pro para taxa de entrada; devolução e premiação dependem de validação específica por operação.
+- Durante o desenvolvimento e nos testes automatizados, um simulador poderá substituir o provedor externo. Para a demonstração acadêmica, ele também poderá simular a premiação caso o sandbox não ofereça repasse posterior; isso deve ficar visível e não atende à integração de premiação prevista.
 - Não haverá cobranças, transferências ou movimentação de dinheiro real.
-- A viabilidade de cada operação depende dos recursos efetivamente disponíveis no ambiente de teste do Mercado Pago. A integração de premiação deve ser validada especificamente; não se deve apresentar uma operação simulada como transferência concluída pela API.
+- A taxa de entrada usará Checkout Pro e a assinatura Premium usará a API de Assinaturas. A devolução e a premiação dependem da validação específica dos fluxos compatíveis no sandbox; não se deve apresentar uma operação simulada como confirmação do provedor.
 - Operações aguardando confirmação permanecem pendentes. O sistema atualiza seu estado após confirmação verificável e não repete automaticamente uma cobrança ou devolução. Antes de uma nova tentativa, deve consultar o estado da operação anterior para prevenir duplicidade.
 
 ## Atores
@@ -337,7 +337,7 @@ Este fluxo ocorre após a saída ter sido registrada.
 3. O sistema registra e apresenta o vencedor ou vencedores elegíveis e o valor/modelo de premiação correspondente.
 4. Um vencedor solicita o recebimento de sua parte da premiação.
 5. O sistema valida a elegibilidade e os dados necessários à solicitação.
-6. Sem exigir aprovação administrativa adicional, o sistema encaminha a operação ao Mercado Pago em ambiente de teste, se a operação for suportada e estiver validada.
+6. Sem exigir aprovação administrativa adicional, o sistema encaminha a operação ao Mercado Pago em ambiente de teste, somente se o repasse posterior estiver suportado e validado.
 7. A operação fica pendente até o sistema verificar confirmação do provedor.
 8. Após confirmação, o sistema registra a movimentação como concluída e informa o vencedor.
 
@@ -346,7 +346,7 @@ Este fluxo ocorre após a saída ter sido registrada.
 - **A1 — Resultados necessários pendentes (passo 2):** o sistema não fecha a classificação nem determina o vencedor até processar os resultados.
 - **A2 — Nenhum participante elegível:** o sistema encerra o bolão, registra que não há vencedor elegível e não solicita transferência.
 - **A3 — Participante não elegível ou solicitação duplicada (passos 4–5):** o sistema recusa a solicitação.
-- **A4 — API não oferece a operação de repasse em ambiente de teste:** o sistema informa que a premiação não foi processada pela API; não registra sucesso. O simulador pode ser usado somente em desenvolvimento/testes identificados como simulação.
+- **A4 — API não oferece a operação de repasse em ambiente de teste:** o sistema informa que a premiação não foi processada pela API; não registra sucesso do provedor. A demonstração acadêmica poderá usar o simulador, identificado como simulação e sem alegar que a integração de premiação foi atendida.
 - **A5 — Operação recusada:** o sistema registra a recusa e informa o vencedor, mantendo a premiação não concluída.
 - **A6 — Operação pendente ou API indisponível:** o sistema mantém o estado pendente e não envia outra operação automaticamente.
 - **A7 — Nova tentativa:** o sistema verifica primeiro o estado da operação anterior para evitar pagamento duplicado.
@@ -421,5 +421,5 @@ O arquivo [diagrama_casos_de_uso_realizar_palpite.png](./diagrama_casos_de_uso_r
 
 ## Pendências técnicas que não bloqueiam a especificação dos fluxos
 
-- Validar no ambiente de teste do Mercado Pago as operações de cobrança, assinatura, reembolso e repasse, inclusive seus estados e mecanismos de confirmação.
-- Se alguma operação não estiver disponível nesse ambiente, manter o caso sem sucesso externo e utilizar o simulador apenas em desenvolvimento/testes, sem apresentar simulação como confirmação do provedor.
+- Executar smoke tests no ambiente de teste para Checkout Pro e assinatura; confirmar o fluxo de reembolso compatível com Checkout Pro e investigar repasse posterior de premiação. A validação documental está registrada em [Validação documental do Mercado Pago](../arquitetura/validacao-mercado-pago.md).
+- Se o repasse não estiver disponível, a demonstração poderá simular a premiação, claramente identificada; o caso deve continuar sem sucesso externo e a integração correspondente deve permanecer pendente.

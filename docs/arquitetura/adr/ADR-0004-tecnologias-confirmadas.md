@@ -1,31 +1,30 @@
-# ADR-0004 — Tecnologias confirmadas e escolhas adiadas
+# ADR-0004 — Tecnologias e ferramentas do protótipo
 
-- **Status:** Parcialmente aceito
+- **Status:** Aceito
 - **Data:** 2026-10-02
 - **Drivers relacionados:** DA-05, DA-06
 
 ## Contexto
 
-O projeto definiu uma interface web e um backend JavaScript. A equipe prefere uma solução adequada ao contexto acadêmico, sem ferramentas que adicionem complexidade operacional desnecessária.
+O projeto definiu uma interface web e um backend JavaScript. Para o protótipo acadêmico, a equipe confirmou uma solução local simples, sem ferramentas que adicionem complexidade operacional desnecessária. A integração de pagamento em teste está detalhada no ADR-0003 e em [Validação documental do Mercado Pago](../validacao-mercado-pago.md).
 
 ## Decisão
 
-Registrar como escolhas confirmadas:
-
 - **Interface:** React com JavaScript, usando Vite para desenvolvimento e build.
-- **Backend:** Node.js como runtime da aplicação.
-- **Assinatura Premium mensal:** API de Assinaturas do Mercado Pago, usada exclusivamente em ambiente de teste.
-
-Adiar a escolha do framework HTTP, do banco de dados, da biblioteca de acesso a dados e da hospedagem. Express e SQLite são recomendações iniciais, não decisões tomadas. Docker Compose e Prisma não são requisitos para começar.
+- **Backend:** Node.js com Express.
+- **Persistência:** SQLite, com SQL direto e `better-sqlite3` como driver Node.js.
+- **Assinatura Premium:** API de Assinaturas do Mercado Pago, exclusivamente em ambiente de teste.
+- **Taxa de entrada:** Checkout Pro, com redirecionamento ao checkout hospedado e uso exclusivo de credenciais de teste.
+- **Hospedagem e implantação:** fora do escopo deste protótipo; nenhuma plataforma foi escolhida.
 
 ## Motivos
 
-React, JavaScript, Vite e Node.js foram definidos para o projeto. Adiar as escolhas restantes evita registrar como aprovada uma tecnologia que ainda não foi escolhida pela equipe.
+As escolhas aprovadas atendem ao escopo acadêmico com tecnologias familiares e uma persistência local simples. O Checkout Pro reduz a implementação de interface de pagamento, enquanto a validação documental e os limites de cada operação financeira permanecem registrados separadamente. A escolha de tecnologias não implica que a integração com o provedor já foi implementada ou executada.
 
 ## Consequências
 
 - Frontend e backend poderão compartilhar JavaScript, embora permaneçam aplicações distintas.
-- A demonstração da assinatura depende de configurar credenciais e contas de teste do Mercado Pago fora do repositório.
-- A implementação do backend depende da escolha posterior de como declarar rotas HTTP.
-- A persistência depende da escolha posterior de banco e estratégia de acesso.
-- A recomendação atual para protótipo local é SQLite com SQL direto; usar PostgreSQL se a disciplina ou a implantação exigir um banco servidor.
+- A demonstração de pagamentos depende da implementação dos fluxos e da configuração de contas e credenciais de teste fora do repositório.
+- O backend usa consultas SQL explícitas; consultas parametrizadas e transações devem ser usadas quando aplicáveis.
+- SQLite atende ao protótipo local. Uma eventual necessidade de banco servidor ou hospedagem requer nova decisão.
+- O uso do Checkout Pro para a taxa de entrada não confirma a compatibilidade de um fluxo específico de reembolso nem a disponibilidade de repasse posterior de premiação; consultar o ADR-0003 e a validação documental antes de declarar essas operações concluídas.

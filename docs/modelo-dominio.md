@@ -12,7 +12,7 @@ O sistema organiza bolões privados de palpites sobre partidas do Brasileirão, 
 
 **Assinatura** representa a contratação paga do plano Premium, com vigência e cobrança recorrente (RB04, RB55). Existe separada de Usuario porque tem ciclo de vida próprio: pode expirar ou ser cancelada sem afetar bolões já criados (RB09, RB10, RB11).
 
-**Carteira** guarda o saldo financeiro simulado do usuário. Os valores não representam dinheiro real e podem ser atualizados por operações confirmadas no provedor de teste ou pelo simulador de desenvolvimento.
+**Carteira** guarda o saldo financeiro simulado do usuário. Os valores não representam dinheiro real e podem ser atualizados por operações confirmadas no provedor de teste ou por simulador identificado como tal. Se usado para demonstrar premiação sem repasse disponível no sandbox, o simulador não representa uma integração de pagamento concluída.
 
 **MovimentacaoFinanceira** registra toda entrada, pagamento, devolução, assinatura ou premiação, vinculada ao usuário e à operação de origem (RB53, RB54, RNF10). Existe separada de Carteira porque o histórico financeiro precisa ser auditável, não apenas o saldo atual.
 
