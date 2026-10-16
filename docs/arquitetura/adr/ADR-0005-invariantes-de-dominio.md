@@ -1,6 +1,6 @@
 # ADR-0005 — Validar invariantes de domínio no backend
 
-- **Status:** Proposto
+- **Status:** Aceito
 - **Data:** 2026-10-02
 - **Drivers relacionados:** DA-01, DA-04
 
@@ -8,7 +8,7 @@
 
 O domínio contém regras que precisam valer independentemente da interface utilizada: imutabilidade das regras do bolão, autorização por papel, exclusividade do tipo de palpite e bloqueio de palpites após o início da partida.
 
-## Decisão proposta
+## Decisão
 
 Validar regras de negócio no backend antes de confirmar operações. A interface pode repetir validações para orientar o usuário, mas não será a autoridade para permitir mudanças de estado.
 

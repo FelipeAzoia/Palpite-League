@@ -1,6 +1,6 @@
 # ADR-0001 — Organizar o backend como monólito modular
 
-- **Status:** Proposto
+- **Status:** Aceito
 - **Data:** 2026-10-02
 - **Drivers relacionados:** DA-01, DA-04, DA-05
 
@@ -8,7 +8,7 @@
 
 O projeto reúne responsabilidades de usuários, bolões, palpites, resultados, pontuação e operações financeiras. É um projeto acadêmico e ainda não há requisito que justifique implantação ou operação de vários serviços independentes.
 
-## Decisão proposta
+## Decisão
 
 Organizar o backend como uma única aplicação, separando internamente as responsabilidades por módulos de domínio. Não adotar microserviços neste estágio.
 
