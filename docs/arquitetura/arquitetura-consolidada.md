@@ -6,13 +6,15 @@ O Palpite League é uma plataforma web para criação e gerenciamento de bolões
 
 A solução foi concebida como um protótipo acadêmico, com regras de negócio fortes, validação no backend e integração externa somente em ambiente de teste. A ênfase está em preservar integridade dos dados, evitar manipulação manual de resultados e manter a lógica de pontuação e participação centralizada na aplicação.
 
+As personas centrais são o administrador do bolão e o participante. Seus perfis e necessidades estão detalhados em [persona_adm.md](../personas/persona_adm.md) e [persona_participante.md](../personas/persona_participante.md).
+
 ## 2. Decisões técnicas
 
 ### 2.1. Decisão arquitetural principal
 
 A arquitetura do Palpite League foi definida como um monólito modular. A justificativa é manter o projeto simples, fácil de operar em contexto acadêmico e com responsabilidades organizadas em módulos de domínio. Isso reduz o acoplamento entre usuários, bolões, palpites, pagamentos e resultados, sem introduzir complexidade de infraestrutura desnecessária.
 
-**Status:** proposta formalmente registrada em ADR-0001.
+**Status:** aceita e registrada no ADR-0001.
 
 ### 2.2. Decisão de persistência
 
@@ -22,9 +24,9 @@ Foi escolhida a persistência local com SQLite, usando acesso direto via SQL e d
 
 ### 2.3. Decisão de API esportiva
 
-Foi definida como candidata principal a integração com a API-Football da API-Sports, mantendo o adaptador isolado do núcleo do domínio. A integração deve ser validada antes da implementação final, confirmando cobertura do Brasileirão, limites, custo, frequência de atualização e termos de uso.
+Foi escolhida a API-Football da API-Sports como fonte esportiva do protótipo, mantendo o adaptador isolado do núcleo do domínio. A integração permanece condicionada à prova técnica de cobertura do Brasileirão, limites, custo, frequência de atualização e termos de uso. Essa validação não foi concluída.
 
-**Status:** recomendação para aprovação e validação técnica, conforme ADR-0002.
+**Status:** escolha aceita para o protótipo; prova técnica pendente, conforme ADR-0002.
 
 ### 2.4. Decisão de pagamentos e assinaturas
 
@@ -67,13 +69,13 @@ As regras regradas por domínio, como imutabilidade do bolão, papéis por bolã
 
 O projeto decidiu manter um monólito modular como estilo arquitetural principal. A proposta mantém a aplicação em um único backend, com módulos internos para separar autenticação, bolões, palpites, resultados, pagamentos e auditoria.
 
-**Status:** proposto. A decisão é coerente com o escopo acadêmico e reduz complexidade operacional, mas ainda precisa ser confirmada como decisão final do projeto.
+**Status:** aceito. A decisão é coerente com o escopo acadêmico e reduz complexidade operacional.
 
 ### 3.2. ADR-0002 — integração com API esportiva
 
 A solução deve obter partidas e resultados oficiais por meio de uma API esportiva externa, com isolamento do adaptador para não espalhar detalhes do provedor pelo domínio. A API-Football foi indicada como candidata principal.
 
-**Status:** recomendação para aprovação e validação técnica. A decisão depende de confirmação de cobertura do Brasileirão, limites, custos e termos de uso.
+**Status:** escolhido para o protótipo. A integração depende de confirmação de cobertura do Brasileirão, limites, custos, frequência de atualização e termos de uso.
 
 ### 3.3. ADR-0003 — pagamentos em ambiente de teste
 
@@ -91,17 +93,17 @@ A stack do protótipo foi confirmada com React no frontend, Node.js com Express 
 
 As regras críticas do domínio devem ser validadas no backend, independentemente da interface web. Isso inclui imutabilidade das regras do bolão, papéis por bolão, exclusividade de palpite por partida e bloqueio de palpites após o início da partida.
 
-**Status:** proposto. A decisão é fortemente recomendada e deve ser adotada como regra de implementação.
+**Status:** aceito. As regras críticas serão aplicadas no backend e cobertas por testes automatizados quando a implementação existir.
 
 ### 3.6. Síntese do status dos ADRs
 
-- ADR-0001: proposto
-- ADR-0002: recomendação para validação
+- ADR-0001: aceito
+- ADR-0002: escolhido para o protótipo; prova técnica pendente
 - ADR-0003: aceito, com validação pendente
 - ADR-0004: aceito
-- ADR-0005: proposto
+- ADR-0005: aceito
 
-A conclusão prática recomendada é: os ADRs de tecnologia e protótipo estão em boa base, mas os itens de validação técnica e de decisão final precisam ser fechados antes de considerar a arquitetura totalmente concluída.
+A conclusão prática é: as decisões arquiteturais internas estão fechadas. Permanecem pendentes a prova técnica da API esportiva e os testes de integração financeira no sandbox; até que sejam executados, cobertura, custos, termos e suporte a devolução ou premiação não devem ser apresentados como validados.
 
 ## 4. Requisitos não funcionais
 
@@ -511,7 +513,7 @@ O domínio principal é composto por entidades como:
 - SolicitacaoDevolucao
 - Notificacao
 
-Esses conceitos são descritos em profundidade em [modelo-dominio.md](modelo-dominio.md). O modelo conceitual centraliza as relações críticas do sistema:
+Esses conceitos são descritos em profundidade em [modelo-dominio.md](../modelo-dominio.md). O modelo conceitual centraliza as relações críticas do sistema:
 
 - um usuário cria bolões;
 - um bolão tem participantes com papéis específicos;
@@ -669,6 +671,8 @@ Este documento consolida os artefatos existentes do repositório e representa a 
 ## 21. Referências internas
 
 - [docs/visao.md](../visao.md)
+- [docs/personas/persona_adm.md](../personas/persona_adm.md)
+- [docs/personas/persona_participante.md](../personas/persona_participante.md)
 - [docs/requisitos/RF.md](../requisitos/RF.md)
 - [docs/requisitos/RNF.md](../requisitos/RNF.md)
 - [docs/requisitos/RB.md](../requisitos/RB.md)

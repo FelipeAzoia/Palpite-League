@@ -1,6 +1,6 @@
 # ADR-0002 — API-Football como fonte de dados esportivos
 
-- **Status:** Recomendação para aprovação e validação técnica
+- **Status:** Aceito para o protótipo; prova técnica pendente antes da integração
 - **Data:** 2026-10-02
 - **Drivers relacionados:** DA-02
 
@@ -8,11 +8,11 @@
 
 O sistema precisa obter partidas e resultados oficiais do Brasileirão. Também prevê atualização durante partidas para bolões com o recurso ao vivo. O resultado oficial não pode ser inserido ou alterado manualmente. As operações financeiras em ambiente de teste não afetam essa integração: a API esportiva fornece dados de futebol, não processa pagamentos.
 
-## Decisão recomendada
+## Decisão
 
-Adotar a **API-Football, da API-Sports**, como candidata principal para a integração esportiva. Isolar as chamadas externas em um módulo adaptador, sem espalhar detalhes do fornecedor pelas regras de domínio.
+Adotar a **API-Football, da API-Sports**, como fonte escolhida para o protótipo e isolar as chamadas externas em um módulo adaptador, sem espalhar detalhes do fornecedor pelas regras de domínio.
 
-Antes de iniciar a integração, fazer uma prova de conceito que confirme a cobertura da Série A do Campeonato Brasileiro para as temporadas necessárias, os dados de status e placar, a frequência de atualização disponível, os limites e custos do plano e os termos de uso aplicáveis ao projeto.
+Antes de iniciar a integração, fazer uma prova de conceito que confirme a cobertura da Série A do Campeonato Brasileiro para as temporadas necessárias, os dados de status e placar, a frequência de atualização disponível, os limites e custos do plano e os termos de uso aplicáveis ao projeto. Essa prova ainda não foi executada; a escolha do fornecedor não representa validação de cobertura, preço ou termos.
 
 ## Motivos
 
