@@ -44,7 +44,6 @@ Os atores, o diagrama de casos de uso e os fluxos principais estão descritos em
 
 ## 🛠️ Tecnologias e Arquitetura
 
-...
-
+A arquitetura consolidada do projeto está documentada em [docs/arquitetura/arquitetura-consolidada.md](docs/arquitetura/arquitetura-consolidada.md).
 
 > **Aviso Acadêmico:** Este repositório reflete um projeto de modelagem de sistemas. As integrações financeiras são destinadas exclusivamente a ambiente de teste e simulação, sem movimentação de dinheiro real. O projeto não está preparado para operação financeira em produção.
