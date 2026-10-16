@@ -1,0 +1,124 @@
+classDiagram
+    class Usuario {
+        +UUID id
+        +String nome
+        +String email
+        +PlanoTipo plano
+        +StatusUsuario status
+    }
+    class Assinatura {
+        +UUID id
+        +DateTime dataInicio
+        +DateTime dataFim
+        +StatusAssinatura status
+        +Decimal valorCobranca
+    }
+    class Carteira {
+        +UUID id
+        +Decimal saldoSimulado
+    }
+    class MovimentacaoFinanceira {
+        +UUID id
+        +TipoMovimentacao tipo
+        +Decimal valor
+        +DateTime data
+        +StatusMovimentacao status
+        +OrigemOperacao origem
+    }
+    class Bolao {
+        +UUID id
+        +String nome
+        +Date dataInicioPeriodo
+        +Date dataFimPeriodo
+        +Decimal taxaEntrada
+        +String modeloPremiacao
+        +CriterioDesempateTipo criterioDesempate
+        +StatusBolao status
+        +Boolean resultadoAoVivo
+    }
+    class Convite {
+        +UUID id
+        +String codigo
+        +StatusConvite status
+        +DateTime dataCriacao
+    }
+    class Participacao {
+        +UUID id
+        +PapelParticipante papel
+        +StatusParticipacao status
+        +DateTime dataEntrada
+        +Boolean entradaTardia
+        +DateTime aceiteRegrasEm
+        +Integer pontuacaoTotal
+        +Boolean pagamentoConfirmado
+    }
+    class Rodada {
+        +UUID id
+        +Integer numero
+        +Date dataInicio
+        +Date dataFim
+    }
+    class Partida {
+        +UUID id
+        +DateTime dataHora
+        +Integer placarCasa
+        +Integer placarVisitante
+        +StatusPartida status
+    }
+    class Time {
+        +UUID id
+        +String nome
+        +String escudo
+    }
+    class Palpite {
+        +UUID id
+        +TipoPalpite tipoPalpite
+        +ResultadoTipo resultadoPalpite
+        +Integer placarCasaPalpite
+        +Integer placarVisitantePalpite
+        +Integer pontosGanhos
+        +DateTime dataEnvio
+    }
+    class Medalha {
+        +UUID id
+        +DateTime dataConcessao
+    }
+    class SolicitacaoDevolucao {
+        +UUID id
+        +StatusSolicitacao status
+        +DateTime dataSolicitacao
+        +DateTime dataResposta
+    }
+    class Notificacao {
+        +UUID id
+        +TipoNotificacao tipo
+        +String mensagem
+        +DateTime dataEnvio
+        +Boolean lida
+    }
+
+    Usuario "1" --> "0..*" Bolao : cria
+    Usuario "1" *-- "1" Carteira : possui
+    Usuario "1" --> "0..*" Assinatura : contrata
+    Usuario "1" --> "0..*" Participacao : participa
+    Usuario "1" --> "0..*" Convite : convidado
+    Usuario "1" --> "0..*" Notificacao : recebe
+
+    Carteira "1" --> "0..*" MovimentacaoFinanceira : registra
+    MovimentacaoFinanceira "0..*" --> "0..1" Bolao : referencia
+    MovimentacaoFinanceira "0..*" --> "0..1" Assinatura : referencia
+
+    Bolao "1" *-- "1..*" Participacao : contem
+    Bolao "1" --> "0..*" Convite : gera
+    Bolao "0..*" --> "0..*" Partida : seleciona
+    Participacao "1" --> "0..*" Palpite : registra
+    Partida "1" --> "0..*" Palpite : recebe
+    Participacao "1" --> "0..*" Medalha : conquista
+    Rodada "1" --> "0..*" Medalha : referente a
+    Participacao "1" --> "0..*" SolicitacaoDevolucao : solicita
+    Rodada "1" *-- "1..*" Partida : contem
+    Time "1" --> "0..*" Partida : mandante
+    Time "1" --> "0..*" Partida : visitante
+
+    note for Bolao "Bolao e o termo canonico: nao use Liga."
+    note for MovimentacaoFinanceira "Valores de teste/simulacao; sem dinheiro real. Uma movimentacao referencia no maximo um Bolao ou uma Assinatura."

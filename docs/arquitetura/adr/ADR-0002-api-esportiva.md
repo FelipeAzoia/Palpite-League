@@ -6,7 +6,7 @@
 
 ## Contexto
 
-O sistema precisa obter partidas e resultados oficiais do Brasileirão. Também prevê atualização durante partidas para bolões com o recurso ao vivo. O resultado oficial não pode ser inserido ou alterado manualmente. A ausência de transações financeiras reais não afeta essa integração: a API esportiva fornece dados de futebol, não processa pagamentos.
+O sistema precisa obter partidas e resultados oficiais do Brasileirão. Também prevê atualização durante partidas para bolões com o recurso ao vivo. O resultado oficial não pode ser inserido ou alterado manualmente. As operações financeiras em ambiente de teste não afetam essa integração: a API esportiva fornece dados de futebol, não processa pagamentos.
 
 ## Decisão recomendada
 

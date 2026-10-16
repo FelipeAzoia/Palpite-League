@@ -220,7 +220,7 @@ Quando uma pontuação for calculada, o sistema deverá atualizar a classificaç
 
 **Tipo EARS: Event-driven**
 
-Quando uma rodada participante do bolão for encerrada, o sistema deverá identificar o participante com maior pontuação na rodada.
+Quando uma rodada participante do bolão for encerrada, o sistema deverá identificar todos os participantes empatados com a maior pontuação na rodada.
 
 ---
 
@@ -228,7 +228,7 @@ Quando uma rodada participante do bolão for encerrada, o sistema deverá identi
 
 **Tipo EARS: Event-driven**
 
-Quando o melhor jogador da rodada for identificado, o sistema deverá associar uma medalha visual ao seu perfil dentro do bolão.
+Quando o melhor jogador ou os melhores jogadores da rodada forem identificados, o sistema deverá associar uma medalha visual ao perfil de cada um dentro do bolão.
 
 ---
 

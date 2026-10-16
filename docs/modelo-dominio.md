@@ -3,6 +3,8 @@
 O sistema organiza bolões privados de palpites sobre partidas do Brasileirão, com plano gratuito e premium, taxa de entrada, premiação e apuração automática via API esportiva. Quatorze conceitos sustentam essa organização. Cada um existe por uma razão de negócio, refletindo as regras de negócio (RB) e requisitos funcionais (RF) já definidos para o projeto.
 
 > Nota de nomenclatura: **Bolão** é o termo canônico usado neste modelo para a competição privada de palpites.
+>
+> Diagrama alinhado a este texto: [SVG do modelo conceitual](uml/modelo-conceitual-dominio.svg) · [fonte Mermaid editável](uml/modelo-conceitual-dominio.mmd). O arquivo [dominio-v3.png](uml/dominio-v3.png) é uma versão anterior e deve ser tratado como legado.
 
 ## Os conceitos
 
@@ -10,7 +12,7 @@ O sistema organiza bolões privados de palpites sobre partidas do Brasileirão, 
 
 **Assinatura** representa a contratação paga do plano Premium, com vigência e cobrança recorrente (RB04, RB55). Existe separada de Usuario porque tem ciclo de vida próprio: pode expirar ou ser cancelada sem afetar bolões já criados (RB09, RB10, RB11).
 
-**Carteira** guarda o saldo em dinheiro real do usuário.
+**Carteira** guarda o saldo financeiro simulado do usuário. Os valores não representam dinheiro real e podem ser atualizados por operações confirmadas no provedor de teste ou por simulador identificado como tal. Se usado para demonstrar premiação sem repasse disponível no sandbox, o simulador não representa uma integração de pagamento concluída.
 
 **MovimentacaoFinanceira** registra toda entrada, pagamento, devolução, assinatura ou premiação, vinculada ao usuário e à operação de origem (RB53, RB54, RNF10). Existe separada de Carteira porque o histórico financeiro precisa ser auditável, não apenas o saldo atual.
 
@@ -28,7 +30,7 @@ O sistema organiza bolões privados de palpites sobre partidas do Brasileirão, 
 
 **Palpite** é o registro que um participante faz para uma partida, sendo obrigatoriamente de um único tipo — resultado ou placar exato — nunca os dois (RB25, RB26). Só pode ser criado ou alterado até o início da partida (RB27, RB28) e concentra a regra de pontuação: 2 pontos por acertar o resultado, 5 pontos por acertar o placar exato, 0 pontos em caso de erro (RB34–RB37).
 
-**Medalha** reconhece o melhor jogador de uma rodada dentro de um bolão. Tem finalidade apenas visual e de incentivo, sem efeito na pontuação ou na premiação (RB39, RB40, RB41).
+**Medalha** reconhece todos os participantes empatados na maior pontuação de uma rodada dentro de um bolão. Tem finalidade apenas visual e de incentivo, sem efeito na pontuação ou na premiação (RB39, RB40, RB41).
 
 **SolicitacaoDevolucao** representa o pedido formal de um participante que já saiu do bolão para reaver valores associados a ele, dependente de aprovação administrativa (RB44, RB45, RB46, RB47).
 
@@ -58,6 +60,6 @@ Uma **Participacao** pode conquistar de zero a muitas **Medalhas**; cada Medalha
 
 Uma **Participacao** pode gerar de zero a muitas **SolicitacoesDevolucao**, cada uma associada a exatamente uma Participacao (RB46).
 
-Uma **Carteira** registra de zero a muitas **MovimentacoesFinanceiras** (RB53). Cada MovimentacaoFinanceira pode referenciar opcionalmente um **Bolão** (taxa de entrada, devolução ou premiação) ou uma **Assinatura** (pagamento do plano Premium) (RB55, RF30, RF31, RF34).
+Uma **Carteira** registra de zero a muitas **MovimentacoesFinanceiras** (RB53). Cada MovimentacaoFinanceira pode referenciar no máximo um **Bolão** (taxa de entrada, devolução ou premiação) ou uma **Assinatura** (pagamento do plano Premium), nunca ambos; o registro mantém a origem e o identificador externo da operação quando houver integração (RB55, RF30, RF31, RF34).
 
 Um **Usuario** recebe de zero a muitas **Notificacoes** (RF39).
