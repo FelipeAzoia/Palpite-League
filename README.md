@@ -46,4 +46,27 @@ Os atores, o diagrama de casos de uso e os fluxos principais estão descritos em
 
 A arquitetura consolidada do projeto está documentada em [docs/arquitetura/arquitetura-consolidada.md](docs/arquitetura/arquitetura-consolidada.md).
 
+## 🚀 Desenvolvimento local
+
+Instale as dependências e execute a interface:
+
+```bash
+npm install
+npm run dev
+```
+
+Em outro terminal, execute a API:
+
+```bash
+npm run dev:server
+```
+
+A API responde em `http://localhost:3000/api/health`. O banco SQLite local é criado em `data/palpite-league.db` e não é versionado.
+
+Para executar os testes técnicos:
+
+```bash
+npm test
+```
+
 > **Aviso Acadêmico:** Este repositório reflete um projeto de modelagem de sistemas. As integrações financeiras são destinadas exclusivamente a ambiente de teste e simulação, sem movimentação de dinheiro real. O projeto não está preparado para operação financeira em produção.
