@@ -46,4 +46,39 @@ Os atores, o diagrama de casos de uso e os fluxos principais estão descritos em
 
 A arquitetura consolidada do projeto está documentada em [docs/arquitetura/arquitetura-consolidada.md](docs/arquitetura/arquitetura-consolidada.md).
 
+## Desenvolvimento local
+
+1. Instale as dependências:
+
+   ```bash
+   npm install
+   ```
+
+2. Opcionalmente, copie `.env.example` para `.env` e ajuste as variáveis locais. O arquivo `.env` é ignorado pelo Git e nenhum provedor externo é necessário para iniciar.
+3. Em terminais separados, inicie o backend e a interface:
+
+   ```bash
+   npm run dev:server
+   npm run dev
+   ```
+
+O backend local responde em `http://127.0.0.1:3000/health` (e mantém `/api/health` como alias). Se o SQLite não estiver disponível na inicialização, o backend HTTP permanece ativo e retorna 503; cada consulta de health tenta abrir/aplicar as migrações novamente. O Vite atende a interface e encaminha as chamadas `/api` ao backend. A interface de desenvolvimento fica em `http://localhost:5173`.
+
+O SQLite usa `data/palpite-league.db` por padrão; `DATABASE_PATH` pode apontar para outro caminho local. Migrações SQL versionadas são aplicadas sem recriar o arquivo nem remover dados existentes. Os eventos técnicos são guardados na tabela `technical_events`; se o banco não puder receber um evento, ele é escrito em JSON no `stderr`. Não há expurgo automático.
+
+Para gerar a interface de produção e iniciá-la pelo mesmo processo do backend:
+
+```bash
+npm run build
+npm start
+```
+
+Execute a suíte offline (Node.js para o backend e a integração HTTP, Vitest para a função de comunicação do frontend) com:
+
+```bash
+npm test
+```
+
+Para a validação de estabilidade RNF05, mantenha backend e interface disponíveis por 30 minutos e consulte a disponibilidade uma vez por minuto, registrando duração, resultado e causa de cada falha.
+
 > **Aviso Acadêmico:** Este repositório reflete um projeto de modelagem de sistemas. As integrações financeiras são destinadas exclusivamente a ambiente de teste e simulação, sem movimentação de dinheiro real. O projeto não está preparado para operação financeira em produção.

@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS technical_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_type TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
