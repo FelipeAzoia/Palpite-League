@@ -1,0 +1,1 @@
+As migrações devem usar arquivos SQL numerados no formato `001-nome.sql`. A fundação não cria tabelas de domínio; cada módulo adicionará suas tabelas na spec correspondente.

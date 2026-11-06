@@ -1,0 +1,17 @@
+{
+  "name": "@palpite/backend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "scripts": {
+    "dev": "node --env-file=../../.env --watch index.js",
+    "start": "node --env-file=../../.env index.js",
+    "test": "node --test ../../tests/backend/*.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "latest",
+    "express": "latest"
+  }
+}

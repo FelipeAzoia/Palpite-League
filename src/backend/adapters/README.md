@@ -1,0 +1,1 @@
+Adaptadores de serviços externos ficam isolados neste diretório. A fundação não implementa nem inicializa integrações externas.
