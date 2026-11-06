@@ -32,32 +32,17 @@ function validateActor(actor) {
 	return { type: actor.type, id: null }
 }
 
-function validateDetails(details, allowedDetailKeys = []) {
+function validateDetails(details, detailSchema = {}) {
 	if (details === undefined || details === null) return null
 	if (!details || typeof details !== 'object' || Array.isArray(details)) {
 		throw new TypeError('details must be an object')
 	}
-	if (!Array.isArray(allowedDetailKeys)) {
-		throw new TypeError('allowedDetailKeys must be an array')
-	}
-
-	const allowed = new Set(allowedDetailKeys)
-	for (const key of Object.keys(details)) {
-		if (!allowed.has(key) || sensitiveDetailKey.test(key)) {
+	for (const [key, value] of Object.entries(details)) {
+		const fieldSchema = detailSchema[key]
+		if (!fieldSchema || sensitiveDetailKey.test(key) || !isValidDetailValue(value, fieldSchema)) {
 			throw new TypeError(`detail key is not allowed: ${key}`)
 		}
 	}
-
-	const rejectSensitiveKeys = (value) => {
-		if (!value || typeof value !== 'object') return
-		for (const [key, nestedValue] of Object.entries(value)) {
-			if (sensitiveDetailKey.test(key)) {
-				throw new TypeError(`detail key is not allowed: ${key}`)
-			}
-			rejectSensitiveKeys(nestedValue)
-		}
-	}
-	rejectSensitiveKeys(details)
 
 	try {
 		return JSON.stringify(details)
@@ -66,7 +51,28 @@ function validateDetails(details, allowedDetailKeys = []) {
 	}
 }
 
-function validateEntry(entry, detailKeysByAction) {
+function isValidDetailValue(value, schema) {
+	switch (schema.type) {
+		case 'score':
+			return typeof value === 'string' && /^(?:[0-9]|[1-9][0-9])-(?:[0-9]|[1-9][0-9])$/.test(value)
+		case 'integer':
+			return Number.isSafeInteger(value)
+		case 'number':
+			return typeof value === 'number' && Number.isFinite(value)
+		case 'boolean':
+			return typeof value === 'boolean'
+		case 'timestamp':
+			return typeof value === 'string'
+				&& Number.isFinite(Date.parse(value))
+				&& new Date(value).toISOString() === value
+		case 'enum':
+			return typeof value === 'string' && schema.values.includes(value)
+		default:
+			return false
+	}
+}
+
+function validateEntry(entry, detailSchemasByAction) {
 	if (!entry || typeof entry !== 'object') throw new TypeError('audit entry is required')
 	const actor = validateActor(entry.actor)
 	const object = entry.object
@@ -80,7 +86,7 @@ function validateEntry(entry, detailKeysByAction) {
 		objectType: requiredText(object.type, 'object.type'),
 		objectId: requiredText(String(object.id ?? ''), 'object.id'),
 		origin: entry.origin == null ? null : requiredText(entry.origin, 'origin'),
-		details: validateDetails(entry.details, detailKeysByAction.get(action) ?? []),
+		details: validateDetails(entry.details, detailSchemasByAction.get(action) ?? {}),
 	}
 }
 
@@ -104,31 +110,53 @@ function toRecord(row) {
 	}
 }
 
-export function createAuditStore(database, { logger = createLogger(), detailKeysByAction = {} } = {}) {
-	if (!detailKeysByAction || typeof detailKeysByAction !== 'object' || Array.isArray(detailKeysByAction)) {
-		throw new TypeError('detailKeysByAction must be an object')
+export function createAuditStore(database, { logger = createLogger(), detailSchemasByAction = {} } = {}) {
+	if (!detailSchemasByAction || typeof detailSchemasByAction !== 'object' || Array.isArray(detailSchemasByAction)) {
+		throw new TypeError('detailSchemasByAction must be an object')
 	}
 
-	const allowedDetails = new Map()
-	for (const [action, keys] of Object.entries(detailKeysByAction)) {
+	const detailSchemas = new Map()
+	for (const [action, schema] of Object.entries(detailSchemasByAction)) {
 		const actionName = requiredText(action, 'action')
-		if (!Array.isArray(keys)) throw new TypeError(`detail keys for ${actionName} must be an array`)
-		const validatedKeys = keys.map((key) => requiredText(key, 'detail key'))
-		if (validatedKeys.some((key) => sensitiveDetailKey.test(key))) {
-			throw new TypeError(`sensitive detail key configured for ${actionName}`)
+		if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+			throw new TypeError(`detail schema for ${actionName} must be an object`)
 		}
-		allowedDetails.set(actionName, validatedKeys)
+		const validatedSchema = {}
+		for (const [key, definition] of Object.entries(schema)) {
+			const field = requiredText(key, 'detail key')
+			if (sensitiveDetailKey.test(field)) throw new TypeError(`sensitive detail key configured for ${actionName}`)
+			if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
+				throw new TypeError(`detail type required for ${actionName}.${field}`)
+			}
+			if (definition.type === 'enum') {
+				if (!Array.isArray(definition.values) || definition.values.length === 0
+					|| definition.values.some((value) => typeof value !== 'string' || value.length === 0)) {
+					throw new TypeError(`enum values required for ${actionName}.${field}`)
+				}
+				validatedSchema[field] = { type: 'enum', values: [...definition.values] }
+			} else if (['score', 'integer', 'number', 'boolean', 'timestamp'].includes(definition.type)) {
+				validatedSchema[field] = { type: definition.type }
+			} else {
+				throw new TypeError(`unsupported detail type for ${actionName}.${field}`)
+			}
+		}
+		detailSchemas.set(actionName, validatedSchema)
 	}
 
-	const insertAuditRecord = database.prepare(`
+	let insertAuditRecord
+
+	function getInsertAuditRecord() {
+		insertAuditRecord ??= database.prepare(`
 		INSERT INTO audit_records (
 			actor_type, actor_id, action, object_type, object_id, occurred_at,
 			result, origin, correlation_id, details_json
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
+		return insertAuditRecord
+	}
 
 	function insert(record, result) {
-		insertAuditRecord.run(
+		getInsertAuditRecord().run(
 			record.actor.type,
 			record.actor.id,
 			record.action,
@@ -154,13 +182,13 @@ export function createAuditStore(database, { logger = createLogger(), detailKeys
 	}
 
 	function recordOutcome(entry, result) {
-		const record = validateEntry(entry, allowedDetails)
+		const record = validateEntry(entry, detailSchemas)
 		return withCorrelation(() => persistOutcome(record, result))
 	}
 
 	function runAuditedOperation(entry, operation) {
 		if (typeof operation !== 'function') throw new TypeError('operation must be a function')
-		const record = validateEntry(entry, allowedDetails)
+		const record = validateEntry(entry, detailSchemas)
 		return withCorrelation(() => {
 			let operationCompleted = false
 

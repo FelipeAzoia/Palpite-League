@@ -1,68 +1,188 @@
 import { useEffect, useState } from 'react'
-import { Activity, ArrowUpRight, CircleCheck, CircleX, RefreshCw } from 'lucide-react'
-import { checkAvailability } from './src/availability.js'
+import { Activity, ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
+import { requestAuth } from './src/auth-api.js'
 import './styles.css'
 
-function App() {
-  const [health, setHealth] = useState({ state: 'checking' })
+const tokenKey = 'palpite-league-session'
 
-  async function refreshHealth() {
-    setHealth({ state: 'checking' })
+function App() {
+  const [view, setView] = useState('checking')
+  const [user, setUser] = useState(null)
+  const [email, setEmail] = useState('')
+  const [message, setMessage] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [pending, setPending] = useState(false)
+
+  useEffect(() => {
+    const token = sessionStorage.getItem(tokenKey)
+    if (!token) {
+      setView('login')
+      return
+    }
+
+    let active = true
+    requestAuth('/auth/me', { token }).then(({ user: currentUser }) => {
+      if (!active) return
+      setUser(currentUser)
+      setView('authenticated')
+    }).catch(() => {
+      sessionStorage.removeItem(tokenKey)
+      if (!active) return
+      setMessage('Sua sessão terminou. Entre novamente.')
+      setView('login')
+    })
+
+    return () => { active = false }
+  }, [])
+
+  async function submitForm(event) {
+    event.preventDefault()
+    setPending(true)
+    setMessage('')
+    setFieldErrors({})
+    const formData = new FormData(event.currentTarget)
+    const values = Object.fromEntries(formData.entries())
+
     try {
-      const result = await checkAvailability()
-      setHealth({ state: 'available', checkedAt: new Date(), result })
-    } catch {
-      setHealth({ state: 'unavailable', checkedAt: new Date() })
+      if (view === 'register') {
+        await requestAuth('/auth/register', { method: 'POST', body: values })
+        setEmail(values.email)
+        setView('login')
+        setMessage('Conta criada. Agora entre com seu e-mail e senha.')
+      } else {
+        const result = await requestAuth('/auth/login', { method: 'POST', body: values })
+        sessionStorage.setItem(tokenKey, result.token)
+        setUser(result.user)
+        setView('authenticated')
+      }
+    } catch (error) {
+      setMessage(error.message)
+      setFieldErrors(error.fields)
+    } finally {
+      setPending(false)
     }
   }
 
-  useEffect(() => {
-    refreshHealth()
-  }, [])
+  async function logout() {
+    const token = sessionStorage.getItem(tokenKey)
+    setPending(true)
+    try {
+      if (token) await requestAuth('/auth/logout', { method: 'POST', token })
+    } catch {
+      // Discard the browser token even if the server session has already expired.
+    } finally {
+      sessionStorage.removeItem(tokenKey)
+      setUser(null)
+      setMessage('Você saiu da sua conta.')
+      setView('login')
+      setPending(false)
+    }
+  }
 
-  const isAvailable = health.state === 'available'
-  const isChecking = health.state === 'checking'
+  function changeView(nextView) {
+    setMessage('')
+    setFieldErrors({})
+    setView(nextView)
+  }
+
+  if (view === 'checking') {
+    return <main className="auth-loading" aria-label="Verificando sessão"><LoaderCircle size={24} /></main>
+  }
 
   return (
-    <main className="foundation-shell">
-      <header className="topbar">
-        <a className="brand" href="/" aria-label="Palpite League, início">
+    <main className="auth-shell">
+      <header className="auth-header">
+        <a className="brand" href="/" aria-label="Palpite League">
           <span className="brand-symbol"><Activity size={18} strokeWidth={2.5} /></span>
           <span>palpite<span className="brand-dot">.</span></span>
         </a>
         <span className="environment"><span /> ambiente local</span>
       </header>
 
-      <section className="status-view" aria-live="polite">
-        <div className={`status-mark status-mark--${health.state}`}>
-          {isChecking ? <RefreshCw size={22} /> : isAvailable ? <CircleCheck size={24} /> : <CircleX size={24} />}
-        </div>
-        <p className="eyebrow">Fundação técnica</p>
-        <h1>{isChecking ? 'Verificando serviços' : isAvailable ? 'Tudo está operando' : 'Backend indisponível'}</h1>
-        <p className="status-copy">
-          {isChecking ? 'Aguardando resposta do backend.' : isAvailable ? 'A aplicação respondeu à verificação de disponibilidade.' : 'Não foi possível acessar a aplicação neste momento.'}
-        </p>
-
-        <div className="service-row">
-          <div className="service-icon"><Activity size={17} /></div>
-          <div className="service-details"><strong>API Palpite League</strong><span>GET /health</span></div>
-          <span className={`service-state ${isAvailable ? 'service-state--up' : isChecking ? 'service-state--checking' : 'service-state--down'}`}>
-            {isChecking ? 'Verificando' : isAvailable ? 'Disponível' : 'Indisponível'}
-          </span>
+      <section className="auth-layout" aria-live="polite">
+        <div className="auth-intro">
+          <p className="eyebrow">PALPITE LEAGUE</p>
+          <h1>O jogo começa<br />com um palpite.</h1>
+          <div className="intro-rule"><span /><span /><span /></div>
+          <p className="intro-index">TEMPORADA <strong>2026</strong></p>
         </div>
 
-        <div className="status-actions">
-          <span className="checked-at">
-            {health.checkedAt ? `Verificado às ${health.checkedAt.toLocaleTimeString('pt-BR')}` : 'Aguardando verificação'}
-          </span>
-          <button type="button" className="refresh-button" onClick={refreshHealth} disabled={isChecking} title="Verificar novamente" aria-label="Verificar novamente">
-            <RefreshCw size={16} />
-          </button>
-        </div>
-        <a className="api-link" href="/health" target="_blank" rel="noreferrer">Abrir resposta HTTP <ArrowUpRight size={14} /></a>
+        <section className="auth-panel" aria-labelledby="auth-title">
+          {view === 'authenticated' ? (
+            <div className="authenticated-view">
+              <p className="eyebrow">ACESSO CONFIRMADO</p>
+              <h2 id="auth-title">Olá, {user?.name}.</h2>
+              <p className="form-copy">Sua conta está pronta para a próxima rodada.</p>
+              <button className="primary-button" type="button" onClick={logout} disabled={pending}>
+                <span>{pending ? 'Saindo...' : 'Sair da conta'}</span>
+                {pending ? <LoaderCircle size={17} className="spin" /> : <LogOut size={17} />}
+              </button>
+              <p className="plan-note">Plano {user?.plan === 'free' ? 'Gratuito' : user?.plan}</p>
+            </div>
+          ) : (
+            <>
+              <p className="eyebrow">{view === 'register' ? 'NOVA CONTA' : 'SUA CONTA'}</p>
+              <h2 id="auth-title">{view === 'register' ? 'Criar cadastro' : 'Entrar'}</h2>
+              <p className="form-copy">
+                {view === 'register' ? 'Comece com seus dados de acesso.' : 'Bom ter você de volta.'}
+              </p>
+
+              <form className="auth-form" onSubmit={submitForm} noValidate>
+                {view === 'register' && (
+                  <label className="field">
+                    <span>Nome</span>
+                    <input name="name" type="text" autoComplete="name" maxLength={100} required aria-describedby={fieldErrors.name ? 'name-error' : undefined} />
+                    {fieldErrors.name && <small id="name-error" className="field-error">{fieldErrors.name}</small>}
+                  </label>
+                )}
+                <label className="field">
+                  <span>E-mail</span>
+                  <input
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    maxLength={254}
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                    aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+                  />
+                  {fieldErrors.email && <small id="email-error" className="field-error">{fieldErrors.email}</small>}
+                </label>
+                <label className="field">
+                  <span>Senha</span>
+                  <input
+                    name="password"
+                    type="password"
+                    autoComplete={view === 'register' ? 'new-password' : 'current-password'}
+                    minLength={view === 'register' ? 8 : undefined}
+                    maxLength={128}
+                    required
+                    aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+                  />
+                  {fieldErrors.password && <small id="password-error" className="field-error">{fieldErrors.password}</small>}
+                </label>
+
+                {message && <p className="form-message" role="alert">{message}</p>}
+
+                <button className="primary-button" type="submit" disabled={pending}>
+                  <span>{pending ? 'Aguarde...' : view === 'register' ? 'Criar conta' : 'Entrar'}</span>
+                  {pending ? <LoaderCircle size={17} className="spin" /> : <ArrowRight size={17} />}
+                </button>
+              </form>
+
+              <div className="mode-switch">
+                {view === 'register' ? 'Já tem uma conta?' : 'Ainda não tem uma conta?'}
+                <button type="button" onClick={() => changeView(view === 'register' ? 'login' : 'register')}>
+                  {view === 'register' ? 'Entrar' : 'Criar cadastro'}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
       </section>
 
-      <footer className="footer"><span>PALPITE LEAGUE</span><span>Node.js · Express · SQLite</span></footer>
+      <footer className="auth-footer"><span>PALPITE LEAGUE</span><span>Uma rodada de cada vez.</span></footer>
     </main>
   )
 }
