@@ -4,12 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:server": "node --watch server/index.js",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "node server/index.js",
-    "test": "node --test"
+    "dev": "npm --prefix src/frontend run dev",
+    "dev:server": "npm --prefix src/backend run dev",
+    "build": "npm --prefix src/frontend run build",
+    "preview": "npm --prefix src/frontend run preview",
+    "start": "npm --prefix src/backend start",
+    "test:backend": "npm --prefix src/backend test",
+    "test:frontend": "npm --prefix src/frontend test",
+    "test": "npm run test:backend && npm run test:frontend"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
