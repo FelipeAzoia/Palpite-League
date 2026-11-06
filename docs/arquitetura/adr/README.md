@@ -9,6 +9,9 @@ ADRs (Architecture Decision Records) registram o contexto, a decisão e suas con
 | [ADR-0003](ADR-0003-pagamentos-simulados.md) | Usar Mercado Pago em teste para assinatura e taxa; investigar reembolso e premiação por operação | Aceito, com validação sandbox pendente |
 | [ADR-0004](ADR-0004-tecnologias-confirmadas.md) | Definir stack do protótipo e produtos de pagamento | Aceito |
 | [ADR-0005](ADR-0005-invariantes-de-dominio.md) | Validar regras críticas no backend | Aceito |
+| [ADR-0006](ADR-0006-agendador-em-processo.md) | Executar tarefas periódicas em um agendador dentro do processo do backend | Aceito |
+| [ADR-0007](ADR-0007-sessao-e-senha.md) | Definir sessão por token opaco, senha com `scrypt` e recuperação de acesso simulada | Aceito |
+| [ADR-0008](ADR-0008-convencoes-do-prototipo.md) | Definir migrações, testes, configuração, diretórios e verificação de disponibilidade | Aceito |
 
 ## Pendências tecnológicas
 
