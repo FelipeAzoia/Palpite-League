@@ -13,17 +13,17 @@ const baseEntry = {
   details: { before: '1-0', after: '2-0' },
 }
 
-function createStore({ logger, detailKeysByAction = {} } = {}) {
+function createStore({ logger, detailSchemasByAction = {} } = {}) {
   const database = createDatabase(':memory:')
   runMigrations(database)
   return {
     database,
     store: createAuditStore(database, {
       logger,
-      detailKeysByAction: {
-        'prediction.updated': ['before', 'after'],
-        'prediction.corrected': ['before', 'after'],
-        ...detailKeysByAction,
+      detailSchemasByAction: {
+        'prediction.updated': { before: { type: 'score' }, after: { type: 'score' } },
+        'prediction.corrected': { before: { type: 'score' }, after: { type: 'score' } },
+        ...detailSchemasByAction,
       },
     }),
   }
@@ -117,12 +117,26 @@ test('falha ao gravar sucesso desfaz a operação e não deixa sucesso', () => {
 
 test('negativa é gravada separadamente sem alterar o objeto', () => {
   const { database, store } = createStore()
-  database.exec('CREATE TABLE operation_marker (value TEXT NOT NULL)')
+  database.exec("CREATE TABLE pool_members (user_id TEXT PRIMARY KEY, role TEXT NOT NULL DEFAULT 'participant')")
+  database.prepare('INSERT INTO pool_members (user_id) VALUES (?)').run('user-1')
 
-  store.recordOutcome(baseEntry, 'denied')
+  function promoteCoAdmin(userId) {
+    const isAdmin = false
+    if (!isAdmin) {
+      store.recordOutcome({
+        actor: { type: 'user', id: userId },
+        action: 'pool.co_admin_promotion',
+        object: { type: 'pool_member', id: userId },
+      }, 'denied')
+      return false
+    }
+    database.prepare("UPDATE pool_members SET role = 'co_admin' WHERE user_id = ?").run(userId)
+    return true
+  }
 
-  assert.equal(database.prepare('SELECT COUNT(*) AS count FROM operation_marker').get().count, 0)
-  assert.equal(store.findByObject(baseEntry.object)[0].result, 'denied')
+  assert.equal(promoteCoAdmin('user-1'), false)
+  assert.equal(database.prepare('SELECT role FROM pool_members WHERE user_id = ?').get('user-1').role, 'participant')
+  assert.equal(store.findByObject({ type: 'pool_member', id: 'user-1' })[0].result, 'denied')
   database.close()
 })
 
@@ -136,11 +150,11 @@ test('valida campos obrigatórios e rejeita detalhes não permitidos ou sensíve
   assert.throws(() => store.runAuditedOperation({ ...baseEntry, object: { type: 'pool', id: '' } }, () => {}), /object.id is required/)
   assert.throws(() => store.runAuditedOperation({ ...baseEntry, details: { email: 'person@example.com' }, allowedDetailKeys: ['email'] }, () => {}), /detail key is not allowed/)
   assert.throws(() => store.runAuditedOperation({ ...baseEntry, details: { extra: 'value' } }, () => {}), /detail key is not allowed/)
-  for (const [key, value] of Object.entries({ password: 'password-secret', token: 'token-secret', cardNumber: '4111111111111111' })) {
-    assert.throws(() => store.runAuditedOperation({ ...baseEntry, details: { [key]: value }, allowedDetailKeys: [key] }, () => {}), /detail key is not allowed/)
+  for (const value of ['password-secret', 'token-secret', '4111111111111111', 'user@example.com']) {
+    assert.throws(() => store.runAuditedOperation({ ...baseEntry, details: { before: value } }, () => {}), /detail key is not allowed/)
   }
   assert.throws(() => createAuditStore(database, {
-    detailKeysByAction: { 'prediction.updated': ['password'] },
+    detailSchemasByAction: { 'prediction.updated': { password: { type: 'score' } } },
   }), /sensitive detail key configured/)
   assert.throws(() => store.recordOutcome(baseEntry, undefined), /failure or denied/)
   assert.equal(operationCalled, false)
@@ -170,8 +184,11 @@ test('registros são imutáveis e falha de persistência é sinalizada e registr
   assert.throws(() => database.prepare('DELETE FROM audit_records').run(), /immutable/)
 
   database.exec('DROP TABLE audit_records')
-  assert.throws(() => store.recordOutcome(baseEntry, 'failure'), /could not be persisted/)
+  requestContext.run({ correlationId: 'audit-failure-123' }, () => {
+    assert.throws(() => store.recordOutcome(baseEntry, 'failure'), /could not be persisted/)
+  })
   assert.equal(events.at(-1).component, 'audit')
   assert.equal(events.at(-1).result, 'record_failed')
+  assert.equal(events.at(-1).correlationId, 'audit-failure-123')
   database.close()
 })
