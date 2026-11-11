@@ -6,6 +6,8 @@ import {
 	timingSafeEqual,
 } from 'node:crypto'
 import { promisify } from 'node:util'
+import { createSimulatedRecoveryChannel } from '../../adapters/simulated-recovery-channel.js'
+import { createLogger } from '../../shared/logger.js'
 
 export const moduleName = 'auth-users'
 
@@ -16,6 +18,11 @@ const sessionTokenLength = 32
 const sessionDurationMs = 8 * 60 * 60 * 1000
 const scryptParameters = { N: 16384, r: 8, p: 1, maxmem: 32 * 1024 * 1024 }
 const dummySalt = Buffer.alloc(passwordSaltLength, 0xa5)
+const recoveryTokenLength = 32
+const recoveryDurationMs = 30 * 60 * 1000
+const passwordRuleMessage = 'A senha deve ter entre 8 e 128 caracteres.'
+const recoveryRequestMessage = 'Se o e-mail estiver cadastrado, enviaremos as instruções para redefinir a senha.'
+const defaultInterfaceBaseUrl = 'http://localhost:5173'
 
 export class AuthError extends Error {
 	constructor(status, type, message, fields) {
@@ -40,23 +47,30 @@ function publicUser(row) {
 	}
 }
 
+function isValidEmail(email) {
+	const atIndex = email.indexOf('@')
+	return Array.from(email).length <= 254
+		&& atIndex > 0
+		&& atIndex === email.lastIndexOf('@')
+		&& atIndex < email.length - 1
+		&& !/\s/.test(email)
+}
+
+function isValidPassword(password) {
+	const passwordLength = Array.from(password).length
+	return passwordLength >= 8 && passwordLength <= 128
+}
+
 function validateRegistration(input) {
 	const fields = {}
 	const name = typeof input?.name === 'string' ? input.name.trim() : ''
 	const email = typeof input?.email === 'string' ? input.email.trim() : ''
 	const password = typeof input?.password === 'string' ? input.password : ''
 	const nameLength = Array.from(name).length
-	const emailLength = Array.from(email).length
-	const passwordLength = Array.from(password).length
-	const atIndex = email.indexOf('@')
-	const validEmail = atIndex > 0
-		&& atIndex === email.lastIndexOf('@')
-		&& atIndex < email.length - 1
-		&& !/\s/.test(email)
 
 	if (nameLength < 1 || nameLength > 100) fields.name = 'Informe um nome com até 100 caracteres.'
-	if (emailLength > 254 || !validEmail) fields.email = 'Informe um e-mail válido com até 254 caracteres.'
-	if (passwordLength < 8 || passwordLength > 128) fields.password = 'A senha deve ter entre 8 e 128 caracteres.'
+	if (!isValidEmail(email)) fields.email = 'Informe um e-mail válido com até 254 caracteres.'
+	if (!isValidPassword(password)) fields.password = passwordRuleMessage
 
 	if (Object.keys(fields).length) {
 		throw new AuthError(400, 'validation_error', 'Confira os campos informados.', fields)
@@ -73,6 +87,10 @@ function rejectedSession() {
 	return new AuthError(401, 'session_rejected', 'Sua sessão expirou ou não é válida.')
 }
 
+function invalidRecoveryToken() {
+	return new AuthError(400, 'invalid_recovery_token', 'O link de recuperação é inválido ou expirou. Solicite um novo.')
+}
+
 function tokenHash(token) {
 	return createHash('sha256').update(token).digest('hex')
 }
@@ -85,7 +103,22 @@ function auditFailedLogin(auditStore) {
 	}, 'failure')
 }
 
-export function createAuthService(database, auditStore, { now = Date.now } = {}) {
+function auditFailedRecovery(auditStore, action, objectType) {
+	auditStore.recordOutcome({
+		actor: { type: 'anonymous' },
+		action,
+		object: { type: objectType, id: randomUUID() },
+	}, 'failure')
+}
+
+export function createAuthService(database, auditStore, {
+	now = Date.now,
+	logger = createLogger(),
+	recoveryChannel,
+	interfaceBaseUrl = process.env.APP_BASE_URL || defaultInterfaceBaseUrl,
+} = {}) {
+	let channel = recoveryChannel
+
 	async function register(input) {
 		const values = validateRegistration(input)
 		const userId = randomUUID()
@@ -222,5 +255,121 @@ export function createAuthService(database, auditStore, { now = Date.now } = {})
 		})
 	}
 
-	return { register, login, authenticate, logout }
+	async function requestPasswordRecovery(input) {
+		const email = typeof input?.email === 'string' ? input.email.trim() : ''
+		if (!isValidEmail(email)) {
+			throw new AuthError(400, 'validation_error', 'Confira os campos informados.', {
+				email: 'Informe um e-mail válido com até 254 caracteres.',
+			})
+		}
+
+		const user = database.prepare(`
+			SELECT id, email FROM users WHERE normalized_email = ? AND status = 'active'
+		`).get(normalizedEmail(email))
+
+		if (!user) {
+			auditFailedRecovery(auditStore, 'user.password_recovery_requested', 'password_recovery_request')
+			return { message: recoveryRequestMessage }
+		}
+
+		const token = randomBytes(recoveryTokenLength).toString('base64url')
+		const createdAt = now()
+		auditStore.runAuditedOperation({
+			actor: { type: 'user', id: user.id },
+			action: 'user.password_recovery_requested',
+			object: { type: 'user', id: user.id },
+		}, () => {
+			database.prepare(`
+				UPDATE password_recovery_tokens SET state = 'invalidated'
+				WHERE user_id = ? AND state = 'pending'
+			`).run(user.id)
+			database.prepare(`
+				INSERT INTO password_recovery_tokens (id, user_id, token_hash, created_at, expires_at, state)
+				VALUES (?, ?, ?, ?, ?, 'pending')
+			`).run(randomUUID(), user.id, tokenHash(token), createdAt, createdAt + recoveryDurationMs)
+		})
+
+		// A mensagem só é entregue depois de confirmada a transação (OPEN-54).
+		try {
+			channel ??= createSimulatedRecoveryChannel()
+			await channel.deliver({
+				recipient: user.email,
+				link: `${interfaceBaseUrl.replace(/\/+$/, '')}/#token=${token}`,
+				sentAt: createdAt,
+			})
+		} catch {
+			logger.error('recovery-delivery', 'delivery_failed')
+		}
+
+		return { message: recoveryRequestMessage }
+	}
+
+	async function resetPassword(input) {
+		const token = typeof input?.token === 'string' ? input.token : ''
+		const password = typeof input?.password === 'string' ? input.password : ''
+
+		// A senha é validada antes do token para que a resposta de validação
+		// não revele se o token é válido.
+		if (!isValidPassword(password)) {
+			auditFailedRecovery(auditStore, 'user.password_reset', 'password_reset_attempt')
+			throw new AuthError(400, 'validation_error', 'Confira os campos informados.', { password: passwordRuleMessage })
+		}
+
+		const row = token.length > 0 && token.length <= 200
+			? database.prepare(`
+				SELECT recovery.id, recovery.user_id
+				FROM password_recovery_tokens AS recovery
+				JOIN users ON users.id = recovery.user_id
+				WHERE recovery.token_hash = ? AND recovery.state = 'pending'
+					AND recovery.expires_at > ? AND users.status = 'active'
+			`).get(tokenHash(token), now())
+			: undefined
+
+		if (!row) {
+			auditFailedRecovery(auditStore, 'user.password_reset', 'password_reset_attempt')
+			throw invalidRecoveryToken()
+		}
+
+		const salt = randomBytes(passwordSaltLength)
+		const passwordHash = await scrypt(password, salt, passwordKeyLength, scryptParameters)
+
+		auditStore.runAuditedOperation({
+			actor: { type: 'user', id: row.user_id },
+			action: 'user.password_reset',
+			object: { type: 'user', id: row.user_id },
+		}, () => {
+			const changedAt = now()
+			const claimed = database.prepare(`
+				UPDATE password_recovery_tokens SET state = 'used'
+				WHERE id = ? AND state = 'pending' AND expires_at > ?
+			`).run(row.id, changedAt)
+			if (claimed.changes !== 1) throw invalidRecoveryToken()
+
+			database.prepare(`
+				UPDATE user_credentials
+				SET password_salt = ?, password_hash = ?, scrypt_n = ?, scrypt_r = ?, scrypt_p = ?, key_length = ?
+				WHERE user_id = ?
+			`).run(
+				salt.toString('hex'),
+				passwordHash.toString('hex'),
+				scryptParameters.N,
+				scryptParameters.r,
+				scryptParameters.p,
+				passwordKeyLength,
+				row.user_id,
+			)
+			database.prepare(`
+				UPDATE password_recovery_tokens SET state = 'invalidated'
+				WHERE user_id = ? AND state = 'pending'
+			`).run(row.user_id)
+			database.prepare(`
+				UPDATE auth_sessions SET revoked_at = ?
+				WHERE user_id = ? AND revoked_at IS NULL
+			`).run(changedAt, row.user_id)
+		})
+
+		return { message: 'Senha redefinida. Faça login com a nova senha.' }
+	}
+
+	return { register, login, authenticate, logout, requestPasswordRecovery, resetPassword }
 }
