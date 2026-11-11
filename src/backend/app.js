@@ -25,10 +25,15 @@ export function createAuthenticationMiddleware(authService) {
   }
 }
 
-export function createApp(database, { logger = createLogger(), now = Date.now } = {}) {
+export function createApp(database, { logger = createLogger(), now = Date.now, recoveryChannel, interfaceBaseUrl } = {}) {
   const app = express()
   const auditStore = createAuditStore(database, { logger })
-  const authService = createAuthService(database, auditStore, { now })
+  const authService = createAuthService(database, auditStore, {
+    now,
+    logger,
+    ...(recoveryChannel ? { recoveryChannel } : {}),
+    ...(interfaceBaseUrl ? { interfaceBaseUrl } : {}),
+  })
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -56,6 +61,22 @@ export function createApp(database, { logger = createLogger(), now = Date.now } 
   app.post('/auth/login', async (request, response, next) => {
     try {
       response.status(200).json(await authService.login(request.body))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/auth/password-recovery', async (request, response, next) => {
+    try {
+      response.status(200).json(await authService.requestPasswordRecovery(request.body))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/auth/password-reset', async (request, response, next) => {
+    try {
+      response.status(200).json(await authService.resetPassword(request.body))
     } catch (error) {
       next(error)
     }
