@@ -8,6 +8,8 @@ import {
 import { promisify } from 'node:util'
 import { createSimulatedRecoveryChannel } from '../../adapters/simulated-recovery-channel.js'
 import { createLogger } from '../../shared/logger.js'
+import { AuthError } from './errors.js'
+import { isValidName, nameRuleMessage } from './validation.js'
 
 export const moduleName = 'auth-users'
 
@@ -24,14 +26,10 @@ const passwordRuleMessage = 'A senha deve ter entre 8 e 128 caracteres.'
 const recoveryRequestMessage = 'Se o e-mail estiver cadastrado, enviaremos as instruções para redefinir a senha.'
 const defaultInterfaceBaseUrl = 'http://localhost:5173'
 
-export class AuthError extends Error {
-	constructor(status, type, message, fields) {
-		super(message)
-		this.status = status
-		this.type = type
-		this.fields = fields
-	}
-}
+export { AuthError }
+
+export { getPlan, listPlans, planStatus, simultaneousPoolLimit } from './plan-catalog.js'
+export { createProfileService } from './profile.js'
 
 function normalizedEmail(email) {
 	return email.trim().toLowerCase()
@@ -66,9 +64,8 @@ function validateRegistration(input) {
 	const name = typeof input?.name === 'string' ? input.name.trim() : ''
 	const email = typeof input?.email === 'string' ? input.email.trim() : ''
 	const password = typeof input?.password === 'string' ? input.password : ''
-	const nameLength = Array.from(name).length
 
-	if (nameLength < 1 || nameLength > 100) fields.name = 'Informe um nome com até 100 caracteres.'
+	if (!isValidName(name)) fields.name = nameRuleMessage
 	if (!isValidEmail(email)) fields.email = 'Informe um e-mail válido com até 254 caracteres.'
 	if (!isValidPassword(password)) fields.password = passwordRuleMessage
 

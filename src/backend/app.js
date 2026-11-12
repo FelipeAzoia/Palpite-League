@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import express from 'express'
-import { createAuthService, AuthError } from './modules/auth-users/index.js'
+import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore } from './modules/notifications-audit/index.js'
 import { createLogger } from './shared/logger.js'
 import { requestContext } from './shared/request-context.js'
@@ -34,6 +34,7 @@ export function createApp(database, { logger = createLogger(), now = Date.now, r
     ...(recoveryChannel ? { recoveryChannel } : {}),
     ...(interfaceBaseUrl ? { interfaceBaseUrl } : {}),
   })
+  const profileService = createProfileService(database)
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -90,6 +91,38 @@ export function createApp(database, { logger = createLogger(), now = Date.now, r
     try {
       authService.logout(request.sessionToken)
       response.json({ message: 'Sessão encerrada.' })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/account/profile', authenticateRequest, (request, response, next) => {
+    try {
+      response.json({ profile: profileService.getProfile(request.authenticatedUser.id) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.patch('/account/profile', authenticateRequest, (request, response, next) => {
+    try {
+      response.json({ profile: profileService.updateName(request.authenticatedUser.id, request.body) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/account/plan', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(profileService.getAccountPlan(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/account/plans', authenticateRequest, (_request, response, next) => {
+    try {
+      response.json(profileService.listAvailablePlans())
     } catch (error) {
       next(error)
     }
