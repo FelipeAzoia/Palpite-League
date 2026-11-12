@@ -1,6 +1,6 @@
 # SPEC-006 — Consulta de times, rodadas e partidas via adaptador esportivo
 
-- **Status:** aprovada. As propostas OPEN-58 a OPEN-60 foram aprovadas e incorporadas; liberada para implementação após as SPEC-001 e SPEC-003. A integração real depende da prova técnica da OPEN-01.
+- **Status:** implementação entregue para validação. As propostas OPEN-58 a OPEN-60 foram aprovadas e incorporadas; a integração real (CA-22/TC-20) permanece bloqueada até a prova técnica e aprovação da equipe (OPEN-01).
 - **Tipo:** Spec funcional com integração externa isolada.
 - **Baseline:** artefatos de `docs/` (incluindo ADR-0002, ADR-0006 e ADR-0008), `docs/specs/mapa-de-specs.md`, `docs/specs/proposta-resolucao-questoes-em-aberto.md` e SPEC-001 a SPEC-005.
 - **Escopo deste documento:** somente a SPEC-006. Nenhum código, tabela ou endpoint.

@@ -8,11 +8,13 @@ import {
   updateProfileName,
 } from './account-api.js'
 import { describeFeatures, planStatusLabel } from './plan-features.js'
+import MatchCatalog from './MatchCatalog.jsx'
 
 const areas = [
   { id: 'home', label: 'Início' },
   { id: 'profile', label: 'Perfil' },
   { id: 'plan', label: 'Plano' },
+  { id: 'matches', label: 'Partidas' },
 ]
 
 function FeatureList({ features }) {
@@ -234,6 +236,10 @@ export default function AccountPanel({ token, user, pending, onLogout, onSession
           onLogout={onLogout}
           onSessionRejected={onSessionRejected}
         />
+      )}
+
+      {area === 'matches' && (
+        <MatchCatalog token={token} onSessionRejected={onSessionRejected} />
       )}
     </div>
   )

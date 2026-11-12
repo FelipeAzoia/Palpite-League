@@ -63,6 +63,10 @@ npm run dev:server
 
 A API responde em `http://localhost:3000/api/health`. O banco SQLite local é criado em `data/palpite-league.db` e não é versionado.
 
+O catálogo esportivo usa o provedor simulado por padrão. Os parâmetros `SPORTS_CATALOG_SOURCE`, `SPORTS_SEASON`, `SPORTS_PROVIDER_TIMEOUT_MS` e `SPORTS_CATALOG_TTL_MS` estão no `.env.example`; a janela padrão é de seis horas e o tempo limite, de dez segundos. A integração API-Football requer `API_FOOTBALL_API_KEY` e `SPORTS_API_FOOTBALL_PROOF_APPROVED=true`, após a aprovação da prova técnica da equipe. Sem ela, o adaptador real permanece bloqueado.
+
+Com uma sessão autenticada, o catálogo pode ser consultado em `GET /catalog/rounds` e `GET /catalog/rounds/:roundNumber/matches`; a segunda rota aceita o filtro opcional `?status=scheduled|in_progress|finished|postponed|cancelled`.
+
 Para executar os testes técnicos:
 
 ```bash

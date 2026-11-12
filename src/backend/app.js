@@ -2,6 +2,11 @@ import { randomUUID } from 'node:crypto'
 import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore } from './modules/notifications-audit/index.js'
+import { createSportsCatalogService } from './modules/matches-results/index.js'
+import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
+import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
+import { SportsProviderError } from './modules/matches-results/sports-provider.js'
+import { AppError } from './shared/app-error.js'
 import { createLogger } from './shared/logger.js'
 import { requestContext } from './shared/request-context.js'
 
@@ -25,7 +30,35 @@ export function createAuthenticationMiddleware(authService) {
   }
 }
 
-export function createApp(database, { logger = createLogger(), now = Date.now, recoveryChannel, interfaceBaseUrl } = {}) {
+function configuredSportsProvider() {
+  const source = process.env.SPORTS_CATALOG_SOURCE || 'simulated'
+  if (source === 'simulated') return createSimulatedSportsProvider()
+  if (source === 'api-football') {
+    if (process.env.SPORTS_API_FOOTBALL_PROOF_APPROVED !== 'true') {
+      return {
+        source: 'api-football',
+        async fetchCatalog() {
+          throw new SportsProviderError('proof_pending')
+        },
+      }
+    }
+    return createApiFootballSportsProvider({
+      apiKey: process.env.API_FOOTBALL_API_KEY || '',
+      timeoutMs: Number(process.env.SPORTS_PROVIDER_TIMEOUT_MS || 10000),
+    })
+  }
+  throw new Error('Unsupported sports catalog source')
+}
+
+export function createApp(database, {
+  logger = createLogger(),
+  now = Date.now,
+  recoveryChannel,
+  interfaceBaseUrl,
+  sportsProvider = configuredSportsProvider(),
+  sportsSeason = Number(process.env.SPORTS_SEASON || 2026),
+  sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
+} = {}) {
   const app = express()
   const auditStore = createAuditStore(database, { logger })
   const authService = createAuthService(database, auditStore, {
@@ -35,6 +68,12 @@ export function createApp(database, { logger = createLogger(), now = Date.now, r
     ...(interfaceBaseUrl ? { interfaceBaseUrl } : {}),
   })
   const profileService = createProfileService(database)
+  const sportsCatalogService = createSportsCatalogService(database, sportsProvider, {
+    logger,
+    now,
+    season: sportsSeason,
+    ttlMs: sportsCatalogTtlMs,
+  })
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -128,6 +167,25 @@ export function createApp(database, { logger = createLogger(), now = Date.now, r
     }
   })
 
+  app.get('/catalog/rounds', authenticateRequest, async (_request, response, next) => {
+    try {
+      response.json(await sportsCatalogService.listRounds())
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/catalog/rounds/:roundNumber/matches', authenticateRequest, async (request, response, next) => {
+    try {
+      response.json(await sportsCatalogService.listMatches(
+        request.params.roundNumber,
+        request.query.status,
+      ))
+    } catch (error) {
+      next(error)
+    }
+  })
+
   app.get('/health', (_request, response) => {
     try {
       database.prepare('SELECT 1').get()
@@ -144,7 +202,7 @@ export function createApp(database, { logger = createLogger(), now = Date.now, r
   })
 
   app.use((error, _request, response, _next) => {
-    const isKnownError = error instanceof AuthError
+    const isKnownError = error instanceof AppError
     const isInvalidJson = error.type === 'entity.parse.failed'
     const status = isKnownError ? error.status : isInvalidJson ? 400 : 500
     const type = isKnownError ? error.type : isInvalidJson ? 'invalid_request' : 'internal_error'
