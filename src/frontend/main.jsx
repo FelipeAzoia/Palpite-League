@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Activity, ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
+import { Activity, ArrowRight, LoaderCircle } from 'lucide-react'
+import AccountPanel from './src/AccountPanel.jsx'
 import { requestAuth } from './src/auth-api.js'
 import { consumeRecoveryToken } from './src/recovery-link.js'
 import './styles.css'
@@ -120,6 +121,13 @@ function App() {
     }
   }
 
+  function rejectSession() {
+    sessionStorage.removeItem(tokenKey)
+    setUser(null)
+    setMessage('Sua sessão terminou. Entre novamente.')
+    setView('login')
+  }
+
   function changeView(nextView) {
     setMessage('')
     setFieldErrors({})
@@ -154,16 +162,14 @@ function App() {
 
         <section className="auth-panel" aria-labelledby="auth-title">
           {view === 'authenticated' ? (
-            <div className="authenticated-view">
-              <p className="eyebrow">ACESSO CONFIRMADO</p>
-              <h2 id="auth-title">Olá, {user?.name}.</h2>
-              <p className="form-copy">Sua conta está pronta para a próxima rodada.</p>
-              <button className="primary-button" type="button" onClick={logout} disabled={pending}>
-                <span>{pending ? 'Saindo...' : 'Sair da conta'}</span>
-                {pending ? <LoaderCircle size={17} className="spin" /> : <LogOut size={17} />}
-              </button>
-              <p className="plan-note">Plano {user?.plan === 'free' ? 'Gratuito' : user?.plan}</p>
-            </div>
+            <AccountPanel
+              token={sessionStorage.getItem(tokenKey)}
+              user={user}
+              pending={pending}
+              onLogout={logout}
+              onSessionRejected={rejectSession}
+              onUserChange={setUser}
+            />
           ) : (
             <>
               <p className="eyebrow">{copy.eyebrow}</p>

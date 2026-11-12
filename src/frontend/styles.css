@@ -115,6 +115,21 @@ a { color: inherit; text-decoration: none; }
 .mode-switch button { padding: 2px 0; border: 0; color: #385e43; background: transparent; font-size: 11px; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
 .mode-switch button:hover { color: #1b3927; }
 .authenticated-view .form-copy { margin-bottom: 27px; }
+.area-nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 24px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.area-nav button { padding: 7px 11px; border: 1px solid transparent; border-radius: 5px; color: #55655a; background: transparent; font-size: 12px; font-weight: 700; }
+.area-nav button[aria-current='page'] { border-color: #ccd7cd; color: var(--forest); background: #fff; }
+.info-list { margin: 0 0 22px; border-top: 1px solid var(--line); }
+.info-list div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.info-list dt { color: var(--muted); }
+.info-list dd { margin: 0; font-weight: 650; overflow-wrap: anywhere; }
+.plan-card { margin: 0 0 14px; padding: 16px; border: 1px solid #ccd7cd; border-radius: 6px; background: #fff; }
+.plan-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 8px; }
+.plan-card h3 { margin: 0; font-family: Georgia, serif; font-size: 20px; font-weight: 400; }
+.plan-tag { padding: 2px 9px; border-radius: 99px; color: var(--forest); background: #e4edc6; font-size: 10px; font-weight: 750; }
+.feature-list { margin: 0; padding: 0; list-style: none; }
+.feature-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.4; }
+.feature-list strong { color: var(--forest); }
+.section-title { margin: 24px 0 10px; color: #87958a; font-family: inherit; font-size: 10px; font-weight: 750; letter-spacing: 1px; }
 .plan-note { margin: 20px 0 0; color: #7d8b7f; font-size: 11px; }
 .auth-footer { border-top: 1px solid #d6dfd7; color: #859188; font-size: 9px; }
 .auth-footer span:first-child { font-weight: 750; letter-spacing: 1px; }
