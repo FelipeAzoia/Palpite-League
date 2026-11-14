@@ -21,6 +21,7 @@ export async function requestAuth(path, { method = 'GET', body, token, fetcher =
     error.status = response.status
     error.type = payload.type
     error.fields = payload.fields ?? {}
+    error.details = payload.details
     throw error
   }
 

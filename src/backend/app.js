@@ -3,6 +3,7 @@ import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore } from './modules/notifications-audit/index.js'
 import { createSportsCatalogService } from './modules/matches-results/index.js'
+import { createPoolsService } from './modules/pools-participations/index.js'
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { SportsProviderError } from './modules/matches-results/sports-provider.js'
@@ -74,6 +75,7 @@ export function createApp(database, {
     season: sportsSeason,
     ttlMs: sportsCatalogTtlMs,
   })
+  const poolsService = createPoolsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -186,6 +188,38 @@ export function createApp(database, {
     }
   })
 
+  app.get('/pools/creation-availability', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(poolsService.getCreationAvailability(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools', authenticateRequest, async (request, response, next) => {
+    try {
+      response.status(201).json(await poolsService.createPool(request.authenticatedUser.id, request.body))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/pools', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(poolsService.listPools(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/pools/:poolId', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(poolsService.getPoolRules(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
   app.get('/health', (_request, response) => {
     try {
       database.prepare('SELECT 1').get()
@@ -214,6 +248,7 @@ export function createApp(database, {
       type,
       message,
       ...(isKnownError && error.fields ? { fields: error.fields } : {}),
+      ...(isKnownError && error.details ? { details: error.details } : {}),
       correlationId: requestContext.getStore()?.correlationId ?? null,
     })
   })

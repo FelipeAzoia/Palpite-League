@@ -24,7 +24,13 @@ function formatPeriod(round) {
   return `${formatter.format(new Date(`${round.startsOn}T12:00:00Z`))} – ${formatter.format(new Date(`${round.endsOn}T12:00:00Z`))}`
 }
 
-export default function MatchCatalog({ token, onSessionRejected }) {
+function isSelectable(match) {
+  return match.status === 'scheduled' && Boolean(match.startsAt) && Date.parse(match.startsAt) > Date.now()
+}
+
+// Sem `selection`, é a consulta da SPEC-006. Com `selection`, o mesmo componente apoia a escolha
+// de partidas na criação do bolão (SPEC-007): a validação definitiva é do backend.
+export default function MatchCatalog({ token, onSessionRejected, selection }) {
   const [catalog, setCatalog] = useState(null)
   const [selectedRound, setSelectedRound] = useState('')
   const [matches, setMatches] = useState([])
@@ -95,9 +101,13 @@ export default function MatchCatalog({ token, onSessionRejected }) {
 
   return (
     <>
-      <p className="eyebrow">CATÁLOGO ESPORTIVO</p>
-      <h2 id="auth-title">Rodadas e partidas</h2>
-      <p className="form-copy">Consulte as partidas disponíveis na temporada.</p>
+      {!selection && (
+        <>
+          <p className="eyebrow">CATÁLOGO ESPORTIVO</p>
+          <h2 id="auth-title">Rodadas e partidas</h2>
+          <p className="form-copy">Consulte as partidas disponíveis na temporada.</p>
+        </>
+      )}
 
       {catalog?.source === 'simulated' && (
         <p className="catalog-notice" role="status">Dados simulados para desenvolvimento e testes.</p>
@@ -140,10 +150,21 @@ export default function MatchCatalog({ token, onSessionRejected }) {
           {catalog.lastUpdatedAt && (
             <p className="catalog-updated">Última atualização: {dateFormatter.format(new Date(catalog.lastUpdatedAt))}</p>
           )}
+          {selection && selectedRound && (
+            <label className="check-field">
+              <input
+                type="checkbox"
+                disabled={loading}
+                checked={selection.roundNumbers.includes(Number(selectedRound))}
+                onChange={() => selection.onToggleRound(Number(selectedRound))}
+              />
+              <span>Incluir todas as partidas elegíveis desta rodada</span>
+            </label>
+          )}
           <div className="match-list" aria-live="polite">
             {!loading && matches.length === 0 && <p className="form-copy">Nenhuma partida encontrada para este filtro.</p>}
             {matches.map((match, index) => (
-              <article className="match-card" key={`${selectedRound}-${match.home.name}-${match.away.name}-${index}`}>
+              <article className="match-card" key={match.id ?? `${selectedRound}-${match.home.name}-${match.away.name}-${index}`}>
                 <div className="match-teams">
                   <span>{match.home.name}</span>
                   <strong aria-hidden="true">×</strong>
@@ -153,6 +174,21 @@ export default function MatchCatalog({ token, onSessionRejected }) {
                   <span><CalendarDays size={14} /> {match.startsAt ? dateFormatter.format(new Date(match.startsAt)) : 'Data a definir'}</span>
                   <span className={`match-status status-${match.status}`}>{statusLabels[match.status]}</span>
                 </div>
+                {selection && (() => {
+                  const roundIncluded = selection.roundNumbers.includes(Number(selectedRound))
+                  const selectable = isSelectable(match)
+                  return (
+                    <label className="check-field match-pick">
+                      <input
+                        type="checkbox"
+                        disabled={loading || !selectable || roundIncluded}
+                        checked={selection.matchIds.includes(match.id) || (roundIncluded && selectable)}
+                        onChange={() => selection.onToggleMatch(match.id)}
+                      />
+                      <span>{selectable ? 'Incluir esta partida' : 'Indisponível para seleção'}</span>
+                    </label>
+                  )
+                })()}
               </article>
             ))}
           </div>
