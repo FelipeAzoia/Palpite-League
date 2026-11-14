@@ -330,7 +330,7 @@ export function createSportsCatalogService(database, provider, {
     }
 
     const matches = database.prepare(`
-      SELECT home.name AS home_name, home.crest AS home_crest,
+      SELECT m.id, home.name AS home_name, home.crest AS home_crest,
         away.name AS away_name, away.crest AS away_crest,
         m.starts_at, m.status
       FROM sports_matches m
@@ -339,6 +339,7 @@ export function createSportsCatalogService(database, provider, {
       WHERE m.round_id = ? AND (? IS NULL OR m.status = ?)
       ORDER BY m.starts_at IS NULL, m.starts_at, m.id
     `).all(round.id, status ?? null, status ?? null).map((match) => ({
+      id: match.id,
       home: { name: match.home_name, crest: match.home_crest },
       away: { name: match.away_name, crest: match.away_crest },
       startsAt: match.starts_at,
@@ -348,5 +349,57 @@ export function createSportsCatalogService(database, provider, {
     return { round: { number: round.number }, matches, ...metadataView(database) }
   }
 
-  return { listRounds, listMatches }
+  async function ensureCatalogAvailable() {
+    await ensureFresh()
+    requireCatalog()
+  }
+
+  function toMatchRow(row) {
+    return { id: row.id, roundNumber: row.round_number, startsAt: row.starts_at, status: row.status }
+  }
+
+  // Leitura para a seleção de partidas de bolões (SPEC-007).
+  function findMatchesByIds(ids) {
+    if (ids.length === 0) return []
+    return database.prepare(`
+      SELECT m.id, r.number AS round_number, m.starts_at, m.status
+      FROM sports_matches m JOIN sports_rounds r ON r.id = m.round_id
+      WHERE m.id IN (${ids.map(() => '?').join(',')})
+    `).all(...ids).map(toMatchRow)
+  }
+
+  function findRoundMatches(roundNumber) {
+    const round = database.prepare('SELECT id, number FROM sports_rounds WHERE number = ?').get(roundNumber)
+    if (!round) return null
+    return database.prepare(`
+      SELECT m.id, r.number AS round_number, m.starts_at, m.status
+      FROM sports_matches m JOIN sports_rounds r ON r.id = m.round_id
+      WHERE m.round_id = ?
+    `).all(round.id).map(toMatchRow)
+  }
+
+  function describeMatches(ids) {
+    if (ids.length === 0) return []
+    return database.prepare(`
+      SELECT m.id, r.number AS round_number,
+        home.name AS home_name, home.crest AS home_crest,
+        away.name AS away_name, away.crest AS away_crest,
+        m.starts_at, m.status
+      FROM sports_matches m
+      JOIN sports_rounds r ON r.id = m.round_id
+      JOIN sports_teams home ON home.id = m.home_team_id
+      JOIN sports_teams away ON away.id = m.away_team_id
+      WHERE m.id IN (${ids.map(() => '?').join(',')})
+      ORDER BY m.starts_at IS NULL, m.starts_at, m.id
+    `).all(...ids).map((match) => ({
+      id: match.id,
+      roundNumber: match.round_number,
+      home: { name: match.home_name, crest: match.home_crest },
+      away: { name: match.away_name, crest: match.away_crest },
+      startsAt: match.starts_at,
+      status: match.status,
+    }))
+  }
+
+  return { listRounds, listMatches, ensureCatalogAvailable, findMatchesByIds, findRoundMatches, describeMatches }
 }

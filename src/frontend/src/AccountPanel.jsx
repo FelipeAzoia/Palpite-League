@@ -9,12 +9,14 @@ import {
 } from './account-api.js'
 import { describeFeatures, planStatusLabel } from './plan-features.js'
 import MatchCatalog from './MatchCatalog.jsx'
+import PoolsPanel from './PoolsPanel.jsx'
 
 const areas = [
   { id: 'home', label: 'Início' },
   { id: 'profile', label: 'Perfil' },
   { id: 'plan', label: 'Plano' },
   { id: 'matches', label: 'Partidas' },
+  { id: 'pools', label: 'Bolões' },
 ]
 
 function FeatureList({ features }) {
@@ -240,6 +242,10 @@ export default function AccountPanel({ token, user, pending, onLogout, onSession
 
       {area === 'matches' && (
         <MatchCatalog token={token} onSessionRejected={onSessionRejected} />
+      )}
+
+      {area === 'pools' && (
+        <PoolsPanel token={token} onSessionRejected={onSessionRejected} />
       )}
     </div>
   )
