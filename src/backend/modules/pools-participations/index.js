@@ -4,6 +4,7 @@ import { saoPauloDate } from '../../shared/sao-paulo-date.js'
 import { getPlan, simultaneousPoolLimit } from '../auth-users/index.js'
 
 export const moduleName = 'pools-participations'
+export { createInvitesService } from './invites.js'
 
 export const prizeModels = Object.freeze(['winner_takes_all'])
 export const tiebreakers = Object.freeze(['exact_scores', 'correct_results', 'last_round_points'])

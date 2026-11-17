@@ -3,7 +3,7 @@ import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore } from './modules/notifications-audit/index.js'
 import { createSportsCatalogService } from './modules/matches-results/index.js'
-import { createPoolsService } from './modules/pools-participations/index.js'
+import { createInvitesService, createPoolsService } from './modules/pools-participations/index.js'
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { SportsProviderError } from './modules/matches-results/sports-provider.js'
@@ -76,6 +76,11 @@ export function createApp(database, {
     ttlMs: sportsCatalogTtlMs,
   })
   const poolsService = createPoolsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
+  const invitesService = createInvitesService(database, {
+    auditStore,
+    now,
+    ...(interfaceBaseUrl ? { interfaceBaseUrl } : {}),
+  })
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -215,6 +220,30 @@ export function createApp(database, {
   app.get('/pools/:poolId', authenticateRequest, (request, response, next) => {
     try {
       response.json(poolsService.getPoolRules(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/invites', authenticateRequest, (request, response, next) => {
+    try {
+      response.status(201).json(invitesService.createInvite(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/pools/:poolId/invites', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(invitesService.listInvites(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.delete('/pools/:poolId/invites/:inviteId', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(invitesService.revokeInvite(request.authenticatedUser.id, request.params.poolId, request.params.inviteId))
     } catch (error) {
       next(error)
     }

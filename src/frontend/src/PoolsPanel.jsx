@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, CalendarDays, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
+import InvitesSection from './InvitesSection.jsx'
+import { canManageInvites } from './invites-view.js'
 import MatchCatalog from './MatchCatalog.jsx'
 import { createPool, fetchCreationAvailability, fetchPoolRules, fetchPools } from './pools-api.js'
 import {
@@ -292,6 +294,10 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
           <ul className="rule-list">
             {rules.participationConditions.map((condition) => <li key={condition}>{condition}</li>)}
           </ul>
+
+          {canManageInvites(rules.requesterRole) && (
+            <InvitesSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
+          )}
 
           <h3 className="section-title">PARTIDAS ({pool.matches.length})</h3>
           <div className="match-list">
