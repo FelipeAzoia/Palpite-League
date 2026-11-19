@@ -28,7 +28,8 @@ export async function withHttpApp(callback, appOptions = {}) {
   const logger = createLogger((event) => events.push(event))
   const clock = { current: startOfTests }
   const now = () => clock.current
-  const server = createServer(createApp(database, { logger, now, interfaceBaseUrl: baseUrl, ...appOptions }))
+  const app = createApp(database, { logger, now, interfaceBaseUrl: baseUrl, ...appOptions })
+  const server = createServer(app)
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
   const origin = `http://127.0.0.1:${server.address().port}`
   const responses = []
@@ -120,7 +121,7 @@ export async function withHttpApp(callback, appOptions = {}) {
   try {
     await callback({
       call, signUp, createPool, inviteCode, requestEntry, joinPool, startMatch, participation,
-      database, events, responses, clock, auditStore, logger,
+      database, events, responses, clock, auditStore, logger, app,
     })
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))

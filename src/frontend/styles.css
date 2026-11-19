@@ -217,6 +217,10 @@ a { color: inherit; text-decoration: none; }
 .score-row .field span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-tag.prediction-situation-closed, .plan-tag.prediction-situation-unavailable { color: #55655a; background: #e7ece7; }
 .plan-tag.prediction-situation-late_entry { color: #8a3f31; background: #f3dfd9; }
+/* SPEC-013 — resultados */
+.pool-actions { display: grid; gap: 10px; margin-bottom: 4px; }
+.pool-actions .small-button { min-height: 40px; }
+.result-score { min-width: 44px; color: var(--forest) !important; font-size: 13px !important; text-align: center; white-space: nowrap; }
 .auth-loading { display: grid; min-height: 100vh; place-items: center; color: var(--forest); }
 .auth-loading svg, .spin { animation: spin 1s linear infinite; }
 

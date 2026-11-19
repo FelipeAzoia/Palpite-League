@@ -75,38 +75,64 @@ export function createApiFootballSportsProvider({
 } = {}) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError('Sports provider timeout must be positive')
 
+  async function requestFixtures(season) {
+    if (!apiKey) throw new SportsProviderError('response_error')
+
+    const url = new URL('/fixtures', baseUrl)
+    url.searchParams.set('league', String(brasileiraoLeagueId))
+    url.searchParams.set('season', String(season))
+
+    let response
+    try {
+      response = await fetcher(url, {
+        headers: { 'x-apisports-key': apiKey },
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+    } catch (error) {
+      throw new SportsProviderError(error?.name === 'TimeoutError' || error?.name === 'AbortError'
+        ? 'timeout'
+        : 'response_error')
+    }
+
+    if (!response.ok) throw new SportsProviderError('response_error')
+    let body
+    try {
+      body = await response.json()
+    } catch {
+      throw new SportsProviderError('invalid_response')
+    }
+    if (Array.isArray(body?.errors) && body.errors.length > 0) {
+      throw new SportsProviderError('response_error')
+    }
+    return body
+  }
+
   return {
     source: 'api-football',
     async fetchCatalog(season) {
-      if (!apiKey) throw new SportsProviderError('response_error')
-
-      const url = new URL('/fixtures', baseUrl)
-      url.searchParams.set('league', String(brasileiraoLeagueId))
-      url.searchParams.set('season', String(season))
-
-      let response
-      try {
-        response = await fetcher(url, {
-          headers: { 'x-apisports-key': apiKey },
-          signal: AbortSignal.timeout(timeoutMs),
-        })
-      } catch (error) {
-        throw new SportsProviderError(error?.name === 'TimeoutError' || error?.name === 'AbortError'
-          ? 'timeout'
-          : 'response_error')
+      return parseResponse(await requestFixtures(season))
+    },
+    // Porta de resultados (SPEC-013). Status desconhecido vira null: o domínio decide se o item
+    // é de partida acompanhada (rejeita a resposta) ou não (ignora), conforme a OPEN-75.
+    async fetchResults(season) {
+      const body = await requestFixtures(season)
+      if (!body || !Array.isArray(body.response)) throw new SportsProviderError('invalid_response')
+      return {
+        matches: body.response.map((fixture) => {
+          let status
+          try {
+            status = mapStatus(fixture?.fixture?.status?.short)
+          } catch {
+            status = null
+          }
+          return {
+            id: fixture?.fixture?.id === undefined || fixture?.fixture?.id === null ? null : String(fixture.fixture.id),
+            status,
+            homeScore: status === 'finished' ? fixture?.goals?.home ?? null : null,
+            awayScore: status === 'finished' ? fixture?.goals?.away ?? null : null,
+          }
+        }),
       }
-
-      if (!response.ok) throw new SportsProviderError('response_error')
-      let body
-      try {
-        body = await response.json()
-      } catch {
-        throw new SportsProviderError('invalid_response')
-      }
-      if (Array.isArray(body?.errors) && body.errors.length > 0) {
-        throw new SportsProviderError('response_error')
-      }
-      return parseResponse(body)
     },
   }
 }
