@@ -5,6 +5,7 @@ import InvitesSection from './InvitesSection.jsx'
 import { canManageInvites } from './invites-view.js'
 import MatchCatalog from './MatchCatalog.jsx'
 import ParticipantsSection from './ParticipantsSection.jsx'
+import PredictionsPage from './PredictionsPage.jsx'
 import RequestsSection from './RequestsSection.jsx'
 import { createPool, fetchCreationAvailability, fetchPoolRules, fetchPools } from './pools-api.js'
 import {
@@ -256,7 +257,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
   )
 }
 
-function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
+function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict }) {
   const [rules, setRules] = useState(null)
   const [error, setError] = useState('')
   // Incrementado a cada decisão de entrada, para recarregar a lista de participantes.
@@ -298,6 +299,11 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
             <div><dt>Desempate</dt><dd>{tiebreakerLabels[pool.tiebreaker] ?? pool.tiebreaker}</dd></div>
             <div><dt>Resultados ao vivo</dt><dd>{pool.liveResults ? 'Sim' : 'Não'}</dd></div>
           </dl>
+
+          <button className="primary-button" type="button" onClick={onPredict}>
+            <span>Fazer palpites</span>
+            <ArrowRight size={17} />
+          </button>
 
           <h3 className="section-title">CONDIÇÕES DE PARTICIPAÇÃO</h3>
           <ul className="rule-list">
@@ -348,7 +354,7 @@ export default function PoolsPanel({ token, onSessionRejected }) {
 
   // A chave muda a cada página interna e reinicia a animação de transição.
   return (
-    <div className="page-enter" key={view.name === 'rules' ? `rules-${view.poolId}` : view.name}>
+    <div className="page-enter" key={view.poolId ? `${view.name}-${view.poolId}` : view.name}>
       <PoolsPage view={view} setView={setView} token={token} onSessionRejected={onSessionRejected} />
     </div>
   )
@@ -381,6 +387,18 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
         notice={view.notice}
         onSessionRejected={onSessionRejected}
         onBack={() => setView({ name: 'list' })}
+        onPredict={() => setView({ name: 'predictions', poolId: view.poolId })}
+      />
+    )
+  }
+
+  if (view.name === 'predictions') {
+    return (
+      <PredictionsPage
+        token={token}
+        poolId={view.poolId}
+        onSessionRejected={onSessionRejected}
+        onBack={() => setView({ name: 'rules', poolId: view.poolId })}
       />
     )
   }
