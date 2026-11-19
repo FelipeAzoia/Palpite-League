@@ -4,6 +4,7 @@ import { isSessionRejected } from './account-api.js'
 import InvitesSection from './InvitesSection.jsx'
 import { canManageInvites } from './invites-view.js'
 import MatchCatalog from './MatchCatalog.jsx'
+import RequestsSection from './RequestsSection.jsx'
 import { createPool, fetchCreationAvailability, fetchPoolRules, fetchPools } from './pools-api.js'
 import {
   buildPoolRequest,
@@ -296,7 +297,10 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
           </ul>
 
           {canManageInvites(rules.requesterRole) && (
-            <InvitesSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
+            <>
+              <RequestsSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
+              <InvitesSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
+            </>
           )}
 
           <h3 className="section-title">PARTIDAS ({pool.matches.length})</h3>

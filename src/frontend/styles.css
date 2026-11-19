@@ -192,6 +192,7 @@ a { color: inherit; text-decoration: none; }
 .invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .small-button { padding: 7px 11px; border: 1px solid #ccd7cd; border-radius: 5px; color: var(--forest); background: #fff; font-size: 11px; font-weight: 700; }
 .small-button.danger { border-color: #e0b9ae; color: #a34f3c; }
+.request-name { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
 .small-button:disabled { opacity: 0.6; }
 .invite-list { display: grid; gap: 8px; margin: 14px 0 20px; padding: 0; list-style: none; }
 .invite-item { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid #ccd7cd; border-radius: 6px; background: #fff; }

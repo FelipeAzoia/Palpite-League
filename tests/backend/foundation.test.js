@@ -166,7 +166,7 @@ test('os sete módulos e a configuração local da fundação existem', () => {
   assert.ok(fs.existsSync(new URL('../../src/backend/migrations', import.meta.url)))
   assert.equal(defaultDatabasePath, path.join(fileURLToPath(new URL('../..', import.meta.url)), 'data', 'palpite-league.db'))
   assert.match(fs.readFileSync(new URL('../../.gitignore', import.meta.url), 'utf8'), /^\.env$/m)
-  const example = fs.readFileSync(new URL('../../.env.example', import.meta.url), 'utf8').trim().split('\n')
+  const example = fs.readFileSync(new URL('../../.env.example', import.meta.url), 'utf8').trim().split(/\r?\n/)
   assert.ok(example.length > 0 && example.every((line) => /^[A-Z_]+=$/.test(line)))
 })
 
