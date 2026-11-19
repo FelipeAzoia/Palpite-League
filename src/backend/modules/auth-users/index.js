@@ -35,16 +35,6 @@ function normalizedEmail(email) {
 	return email.trim().toLowerCase()
 }
 
-function publicUser(row) {
-	return {
-		id: row.id,
-		name: row.name,
-		email: row.email,
-		plan: row.plan,
-		status: row.status,
-	}
-}
-
 function isValidEmail(email) {
 	const atIndex = email.indexOf('@')
 	return Array.from(email).length <= 254

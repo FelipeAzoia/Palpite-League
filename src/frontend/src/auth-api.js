@@ -9,7 +9,7 @@ export async function requestAuth(path, { method = 'GET', body, token, fetcher =
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
 
-  let payload = {}
+  let payload
   try {
     payload = await response.json()
   } catch {

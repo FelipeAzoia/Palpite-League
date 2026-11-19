@@ -73,4 +73,25 @@ Para executar os testes técnicos:
 npm test
 ```
 
+## ✅ Integração contínua
+
+Todo pull request para `main`, `develop` ou `staging` dispara o workflow [CI](.github/workflows/ci.yml) no GitHub Actions (também pode ser executado manualmente pela aba Actions). Os jobs rodam em paralelo, e qualquer falha reprova o PR:
+
+| Job | Comando |
+| --- | --- |
+| ESLint | `npm run lint` (erros e avisos reprovam) |
+| Build (Vite) | `npm run build` |
+| Testes backend | `npm run test:backend` |
+| Testes frontend (Vitest) | `npm run test:frontend` |
+| npm audit | `npm audit --audit-level=high --omit=dev` |
+
+Antes de abrir o PR, rode o mesmo localmente:
+
+```bash
+npm ci
+npm run lint      # ou npm run lint:fix para corrigir o que for automático
+npm run build
+npm test
+```
+
 > **Aviso Acadêmico:** Este repositório reflete um projeto de modelagem de sistemas. As integrações financeiras são destinadas exclusivamente a ambiente de teste e simulação, sem movimentação de dinheiro real. O projeto não está preparado para operação financeira em produção.

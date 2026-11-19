@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { CalendarDays, LoaderCircle, RefreshCw } from 'lucide-react'
 import { fetchRoundMatches, fetchRounds } from './match-catalog-api.js'
 import { isSessionRejected } from './account-api.js'
@@ -51,6 +51,11 @@ export default function MatchCatalog({ token, onSessionRejected, selection }) {
   async function loadCatalog() {
     setLoading(true)
     setError('')
+    await fetchCatalog()
+  }
+
+  // Busca o catálogo; quem chama decide se liga o indicador de carregamento antes.
+  async function fetchCatalog() {
     try {
       const result = await fetchRounds(token)
       setCatalog(result)
@@ -65,8 +70,11 @@ export default function MatchCatalog({ token, onSessionRejected, selection }) {
     }
   }
 
+  const fetchInitialCatalog = useEffectEvent(() => fetchCatalog())
+
+  // `loading` já começa verdadeiro, então basta buscar ao montar ou trocar de sessão.
   useEffect(() => {
-    loadCatalog()
+    fetchInitialCatalog()
   }, [token])
 
   async function changeRound(event) {

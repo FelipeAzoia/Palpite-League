@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
 import {
   fetchAccountPlan,
@@ -47,6 +47,8 @@ function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const rejectSession = useEffectEvent(() => onSessionRejected())
+
   useEffect(() => {
     let active = true
     fetchProfile(token).then(({ profile: loaded }) => {
@@ -54,7 +56,7 @@ function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected
       setProfile(loaded)
       setName(loaded.name)
     }).catch((error) => {
-      if (isSessionRejected(error)) onSessionRejected()
+      if (isSessionRejected(error)) rejectSession()
       else if (active) setLoadError(error.message)
     })
     return () => { active = false }
@@ -140,6 +142,8 @@ function PlanArea({ token, pending, onBack, onLogout, onSessionRejected }) {
   const [plans, setPlans] = useState(null)
   const [loadError, setLoadError] = useState('')
 
+  const rejectSession = useEffectEvent(() => onSessionRejected())
+
   useEffect(() => {
     let active = true
     Promise.all([fetchAccountPlan(token), fetchAvailablePlans(token)]).then(([accountPlan, available]) => {
@@ -147,7 +151,7 @@ function PlanArea({ token, pending, onBack, onLogout, onSessionRejected }) {
       setCurrent(accountPlan)
       setPlans(available.plans)
     }).catch((error) => {
-      if (isSessionRejected(error)) onSessionRejected()
+      if (isSessionRejected(error)) rejectSession()
       else if (active) setLoadError(error.message)
     })
     return () => { active = false }

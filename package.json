@@ -11,7 +11,9 @@
     "start": "npm --prefix src/backend start",
     "test:backend": "npm --prefix src/backend test",
     "test:frontend": "npm --prefix src/frontend test",
-    "test": "npm run test:backend && npm run test:frontend"
+    "test": "npm run test:backend && npm run test:frontend",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
@@ -22,5 +24,12 @@
     "react-dom": "latest",
     "vite": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.8",
+    "globals": "^17.14.0",
+    "vitest": "^4.1.12"
+  }
 }
