@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Activity, ArrowRight, LoaderCircle } from 'lucide-react'
+import { ArrowRight, LoaderCircle } from 'lucide-react'
+import BrandIcon from './src/BrandIcon.jsx'
 import AccountPanel, { AreaNav } from './src/AccountPanel.jsx'
 import { requestAuth } from './src/auth-api.js'
 import InvitePanel from './src/InvitePanel.jsx'
@@ -162,6 +163,9 @@ function App() {
   const showInvite = view === 'authenticated' && Boolean(inviteCode)
   const isAccount = view === 'authenticated' && (showInvite || !compactAreas.includes(accountArea))
 
+  // Cada página tem sua chave; quando ela muda, o conteúdo é remontado e a transição roda de novo.
+  const pageKey = showInvite ? 'invite' : view === 'authenticated' ? `account-${accountArea}` : view
+
   function closeInvite() {
     discardInviteCode(sessionStorage)
     setInviteCode(null)
@@ -171,26 +175,27 @@ function App() {
     <main className={['auth-shell', view === 'authenticated' && !showInvite && 'auth-shell-nav', isAccount && 'auth-shell-account'].filter(Boolean).join(' ')}>
       <header className="auth-header">
         <a className="brand" href="/" aria-label="Palpite League">
-          <span className="brand-symbol"><Activity size={18} strokeWidth={2.5} /></span>
-          <span>palpite<span className="brand-dot">.</span></span>
+          <span className="brand-symbol"><BrandIcon size={22} strokeWidth={1.8} /></span>
+          <span>Palpite League</span>
         </a>
-        {isAccount && <p className="header-slogan">O jogo começa com um palpite.</p>}
+        {isAccount && <p className="header-slogan">O jogo começa com um palpite!</p>}
         <span className="environment"><span /> ambiente local</span>
       </header>
 
       {view === 'authenticated' && !showInvite && <AreaNav area={accountArea} onAreaChange={setAccountArea} />}
 
-      <section className={isAccount ? 'auth-layout auth-layout-account' : 'auth-layout'} aria-live="polite">
+      <section key={isAccount ? 'wide' : 'compact'} className={isAccount ? 'auth-layout auth-layout-account' : 'auth-layout'} aria-live="polite">
         {!isAccount && (
           <div className="auth-intro">
             <p className="eyebrow">PALPITE LEAGUE</p>
-            <h1>O jogo começa<br />com um palpite.</h1>
+            <h1>O jogo começa<br />com um palpite!</h1>
             <div className="intro-rule"><span /><span /><span /></div>
             <p className="intro-index">TEMPORADA <strong>2026</strong></p>
           </div>
         )}
 
         <section className="auth-panel" aria-labelledby="auth-title">
+          <div className="page-enter" key={pageKey}>
           {showInvite ? (
             <InvitePanel
               token={sessionStorage.getItem(tokenKey)}
@@ -291,6 +296,7 @@ function App() {
               )}
             </>
           )}
+          </div>
         </section>
       </section>
 

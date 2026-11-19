@@ -328,6 +328,15 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
 export default function PoolsPanel({ token, onSessionRejected }) {
   const [view, setView] = useState({ name: 'list' })
 
+  // A chave muda a cada página interna e reinicia a animação de transição.
+  return (
+    <div className="page-enter" key={view.name === 'rules' ? `rules-${view.poolId}` : view.name}>
+      <PoolsPage view={view} setView={setView} token={token} onSessionRejected={onSessionRejected} />
+    </div>
+  )
+}
+
+function PoolsPage({ view, setView, token, onSessionRejected }) {
   if (view.name === 'create') {
     return (
       <PoolCreate

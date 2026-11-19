@@ -10,6 +10,7 @@ export default defineConfig({
       '/account': 'http://localhost:3000',
       '/pools': 'http://localhost:3000',
       '/catalog': 'http://localhost:3000',
+      '/invites': 'http://localhost:3000',
     },
   },
 })
