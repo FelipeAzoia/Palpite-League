@@ -55,6 +55,14 @@ a { color: inherit; text-decoration: none; }
   padding: 64px 0;
   animation: arrive 420ms ease-out both;
 }
+.header-slogan { margin: 0; color: var(--forest); font-family: Georgia, serif; font-size: 20px; text-align: center; }
+.auth-shell-account { width: min(100% - 48px, 1600px); }
+.auth-layout-account {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  width: 100%;
+  padding: 24px 0;
+}
 .auth-intro { padding-bottom: 20px; }
 .eyebrow { margin: 0 0 12px; color: #87958a; font-size: 10px; font-weight: 750; letter-spacing: 1px; }
 .auth-intro h1 { margin: 0; font-family: Georgia, serif; font-size: 64px; font-weight: 400; line-height: 1.04; }
@@ -116,7 +124,8 @@ a { color: inherit; text-decoration: none; }
 .mode-switch button { padding: 2px 0; border: 0; color: #385e43; background: transparent; font-size: 11px; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; }
 .mode-switch button:hover { color: #1b3927; }
 .authenticated-view .form-copy { margin-bottom: 27px; }
-.area-nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 24px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.auth-shell-nav { grid-template-rows: 76px auto 1fr 54px; }
+.area-nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 0; border-bottom: 1px solid #d6dfd7; }
 .area-nav button { padding: 7px 11px; border: 1px solid transparent; border-radius: 5px; color: #55655a; background: transparent; font-size: 12px; font-weight: 700; }
 .area-nav button[aria-current='page'] { border-color: #ccd7cd; color: var(--forest); background: #fff; }
 .info-list { margin: 0 0 22px; border-top: 1px solid var(--line); }
@@ -199,12 +208,17 @@ a { color: inherit; text-decoration: none; }
   .auth-intro h1 { font-size: 42px; }
   .intro-rule { margin-top: 18px; }
   .auth-panel { padding: 28px 24px; }
+  .auth-shell-nav { grid-template-rows: 66px auto 1fr 48px; }
+  .auth-shell-account { width: calc(100% - 32px); }
+  .auth-layout-account { width: 100%; padding: 20px 0; }
+  .header-slogan { font-size: 15px; }
 }
 
 @media (max-width: 400px) {
   .auth-shell { width: calc(100% - 32px); }
   .auth-panel { padding: 25px 20px; }
   .auth-footer { font-size: 8px; }
+  .header-slogan { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "better-sqlite3": "latest",
+    "better-sqlite3": "11.10.0",
     "express": "latest",
     "lucide-react": "latest",
     "react": "latest",

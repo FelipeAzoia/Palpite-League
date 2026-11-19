@@ -192,18 +192,23 @@ function PlanArea({ token, pending, onBack, onLogout, onSessionRejected }) {
   )
 }
 
-export default function AccountPanel({ token, user, pending, onLogout, onSessionRejected, onUserChange }) {
-  const [area, setArea] = useState('home')
+export function AreaNav({ area, onAreaChange }) {
+  return (
+    <nav className="area-nav" aria-label="Áreas da conta">
+      {areas.map((item) => (
+        <button key={item.id} type="button" aria-current={area === item.id ? 'page' : undefined} onClick={() => onAreaChange(item.id)}>
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+export default function AccountPanel({ token, user, pending, area, onAreaChange, onLogout, onSessionRejected, onUserChange }) {
+  const setArea = onAreaChange
 
   return (
     <div className="authenticated-view">
-      <nav className="area-nav" aria-label="Áreas da conta">
-        {areas.map((item) => (
-          <button key={item.id} type="button" aria-current={area === item.id ? 'page' : undefined} onClick={() => setArea(item.id)}>
-            {item.label}
-          </button>
-        ))}
-      </nav>
 
       {area === 'home' && (
         <>
