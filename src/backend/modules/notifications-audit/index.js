@@ -186,9 +186,13 @@ export function createAuditStore(database, { logger = createLogger(), detailSche
 		return withCorrelation(() => persistOutcome(record, result))
 	}
 
-	function runAuditedOperation(entry, operation) {
+	// Accepts one entry or a list of entries; every success record is written in the
+	// same transaction as the operation, so either all of them persist or none does.
+	function runAuditedOperation(entryOrEntries, operation) {
 		if (typeof operation !== 'function') throw new TypeError('operation must be a function')
-		const record = validateEntry(entry, detailSchemas)
+		const entries = Array.isArray(entryOrEntries) ? entryOrEntries : [entryOrEntries]
+		if (entries.length === 0) throw new TypeError('audit entry is required')
+		const records = entries.map((entry) => validateEntry(entry, detailSchemas))
 		return withCorrelation(() => {
 			let operationCompleted = false
 
@@ -196,15 +200,17 @@ export function createAuditStore(database, { logger = createLogger(), detailSche
 				return database.transaction(() => {
 					const result = operation(database)
 					operationCompleted = true
-					insert(record, 'success')
+					for (const record of records) insert(record, 'success')
 					return result
 				})()
 			} catch (error) {
 				if (operationCompleted) logger.error('audit', 'record_failed')
-				try {
-					persistOutcome(record, 'failure')
-				} catch {
-					// The technical logger in persistOutcome records the persistence failure.
+				for (const record of records) {
+					try {
+						persistOutcome(record, 'failure')
+					} catch {
+						// The technical logger in persistOutcome records the persistence failure.
+					}
 				}
 				throw error
 			}
