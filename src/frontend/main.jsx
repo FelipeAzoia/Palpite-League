@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client'
 import { Activity, ArrowRight, LoaderCircle } from 'lucide-react'
 import AccountPanel, { AreaNav } from './src/AccountPanel.jsx'
 import { requestAuth } from './src/auth-api.js'
+import InvitePanel from './src/InvitePanel.jsx'
+import { consumeInviteLink, discardInviteCode, pendingInviteCode } from './src/invite-link.js'
 import { consumeRecoveryToken } from './src/recovery-link.js'
 import './styles.css'
 
@@ -12,6 +14,9 @@ const compactAreas = ['home', 'profile']
 const initialRecoveryToken = typeof window === 'undefined'
   ? null
   : consumeRecoveryToken(window.location, window.history)
+const initialInviteCode = typeof window === 'undefined'
+  ? null
+  : consumeInviteLink(window.location, window.history, window.sessionStorage) ?? pendingInviteCode(window.sessionStorage)
 
 const viewCopy = {
   login: { eyebrow: 'SUA CONTA', title: 'Entrar', text: 'Bom ter você de volta.', action: 'Entrar' },
@@ -30,6 +35,7 @@ function App() {
   const [recoveryToken, setRecoveryToken] = useState(initialRecoveryToken)
   const [recoverySent, setRecoverySent] = useState(false)
   const [accountArea, setAccountArea] = useState('home')
+  const [inviteCode, setInviteCode] = useState(initialInviteCode)
 
   useEffect(() => {
     if (initialRecoveryToken) return undefined
@@ -56,6 +62,11 @@ function App() {
 
   useEffect(() => {
     function openRecoveryLink() {
+      const invite = consumeInviteLink(window.location, window.history, window.sessionStorage)
+      if (invite) {
+        setInviteCode(invite)
+        return
+      }
       const token = consumeRecoveryToken(window.location, window.history)
       if (!token) return
       setRecoveryToken(token)
@@ -117,6 +128,8 @@ function App() {
       // Discard the browser token even if the server session has already expired.
     } finally {
       sessionStorage.removeItem(tokenKey)
+      discardInviteCode(sessionStorage)
+      setInviteCode(null)
       setUser(null)
       setAccountArea('home')
       setMessage('Você saiu da sua conta.')
@@ -146,10 +159,16 @@ function App() {
   }
 
   const copy = viewCopy[view]
-  const isAccount = view === 'authenticated' && !compactAreas.includes(accountArea)
+  const showInvite = view === 'authenticated' && Boolean(inviteCode)
+  const isAccount = view === 'authenticated' && (showInvite || !compactAreas.includes(accountArea))
+
+  function closeInvite() {
+    discardInviteCode(sessionStorage)
+    setInviteCode(null)
+  }
 
   return (
-    <main className={['auth-shell', view === 'authenticated' && 'auth-shell-nav', isAccount && 'auth-shell-account'].filter(Boolean).join(' ')}>
+    <main className={['auth-shell', view === 'authenticated' && !showInvite && 'auth-shell-nav', isAccount && 'auth-shell-account'].filter(Boolean).join(' ')}>
       <header className="auth-header">
         <a className="brand" href="/" aria-label="Palpite League">
           <span className="brand-symbol"><Activity size={18} strokeWidth={2.5} /></span>
@@ -159,7 +178,7 @@ function App() {
         <span className="environment"><span /> ambiente local</span>
       </header>
 
-      {view === 'authenticated' && <AreaNav area={accountArea} onAreaChange={setAccountArea} />}
+      {view === 'authenticated' && !showInvite && <AreaNav area={accountArea} onAreaChange={setAccountArea} />}
 
       <section className={isAccount ? 'auth-layout auth-layout-account' : 'auth-layout'} aria-live="polite">
         {!isAccount && (
@@ -172,7 +191,15 @@ function App() {
         )}
 
         <section className="auth-panel" aria-labelledby="auth-title">
-          {view === 'authenticated' ? (
+          {showInvite ? (
+            <InvitePanel
+              token={sessionStorage.getItem(tokenKey)}
+              code={inviteCode}
+              onSessionRejected={rejectSession}
+              onRequested={() => discardInviteCode(sessionStorage)}
+              onClose={closeInvite}
+            />
+          ) : view === 'authenticated' ? (
             <AccountPanel
               area={accountArea}
               onAreaChange={setAccountArea}
@@ -188,6 +215,9 @@ function App() {
               <p className="eyebrow">{copy.eyebrow}</p>
               <h2 id="auth-title">{copy.title}</h2>
               <p className="form-copy">{copy.text}</p>
+              {inviteCode && (view === 'login' || view === 'register') && (
+                <p className="form-message form-message-success" role="status">Você recebeu um convite. Entre ou crie sua conta para abri-lo.</p>
+              )}
 
               <form className="auth-form" onSubmit={submitForm} noValidate>
                 {view === 'register' && (

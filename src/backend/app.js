@@ -3,7 +3,12 @@ import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore } from './modules/notifications-audit/index.js'
 import { createSportsCatalogService } from './modules/matches-results/index.js'
-import { createInvitesService, createPoolsService } from './modules/pools-participations/index.js'
+import {
+  createInvitesService,
+  createParticipationRequestsService,
+  createPoolsService,
+  participationAuditDetailSchemas,
+} from './modules/pools-participations/index.js'
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { SportsProviderError } from './modules/matches-results/sports-provider.js'
@@ -61,7 +66,7 @@ export function createApp(database, {
   sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
 } = {}) {
   const app = express()
-  const auditStore = createAuditStore(database, { logger })
+  const auditStore = createAuditStore(database, { logger, detailSchemasByAction: participationAuditDetailSchemas })
   const authService = createAuthService(database, auditStore, {
     now,
     logger,
@@ -80,6 +85,12 @@ export function createApp(database, {
     auditStore,
     now,
     ...(interfaceBaseUrl ? { interfaceBaseUrl } : {}),
+  })
+  const participationRequests = createParticipationRequestsService(database, {
+    auditStore,
+    invites: invitesService,
+    pools: poolsService,
+    now,
   })
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
@@ -244,6 +255,23 @@ export function createApp(database, {
   app.delete('/pools/:poolId/invites/:inviteId', authenticateRequest, (request, response, next) => {
     try {
       response.json(invitesService.revokeInvite(request.authenticatedUser.id, request.params.poolId, request.params.inviteId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // O código do convite viaja sempre no corpo, nunca no caminho ou na consulta (SPEC-009, seção 9).
+  app.post('/invites/open', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(participationRequests.openInvite(request.authenticatedUser.id, request.body))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/invites/requests', authenticateRequest, (request, response, next) => {
+    try {
+      response.status(201).json(participationRequests.requestEntry(request.authenticatedUser.id, request.body))
     } catch (error) {
       next(error)
     }

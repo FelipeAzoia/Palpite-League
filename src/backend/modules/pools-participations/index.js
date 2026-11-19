@@ -5,6 +5,7 @@ import { getPlan, simultaneousPoolLimit } from '../auth-users/index.js'
 
 export const moduleName = 'pools-participations'
 export { createInvitesService } from './invites.js'
+export { createParticipationRequestsService, participationAuditDetailSchemas } from './participation-requests.js'
 
 export const prizeModels = Object.freeze(['winner_takes_all'])
 export const tiebreakers = Object.freeze(['exact_scores', 'correct_results', 'last_round_points'])
@@ -307,25 +308,37 @@ export function createPoolsService(database, { auditStore, sportsCatalog, now = 
       : undefined
     if (!row) throw poolNotFound()
 
-    const matchIds = database.prepare('SELECT match_id FROM pool_matches WHERE pool_id = ?').all(poolId).map(({ match_id: id }) => id)
     return {
-      pool: {
-        id: row.id,
-        name: row.name,
-        status: row.status,
-        startsOn: row.starts_on,
-        endsOn: row.ends_on,
-        entryFee: formatCents(row.entry_fee_cents),
-        currency: 'BRL',
-        prizeModel: row.prize_model,
-        tiebreaker: row.tiebreaker,
-        liveResults: row.live_results === 1,
-        matches: sportsCatalog.describeMatches(matchIds),
-      },
+      pool: describePool(row),
       requesterRole: row.requester_role,
       participationConditions: participationConditions(row.entry_fee_cents),
     }
   }
 
-  return { getCreationAvailability, createPool, listPools, getPoolRules }
+  function describePool(row) {
+    const matchIds = database.prepare('SELECT match_id FROM pool_matches WHERE pool_id = ?').all(row.id).map(({ match_id: id }) => id)
+    return {
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      startsOn: row.starts_on,
+      endsOn: row.ends_on,
+      entryFee: formatCents(row.entry_fee_cents),
+      currency: 'BRL',
+      prizeModel: row.prize_model,
+      tiebreaker: row.tiebreaker,
+      liveResults: row.live_results === 1,
+      matches: sportsCatalog.describeMatches(matchIds),
+    }
+  }
+
+  // Visão das regras do convidado (SPEC-009, OPEN-19): só regras e condições, nunca participantes.
+  // Chamada somente depois de o convite ter sido validado pelo serviço de convites.
+  function getInviteeRules(poolId) {
+    const row = database.prepare('SELECT * FROM pools WHERE id = ?').get(poolId)
+    if (!row) throw poolNotFound()
+    return { pool: describePool(row), participationConditions: participationConditions(row.entry_fee_cents) }
+  }
+
+  return { getCreationAvailability, createPool, listPools, getPoolRules, getInviteeRules }
 }
