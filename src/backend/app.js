@@ -13,12 +13,14 @@ import {
   participantAuditDetailSchemas,
   participationAuditDetailSchemas,
 } from './modules/pools-participations/index.js'
+import { createPredictionsService, predictionAuditDetailSchemas } from './modules/predictions-scoring/index.js'
 
 // Esquemas dos detalhes de auditoria permitidos por ação (SPEC-002), reunidos de cada módulo.
 export const auditDetailSchemas = Object.freeze({
   ...participationAuditDetailSchemas,
   ...decisionAuditDetailSchemas,
   ...participantAuditDetailSchemas,
+  ...predictionAuditDetailSchemas,
 })
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
@@ -105,6 +107,7 @@ export function createApp(database, {
   })
   const participationDecisions = createParticipationDecisionsService(database, { auditStore, pools: poolsService, now })
   const participantManagement = createParticipantManagementService(database, { auditStore })
+  const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -310,6 +313,36 @@ export function createApp(database, {
   app.post('/pools/:poolId/participants/:participationId/promote', authenticateRequest, (request, response, next) => {
     try {
       response.json(participantManagement.promote(request.authenticatedUser.id, request.params.poolId, request.params.participationId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-012 — partidas do bolão para palpite e palpite próprio (nunca o de outro participante).
+  app.get('/pools/:poolId/predictions', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(predictions.listMatches(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/pools/:poolId/matches/:matchId/prediction', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(predictions.getPrediction(request.authenticatedUser.id, request.params.poolId, request.params.matchId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.put('/pools/:poolId/matches/:matchId/prediction', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(predictions.savePrediction(
+        request.authenticatedUser.id,
+        request.params.poolId,
+        request.params.matchId,
+        request.body,
+      ))
     } catch (error) {
       next(error)
     }
