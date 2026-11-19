@@ -7,6 +7,7 @@ import MatchCatalog from './MatchCatalog.jsx'
 import ParticipantsSection from './ParticipantsSection.jsx'
 import PredictionsPage from './PredictionsPage.jsx'
 import ResultsPage from './ResultsPage.jsx'
+import PointsPage from './PointsPage.jsx'
 import RequestsSection from './RequestsSection.jsx'
 import { createPool, fetchCreationAvailability, fetchPoolRules, fetchPools } from './pools-api.js'
 import {
@@ -258,7 +259,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
   )
 }
 
-function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict, onResults }) {
+function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict, onResults, onPoints }) {
   const [rules, setRules] = useState(null)
   const [error, setError] = useState('')
   // Incrementado a cada decisão de entrada, para recarregar a lista de participantes.
@@ -307,6 +308,7 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict
               <ArrowRight size={17} />
             </button>
             <button className="small-button" type="button" onClick={onResults}>Ver resultados</button>
+            <button className="small-button" type="button" onClick={onPoints}>Meus pontos</button>
           </div>
 
           <h3 className="section-title">CONDIÇÕES DE PARTICIPAÇÃO</h3>
@@ -393,6 +395,18 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
         onBack={() => setView({ name: 'list' })}
         onPredict={() => setView({ name: 'predictions', poolId: view.poolId })}
         onResults={() => setView({ name: 'results', poolId: view.poolId })}
+        onPoints={() => setView({ name: 'points', poolId: view.poolId })}
+      />
+    )
+  }
+
+  if (view.name === 'points') {
+    return (
+      <PointsPage
+        token={token}
+        poolId={view.poolId}
+        onSessionRejected={onSessionRejected}
+        onBack={() => setView({ name: 'rules', poolId: view.poolId })}
       />
     )
   }

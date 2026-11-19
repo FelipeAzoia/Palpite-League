@@ -13,7 +13,7 @@ import {
   participantAuditDetailSchemas,
   participationAuditDetailSchemas,
 } from './modules/pools-participations/index.js'
-import { createPredictionsService, predictionAuditDetailSchemas } from './modules/predictions-scoring/index.js'
+import { createPredictionsService, createScoringService, predictionAuditDetailSchemas } from './modules/predictions-scoring/index.js'
 
 // Esquemas dos detalhes de auditoria permitidos por ação (SPEC-002), reunidos de cada módulo.
 export const auditDetailSchemas = Object.freeze({
@@ -26,6 +26,8 @@ export const auditDetailSchemas = Object.freeze({
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
 export const defaultResultsSyncIntervalMs = 10 * 60 * 1000
+// Intervalo padrão da pontuação (SPEC-014, OPEN-76): 1 minuto.
+export const defaultScoringIntervalMs = 60 * 1000
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { SportsProviderError } from './modules/matches-results/sports-provider.js'
@@ -114,7 +116,12 @@ export function createApp(database, {
   const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const resultsSync = createResultsSyncService(database, sportsProvider, { auditStore, logger, now, season: sportsSeason })
   // Tarefas periódicas expostas ao agendador do processo (index.js) e aos testes (SPEC-013).
-  app.locals.tasks = { syncResults: () => resultsSync.syncResults() }
+  const scoring = createScoringService(database, { logger })
+  app.locals.tasks = {
+    syncResults: () => resultsSync.syncResults(),
+    scorePredictions: () => scoring.scorePendingMatches(),
+  }
+  app.locals.scoring = scoring
   app.locals.results = resultsSync
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
@@ -331,6 +338,15 @@ export function createApp(database, {
   app.get('/pools/:poolId/results', authenticateRequest, (request, response, next) => {
     try {
       response.json(resultsSync.getPoolResults(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-014 — pontos do próprio participante; não existe operação que informe ou altere pontos.
+  app.get('/pools/:poolId/points', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(predictions.getMyPoints(request.authenticatedUser.id, request.params.poolId))
     } catch (error) {
       next(error)
     }
