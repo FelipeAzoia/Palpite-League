@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore } from './modules/notifications-audit/index.js'
-import { createSportsCatalogService } from './modules/matches-results/index.js'
+import { createResultsSyncService, createSportsCatalogService, resultsAuditDetailSchemas } from './modules/matches-results/index.js'
 import {
   createInvitesService,
   createParticipantManagementService,
@@ -21,7 +21,11 @@ export const auditDetailSchemas = Object.freeze({
   ...decisionAuditDetailSchemas,
   ...participantAuditDetailSchemas,
   ...predictionAuditDetailSchemas,
+  ...resultsAuditDetailSchemas,
 })
+
+// Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
+export const defaultResultsSyncIntervalMs = 10 * 60 * 1000
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { SportsProviderError } from './modules/matches-results/sports-provider.js'
@@ -49,9 +53,9 @@ export function createAuthenticationMiddleware(authService) {
   }
 }
 
-function configuredSportsProvider() {
+function configuredSportsProvider(now) {
   const source = process.env.SPORTS_CATALOG_SOURCE || 'simulated'
-  if (source === 'simulated') return createSimulatedSportsProvider()
+  if (source === 'simulated') return createSimulatedSportsProvider({ now })
   if (source === 'api-football') {
     if (process.env.SPORTS_API_FOOTBALL_PROOF_APPROVED !== 'true') {
       return {
@@ -74,7 +78,7 @@ export function createApp(database, {
   now = Date.now,
   recoveryChannel,
   interfaceBaseUrl,
-  sportsProvider = configuredSportsProvider(),
+  sportsProvider = configuredSportsProvider(now),
   sportsSeason = Number(process.env.SPORTS_SEASON || 2026),
   sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
 } = {}) {
@@ -108,6 +112,10 @@ export function createApp(database, {
   const participationDecisions = createParticipationDecisionsService(database, { auditStore, pools: poolsService, now })
   const participantManagement = createParticipantManagementService(database, { auditStore })
   const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
+  const resultsSync = createResultsSyncService(database, sportsProvider, { auditStore, logger, now, season: sportsSeason })
+  // Tarefas periódicas expostas ao agendador do processo (index.js) e aos testes (SPEC-013).
+  app.locals.tasks = { syncResults: () => resultsSync.syncResults() }
+  app.locals.results = resultsSync
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -313,6 +321,16 @@ export function createApp(database, {
   app.post('/pools/:poolId/participants/:participationId/promote', authenticateRequest, (request, response, next) => {
     try {
       response.json(participantManagement.promote(request.authenticatedUser.id, request.params.poolId, request.params.participationId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-013 — resultados oficiais do bolão, somente leitura. Não existe operação que escreva
+  // resultado, placar ou status de partida (INV-001): qualquer tentativa cai no 404 comum.
+  app.get('/pools/:poolId/results', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(resultsSync.getPoolResults(request.authenticatedUser.id, request.params.poolId))
     } catch (error) {
       next(error)
     }
