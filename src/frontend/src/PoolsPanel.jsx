@@ -4,6 +4,7 @@ import { isSessionRejected } from './account-api.js'
 import InvitesSection from './InvitesSection.jsx'
 import { canManageInvites } from './invites-view.js'
 import MatchCatalog from './MatchCatalog.jsx'
+import ParticipantsSection from './ParticipantsSection.jsx'
 import RequestsSection from './RequestsSection.jsx'
 import { createPool, fetchCreationAvailability, fetchPoolRules, fetchPools } from './pools-api.js'
 import {
@@ -254,6 +255,8 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
 function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
   const [rules, setRules] = useState(null)
   const [error, setError] = useState('')
+  // Incrementado a cada decisão de entrada, para recarregar a lista de participantes.
+  const [membersVersion, setMembersVersion] = useState(0)
   const handle = useGuardedRequest(onSessionRejected)
 
   useEffect(() => {
@@ -298,7 +301,13 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
 
           {canManageInvites(rules.requesterRole) && (
             <>
-              <RequestsSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
+              <RequestsSection
+                token={token}
+                poolId={poolId}
+                onSessionRejected={onSessionRejected}
+                onDecided={() => setMembersVersion((current) => current + 1)}
+              />
+              <ParticipantsSection token={token} poolId={poolId} refreshKey={membersVersion} onSessionRejected={onSessionRejected} />
               <InvitesSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
             </>
           )}
