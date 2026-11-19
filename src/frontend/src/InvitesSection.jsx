@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { createInvite, fetchInvites, revokeInvite } from './invites-api.js'
@@ -27,11 +27,17 @@ export default function InvitesSection({ token, poolId, onSessionRejected }) {
     }
   }
 
+  const handleLoadError = useEffectEvent((requestError) => handleError(requestError))
+
+  // A seção é remontada quando o bolão muda (key no PoolsPanel), então o estado já começa limpo.
   useEffect(() => {
-    setNewLink('')
-    setInvites(null)
-    setError('')
-    load()
+    let active = true
+    fetchInvites(token, poolId).then((result) => {
+      if (active) setInvites(result.invites)
+    }).catch((requestError) => {
+      if (active) handleLoadError(requestError)
+    })
+    return () => { active = false }
   }, [token, poolId])
 
   async function create() {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { isSessionRejected } from './account-api.js'
 import {
   canPromote,
@@ -9,7 +9,7 @@ import {
 } from './participants-api.js'
 
 // SPEC-011 — lista de participantes para administrador e coadministrador; só o administrador promove.
-export default function ParticipantsSection({ token, poolId, refreshKey, onSessionRejected }) {
+export default function ParticipantsSection({ token, poolId, onSessionRejected }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -29,11 +29,19 @@ export default function ParticipantsSection({ token, poolId, refreshKey, onSessi
     }
   }
 
+  const handleLoadError = useEffectEvent((requestError) => handleError(requestError))
+
+  // O PoolsPanel remonta esta seção (key) quando o bolão muda ou há nova decisão de entrada,
+  // então o estado já começa limpo e a lista é recarregada.
   useEffect(() => {
-    setData(null)
-    setError('')
-    load()
-  }, [token, poolId, refreshKey])
+    let active = true
+    fetchParticipants(token, poolId).then((result) => {
+      if (active) setData(result)
+    }).catch((requestError) => {
+      if (active) handleLoadError(requestError)
+    })
+    return () => { active = false }
+  }, [token, poolId])
 
   async function promote(participant) {
     setBusyId(participant.id)

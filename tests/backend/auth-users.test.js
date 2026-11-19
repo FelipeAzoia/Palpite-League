@@ -109,7 +109,7 @@ test('login normaliza e-mail, devolve token opaco e persiste somente o hash por 
 })
 
 test('falhas de login têm resposta igual e auditoria anônima sem e-mail', async () => {
-  const { database, auditStore, auth } = createFixture()
+  const { database, auth } = createFixture()
   await auth.register({ name: 'Ana', email: 'ana@example.com', password: 'senha-segura-123' })
 
   let wrongPassword

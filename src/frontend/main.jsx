@@ -26,8 +26,13 @@ const viewCopy = {
   reset: { eyebrow: 'NOVA SENHA', title: 'Definir nova senha', text: 'Escolha uma nova senha para sua conta.', action: 'Salvar nova senha' },
 }
 
+function initialView() {
+  if (initialRecoveryToken) return 'reset'
+  return sessionStorage.getItem(tokenKey) ? 'checking' : 'login'
+}
+
 function App() {
-  const [view, setView] = useState(initialRecoveryToken ? 'reset' : 'checking')
+  const [view, setView] = useState(initialView)
   const [user, setUser] = useState(null)
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
@@ -41,10 +46,7 @@ function App() {
   useEffect(() => {
     if (initialRecoveryToken) return undefined
     const token = sessionStorage.getItem(tokenKey)
-    if (!token) {
-      setView('login')
-      return
-    }
+    if (!token) return undefined
 
     let active = true
     requestAuth('/auth/me', { token }).then(({ user: currentUser }) => {
@@ -198,6 +200,7 @@ function App() {
           <div className="page-enter" key={pageKey}>
           {showInvite ? (
             <InvitePanel
+              key={inviteCode}
               token={sessionStorage.getItem(tokenKey)}
               code={inviteCode}
               onSessionRejected={rejectSession}

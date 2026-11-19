@@ -45,7 +45,7 @@ export async function withHttpApp(callback, appOptions = {}) {
     })
     const text = await response.text()
     responses.push(text)
-    let json = null
+    let json
     try { json = JSON.parse(text) } catch { json = null }
     return { status: response.status, headers: response.headers, text, json }
   }

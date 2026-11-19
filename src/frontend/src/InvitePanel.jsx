@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, CalendarDays, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { canRequestEntry, canSubmitEntry, openInvite, requestEntry, situationLabels } from './invite-link.js'
@@ -49,14 +49,15 @@ export default function InvitePanel({ token, code, onSessionRejected, onRequeste
     }
   }
 
+  const handleLoadError = useEffectEvent((error) => handle(error, setLoadError))
+
+  // O pai remonta este painel (key) quando o código do convite muda, então o estado já começa limpo.
   useEffect(() => {
     let active = true
-    setInvite(null)
-    setLoadError('')
     openInvite(token, code).then((result) => {
       if (active) setInvite(result)
     }).catch((error) => {
-      if (active) handle(error, setLoadError)
+      if (active) handleLoadError(error)
     })
     return () => { active = false }
   }, [token, code])

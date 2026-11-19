@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, CalendarDays, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import InvitesSection from './InvitesSection.jsx'
@@ -41,12 +41,14 @@ function PoolList({ token, onSessionRejected, onOpen, onCreate }) {
   const [error, setError] = useState('')
   const handle = useGuardedRequest(onSessionRejected)
 
+  const handleLoadError = useEffectEvent((requestError) => handle(requestError, setError))
+
   useEffect(() => {
     let active = true
     fetchPools(token).then((result) => {
       if (active) setPools(result.pools)
     }).catch((requestError) => {
-      if (active) handle(requestError, setError)
+      if (active) handleLoadError(requestError)
     })
     return () => { active = false }
   }, [token])
@@ -108,12 +110,14 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
   const [saving, setSaving] = useState(false)
   const handle = useGuardedRequest(onSessionRejected)
 
+  const handleLoadError = useEffectEvent((requestError) => handle(requestError, setLoadError))
+
   useEffect(() => {
     let active = true
     fetchCreationAvailability(token).then((result) => {
       if (active) setAvailability(result)
     }).catch((requestError) => {
-      if (active) handle(requestError, setLoadError)
+      if (active) handleLoadError(requestError)
     })
     return () => { active = false }
   }, [token])
@@ -259,14 +263,15 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
   const [membersVersion, setMembersVersion] = useState(0)
   const handle = useGuardedRequest(onSessionRejected)
 
+  const handleLoadError = useEffectEvent((requestError) => handle(requestError, setError))
+
+  // O PoolsPanel remonta esta página (key) a cada bolão aberto, então o estado já começa limpo.
   useEffect(() => {
     let active = true
-    setRules(null)
-    setError('')
     fetchPoolRules(token, poolId).then((result) => {
       if (active) setRules(result)
     }).catch((requestError) => {
-      if (active) handle(requestError, setError)
+      if (active) handleLoadError(requestError)
     })
     return () => { active = false }
   }, [token, poolId])
@@ -307,7 +312,7 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack }) {
                 onSessionRejected={onSessionRejected}
                 onDecided={() => setMembersVersion((current) => current + 1)}
               />
-              <ParticipantsSection token={token} poolId={poolId} refreshKey={membersVersion} onSessionRejected={onSessionRejected} />
+              <ParticipantsSection key={membersVersion} token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
               <InvitesSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
             </>
           )}
