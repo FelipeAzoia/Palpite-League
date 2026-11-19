@@ -11,7 +11,7 @@
     "test": "node --test ../../tests/backend/*.test.js"
   },
   "dependencies": {
-    "better-sqlite3": "latest",
+    "better-sqlite3": "11.10.0",
     "express": "latest"
   }
 }

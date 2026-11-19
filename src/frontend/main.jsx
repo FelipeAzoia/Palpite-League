@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Activity, ArrowRight, LoaderCircle } from 'lucide-react'
-import AccountPanel from './src/AccountPanel.jsx'
+import AccountPanel, { AreaNav } from './src/AccountPanel.jsx'
 import { requestAuth } from './src/auth-api.js'
 import { consumeRecoveryToken } from './src/recovery-link.js'
 import './styles.css'
 
 const tokenKey = 'palpite-league-session'
+// Account tabs that keep the original two-column layout with the large slogan.
+const compactAreas = ['home', 'profile']
 const initialRecoveryToken = typeof window === 'undefined'
   ? null
   : consumeRecoveryToken(window.location, window.history)
@@ -27,6 +29,7 @@ function App() {
   const [pending, setPending] = useState(false)
   const [recoveryToken, setRecoveryToken] = useState(initialRecoveryToken)
   const [recoverySent, setRecoverySent] = useState(false)
+  const [accountArea, setAccountArea] = useState('home')
 
   useEffect(() => {
     if (initialRecoveryToken) return undefined
@@ -115,6 +118,7 @@ function App() {
     } finally {
       sessionStorage.removeItem(tokenKey)
       setUser(null)
+      setAccountArea('home')
       setMessage('Você saiu da sua conta.')
       setView('login')
       setPending(false)
@@ -124,6 +128,7 @@ function App() {
   function rejectSession() {
     sessionStorage.removeItem(tokenKey)
     setUser(null)
+    setAccountArea('home')
     setMessage('Sua sessão terminou. Entre novamente.')
     setView('login')
   }
@@ -141,28 +146,36 @@ function App() {
   }
 
   const copy = viewCopy[view]
+  const isAccount = view === 'authenticated' && !compactAreas.includes(accountArea)
 
   return (
-    <main className="auth-shell">
+    <main className={['auth-shell', view === 'authenticated' && 'auth-shell-nav', isAccount && 'auth-shell-account'].filter(Boolean).join(' ')}>
       <header className="auth-header">
         <a className="brand" href="/" aria-label="Palpite League">
           <span className="brand-symbol"><Activity size={18} strokeWidth={2.5} /></span>
           <span>palpite<span className="brand-dot">.</span></span>
         </a>
+        {isAccount && <p className="header-slogan">O jogo começa com um palpite.</p>}
         <span className="environment"><span /> ambiente local</span>
       </header>
 
-      <section className="auth-layout" aria-live="polite">
-        <div className="auth-intro">
-          <p className="eyebrow">PALPITE LEAGUE</p>
-          <h1>O jogo começa<br />com um palpite.</h1>
-          <div className="intro-rule"><span /><span /><span /></div>
-          <p className="intro-index">TEMPORADA <strong>2026</strong></p>
-        </div>
+      {view === 'authenticated' && <AreaNav area={accountArea} onAreaChange={setAccountArea} />}
+
+      <section className={isAccount ? 'auth-layout auth-layout-account' : 'auth-layout'} aria-live="polite">
+        {!isAccount && (
+          <div className="auth-intro">
+            <p className="eyebrow">PALPITE LEAGUE</p>
+            <h1>O jogo começa<br />com um palpite.</h1>
+            <div className="intro-rule"><span /><span /><span /></div>
+            <p className="intro-index">TEMPORADA <strong>2026</strong></p>
+          </div>
+        )}
 
         <section className="auth-panel" aria-labelledby="auth-title">
           {view === 'authenticated' ? (
             <AccountPanel
+              area={accountArea}
+              onAreaChange={setAccountArea}
               token={sessionStorage.getItem(tokenKey)}
               user={user}
               pending={pending}
