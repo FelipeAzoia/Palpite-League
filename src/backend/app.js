@@ -5,10 +5,12 @@ import { createAuditStore } from './modules/notifications-audit/index.js'
 import { createSportsCatalogService } from './modules/matches-results/index.js'
 import {
   createInvitesService,
+  createParticipantManagementService,
   createParticipationDecisionsService,
   createParticipationRequestsService,
   createPoolsService,
   decisionAuditDetailSchemas,
+  participantAuditDetailSchemas,
   participationAuditDetailSchemas,
 } from './modules/pools-participations/index.js'
 
@@ -16,6 +18,7 @@ import {
 export const auditDetailSchemas = Object.freeze({
   ...participationAuditDetailSchemas,
   ...decisionAuditDetailSchemas,
+  ...participantAuditDetailSchemas,
 })
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
@@ -101,6 +104,7 @@ export function createApp(database, {
     now,
   })
   const participationDecisions = createParticipationDecisionsService(database, { auditStore, pools: poolsService, now })
+  const participantManagement = createParticipantManagementService(database, { auditStore })
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -289,6 +293,23 @@ export function createApp(database, {
   app.post('/pools/:poolId/requests/:participationId/reject', authenticateRequest, (request, response, next) => {
     try {
       response.json(participationDecisions.reject(request.authenticatedUser.id, request.params.poolId, request.params.participationId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-011 — participantes do bolão e promoção a coadministrador (sem operação de rebaixamento).
+  app.get('/pools/:poolId/participants', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(participantManagement.listParticipants(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/participants/:participationId/promote', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(participantManagement.promote(request.authenticatedUser.id, request.params.poolId, request.params.participationId))
     } catch (error) {
       next(error)
     }
