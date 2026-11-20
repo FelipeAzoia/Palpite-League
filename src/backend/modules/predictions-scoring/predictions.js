@@ -135,28 +135,32 @@ function samePrediction(row, prediction) {
     && current.awayGoals === prediction.awayGoals
 }
 
-export function createPredictionsService(database, { auditStore, sportsCatalog, now = Date.now }) {
-  // Participação do próprio solicitante: só a confirmada palpita (INV-005).
-  // Aprovada aguardando pagamento: 409; solicitada, rejeitada, saiu ou sem vínculo: 404.
-  function requireConfirmed(userId, poolId) {
-    if (typeof poolId !== 'string' || poolId.length > 100) throw poolNotFound()
-    const row = database.prepare(`
-      SELECT pools.id AS pool_id, pools.name AS pool_name, pools.status AS pool_status,
-        part.id AS participation_id, part.status AS participation_status, part.joined_at
-      FROM pools JOIN pool_participations part ON part.pool_id = pools.id AND part.user_id = ?
-      WHERE pools.id = ?
-    `).get(userId, poolId)
-    if (!row) throw poolNotFound()
-    if (row.participation_status === 'approved_awaiting_payment') throw notConfirmed()
-    if (row.participation_status !== 'confirmed') throw poolNotFound()
-    return {
-      poolId: row.pool_id,
-      poolName: row.pool_name,
-      poolStatus: row.pool_status,
-      participationId: row.participation_id,
-      joinedAt: row.joined_at,
-    }
+// Participação do próprio solicitante, regra comum das SPEC-012, SPEC-014 e SPEC-015: só a
+// confirmada acessa; aprovada aguardando pagamento recebe 409; solicitada, rejeitada, que saiu,
+// sem vínculo ou bolão inexistente recebem 404.
+export function requireConfirmedParticipation(database, userId, poolId) {
+  if (typeof poolId !== 'string' || poolId.length > 100) throw poolNotFound()
+  const row = database.prepare(`
+    SELECT pools.id AS pool_id, pools.name AS pool_name, pools.status AS pool_status, pools.tiebreaker,
+      part.id AS participation_id, part.status AS participation_status, part.joined_at
+    FROM pools JOIN pool_participations part ON part.pool_id = pools.id AND part.user_id = ?
+    WHERE pools.id = ?
+  `).get(userId, poolId)
+  if (!row) throw poolNotFound()
+  if (row.participation_status === 'approved_awaiting_payment') throw notConfirmed()
+  if (row.participation_status !== 'confirmed') throw poolNotFound()
+  return {
+    poolId: row.pool_id,
+    poolName: row.pool_name,
+    poolStatus: row.pool_status,
+    tiebreaker: row.tiebreaker,
+    participationId: row.participation_id,
+    joinedAt: row.joined_at,
   }
+}
+
+export function createPredictionsService(database, { auditStore, sportsCatalog, now = Date.now }) {
+  const requireConfirmed = (userId, poolId) => requireConfirmedParticipation(database, userId, poolId)
 
   function poolMatchIds(poolId) {
     return database.prepare('SELECT match_id FROM pool_matches WHERE pool_id = ?').all(poolId).map(({ match_id: id }) => id)
