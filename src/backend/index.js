@@ -1,4 +1,4 @@
-import { createApp, defaultResultsSyncIntervalMs } from './app.js'
+import { createApp, defaultResultsSyncIntervalMs, defaultScoringIntervalMs } from './app.js'
 import { createDatabase } from './shared/database.js'
 import { runMigrations } from './shared/migrations.js'
 import { createLogger } from './shared/logger.js'
@@ -25,6 +25,11 @@ scheduler.register(
   'results-sync',
   Number(process.env.RESULTS_SYNC_INTERVAL_MS || defaultResultsSyncIntervalMs),
   app.locals.tasks.syncResults,
+)
+scheduler.register(
+  'scoring',
+  Number(process.env.SCORING_INTERVAL_MS || defaultScoringIntervalMs),
+  app.locals.tasks.scorePredictions,
 )
 
 const server = app.listen(port, () => {

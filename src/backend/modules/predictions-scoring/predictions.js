@@ -254,5 +254,31 @@ export function createPredictionsService(database, { auditStore, sportsCatalog, 
     }).immediate()
   }
 
-  return { listMatches, getPrediction, savePrediction }
+  // SPEC-014 — pontos do próprio participante nas partidas encerradas do bolão (OPEN-77, INV-012).
+  function getMyPoints(userId, poolId) {
+    const member = requireConfirmed(userId, poolId)
+    const ownPredictions = new Map(database.prepare('SELECT * FROM predictions WHERE participation_id = ?')
+      .all(member.participationId).map((row) => [row.match_id, row]))
+    const scores = new Map(database.prepare(`
+      SELECT m.id, m.home_score, m.away_score FROM pool_matches pm JOIN sports_matches m ON m.id = pm.match_id
+      WHERE pm.pool_id = ? AND m.status = 'finished' AND m.home_score IS NOT NULL
+    `).all(member.poolId).map((row) => [row.id, { home: row.home_score, away: row.away_score }]))
+    const matches = sportsCatalog.describeMatches([...scores.keys()]).map((match) => {
+      const row = ownPredictions.get(match.id)
+      return {
+        ...match,
+        officialScore: scores.get(match.id),
+        prediction: viewOf(row),
+        points: row?.points ?? null,
+      }
+    })
+    const totalPoints = database.prepare('SELECT total_points FROM pool_participations WHERE id = ?').get(member.participationId).total_points
+    return {
+      pool: { id: member.poolId, name: member.poolName, status: member.poolStatus },
+      totalPoints,
+      matches,
+    }
+  }
+
+  return { listMatches, getPrediction, savePrediction, getMyPoints }
 }

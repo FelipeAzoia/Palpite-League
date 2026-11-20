@@ -221,6 +221,9 @@ a { color: inherit; text-decoration: none; }
 .pool-actions { display: grid; gap: 10px; margin-bottom: 4px; }
 .pool-actions .small-button { min-height: 40px; }
 .result-score { min-width: 44px; color: var(--forest) !important; font-size: 13px !important; text-align: center; white-space: nowrap; }
+/* SPEC-014 — pontos */
+.plan-tag.points-total { font-size: 12px; }
+.plan-tag.points-zero { color: #55655a; background: #e7ece7; }
 .auth-loading { display: grid; min-height: 100vh; place-items: center; color: var(--forest); }
 .auth-loading svg, .spin { animation: spin 1s linear infinite; }
 
