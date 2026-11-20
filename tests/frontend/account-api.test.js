@@ -6,7 +6,7 @@ import {
   isSessionRejected,
   updateProfileName,
 } from '../../src/frontend/src/account-api.js'
-import { describeFeatures, planStatusLabel } from '../../src/frontend/src/plan-features.js'
+import { describeFeatures, planStatusLabel, planTagline, usageSummary } from '../../src/frontend/src/plan-features.js'
 
 function okFetcher(payload) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => payload })
@@ -61,5 +61,18 @@ describe('recursos dos planos', () => {
 
   it('traduz o status ativo', () => {
     expect(planStatusLabel('active')).toBe('Ativo')
+  })
+
+  it('resume o plano em uma linha, sem preço', () => {
+    expect(planTagline({ features: { simultaneousPools: 1, liveResultsInCreatedPools: false } }))
+      .toBe('Participe de quantos bolões quiser e administre até 1 bolão ativo ao mesmo tempo.')
+    expect(planTagline({ features: { simultaneousPools: 10, liveResultsInCreatedPools: true } }))
+      .toBe('Participe de quantos bolões quiser e administre até 10 bolões ativos ao mesmo tempo, com resultados ao vivo nos bolões que você cria.')
+  })
+
+  it('resume o uso do limite de bolões ativos', () => {
+    expect(usageSummary({ activePools: 1, limit: 1 })).toEqual({ ratio: 1, full: true, text: 'Limite atingido: encerre um bolão para criar outro.' })
+    expect(usageSummary({ activePools: 3, limit: 10 })).toEqual({ ratio: 0.3, full: false, text: 'Você ainda pode criar 7 bolões.' })
+    expect(usageSummary({ activePools: 0, limit: 1 }).text).toBe('Você ainda pode criar 1 bolão.')
   })
 })
