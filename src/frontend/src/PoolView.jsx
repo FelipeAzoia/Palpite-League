@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { canManageInvites } from './invites-view.js'
 import InvitesSection from './InvitesSection.jsx'
+import LeaveSection from './LeaveSection.jsx'
 import { formatDeadline, formatKickoff } from './match-format.js'
 import MedalsPage from './MedalsPage.jsx'
 import ParticipantsSection from './ParticipantsSection.jsx'
@@ -108,7 +109,7 @@ function PoolHeader({ summary, onBack }) {
   )
 }
 
-function OverviewTab({ summary, onTab }) {
+function OverviewTab({ summary, onTab, leave }) {
   const { rules, ranking } = summary
   const pool = rules.pool
   const rounds = new Set(pool.matches.map(({ roundNumber }) => roundNumber))
@@ -184,6 +185,7 @@ function OverviewTab({ summary, onTab }) {
             {rules.participationConditions.map((condition) => <li key={condition}>{condition}</li>)}
           </ul>
         </section>
+        {!summary.awaitingPayment && <LeaveSection {...leave} role={rules.requesterRole} poolStatus={pool.status} />}
       </aside>
     </div>
   )
@@ -209,7 +211,7 @@ function ManageTab({ token, poolId, onSessionRejected, onChanged }) {
 }
 
 // Página de um bolão: cabeçalho com os números do participante e navegação por abas.
-export default function PoolView({ token, poolId, initialTab = 'overview', notice, onSessionRejected, onBack }) {
+export default function PoolView({ token, poolId, initialTab = 'overview', notice, onSessionRejected, onBack, onLeft }) {
   const [summary, setSummary] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [tab, setTab] = useState(initialTab)
@@ -266,7 +268,7 @@ export default function PoolView({ token, poolId, initialTab = 'overview', notic
       </nav>
 
       <div className="tab-panel" key={activeTab}>
-        {activeTab === 'overview' && <OverviewTab summary={summary} onTab={setTab} />}
+        {activeTab === 'overview' && <OverviewTab summary={summary} onTab={setTab} leave={{ token, poolId, onSessionRejected, onLeft }} />}
         {activeTab === 'predictions' && <PredictionsPage {...shared} onChanged={refresh} />}
         {activeTab === 'results' && <ResultsPage {...shared} />}
         {activeTab === 'points' && <PointsPage {...shared} />}

@@ -277,6 +277,18 @@
 .medal-round-empty .medal-round-number { color: #a9b3ab; }
 .medal-count { display: inline-flex; align-items: center; gap: 4px; color: var(--gold); font-size: 15px; font-variant-numeric: tabular-nums; }
 
+/* ——— Saída do bolão (SPEC-017) ——— */
+.leave-block { padding-top: 18px; border-top: 1px solid var(--rule); }
+.leave-panel { display: grid; gap: 12px; padding: 14px; border: 1px solid #ecd2cb; border-radius: 6px; background: #fcf6f3; }
+.leave-count { margin: 0; color: #3e4d43; font-size: 12px; font-weight: 650; }
+.leave-panel .match-rows { border-top-color: #ecd2cb; }
+.leave-panel .mrow { min-height: 40px; font-size: 12px; }
+.leave-check { margin: 0; }
+.small-button.danger-solid { border-color: #a34f3c; color: #fff; background: #a34f3c; }
+.small-button.danger-solid:hover:not(:disabled) { border-color: #8a3f31; background: #8a3f31; }
+.small-button.danger-solid:disabled { cursor: not-allowed; opacity: .45; }
+.pool-notice { margin: 0; padding: 12px 14px; border-left: 3px solid #7ea33a; color: #385e43; background: #f0f5e4; font-size: 13px; line-height: 1.5; }
+
 /* ——— Meu plano ——— */
 .plan-page { display: grid; gap: 28px; }
 .plan-page h2 { margin: 0 0 4px; }
