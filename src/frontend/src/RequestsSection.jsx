@@ -56,18 +56,26 @@ export default function RequestsSection({ token, poolId, onSessionRejected, onDe
   }
 
   return (
-    <section aria-label="Solicitações de entrada">
-      <h3 className="section-title">SOLICITAÇÕES DE ENTRADA</h3>
+    <section aria-labelledby="requests-title">
+      <h3 id="requests-title" className="block-title">
+        Solicitações de entrada
+        {requests && requests.length > 0 && <span className="count-pill">{requests.length}</span>}
+      </h3>
       {notice && <p className="form-message form-message-success" role="status">{notice}</p>}
       {error && <p className="form-message" role="alert">{error}</p>}
-      {!requests && !error && <p className="form-copy" role="status">Carregando solicitações...</p>}
-      {requests && requests.length === 0 && <p className="form-copy">Nenhuma solicitação pendente.</p>}
+      {!requests && !error && <p className="tab-loading" role="status">Carregando solicitações...</p>}
+      {requests && requests.length === 0 && <p className="empty-state">Nenhuma solicitação pendente.</p>}
       {requests && requests.length > 0 && (
-        <ul className="invite-list">
+        <ul className="plain-rows">
           {requests.map((request) => (
-            <li key={request.id} className="invite-item">
-              <div className="invite-item-head">
-                <strong className="request-name">{request.name}</strong>
+            <li key={request.id}>
+              <span className="plain-rows-main">
+                {request.name}
+                <small>
+                  Pediu em {formatInviteDate(request.requestedAt)}
+                  {request.lateEntry && ' · entrada tardia: não palpita nas partidas já iniciadas'}
+                </small>
+              </span>
                 {confirmingId !== request.id ? (
                   <span className="invite-actions">
                     <button type="button" className="small-button" disabled={busyId === request.id} onClick={() => decide(request.id, 'approve')}>
@@ -83,11 +91,6 @@ export default function RequestsSection({ token, poolId, onSessionRejected, onDe
                     <button type="button" className="small-button" onClick={() => setConfirmingId(null)}>Cancelar</button>
                   </span>
                 )}
-              </div>
-              <p className="invite-meta">
-                Solicitado em {formatInviteDate(request.requestedAt)}
-                {request.lateEntry && <><br />Entrada tardia: não poderá palpitar nas partidas que já começaram.</>}
-              </p>
             </li>
           ))}
         </ul>

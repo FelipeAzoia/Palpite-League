@@ -1,14 +1,8 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
-import {
-  fetchAccountPlan,
-  fetchAvailablePlans,
-  fetchProfile,
-  isSessionRejected,
-  updateProfileName,
-} from './account-api.js'
-import { describeFeatures, planStatusLabel } from './plan-features.js'
+import { fetchProfile, isSessionRejected, updateProfileName } from './account-api.js'
 import MatchCatalog from './MatchCatalog.jsx'
+import PlanArea from './PlanArea.jsx'
 import PoolsPanel from './PoolsPanel.jsx'
 
 const areas = [
@@ -19,15 +13,6 @@ const areas = [
   { id: 'pools', label: 'Bolões' },
 ]
 
-function FeatureList({ features }) {
-  return (
-    <ul className="feature-list">
-      {describeFeatures(features).map((feature) => (
-        <li key={feature.id}><span>{feature.label}</span><strong>{feature.value}</strong></li>
-      ))}
-    </ul>
-  )
-}
 
 function AreaFooter({ pending, onBack, onLogout }) {
   return (
@@ -130,65 +115,6 @@ function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected
             </button>
           </form>
         </>
-      )}
-
-      <AreaFooter pending={pending} onBack={onBack} onLogout={onLogout} />
-    </>
-  )
-}
-
-function PlanArea({ token, pending, onBack, onLogout, onSessionRejected }) {
-  const [current, setCurrent] = useState(null)
-  const [plans, setPlans] = useState(null)
-  const [loadError, setLoadError] = useState('')
-
-  const rejectSession = useEffectEvent(() => onSessionRejected())
-
-  useEffect(() => {
-    let active = true
-    Promise.all([fetchAccountPlan(token), fetchAvailablePlans(token)]).then(([accountPlan, available]) => {
-      if (!active) return
-      setCurrent(accountPlan)
-      setPlans(available.plans)
-    }).catch((error) => {
-      if (isSessionRejected(error)) rejectSession()
-      else if (active) setLoadError(error.message)
-    })
-    return () => { active = false }
-  }, [token])
-
-  return (
-    <>
-      <p className="eyebrow">MEU PLANO</p>
-      <h2 id="auth-title">Meu plano</h2>
-      <p className="form-copy">Veja o que sua conta permite hoje e compare os planos.</p>
-
-      {loadError && <p className="form-message" role="alert">{loadError}</p>}
-      {!current && !loadError && <p className="form-copy" role="status">Carregando...</p>}
-
-      {current && (
-        <section className="plan-card" aria-label="Plano atual">
-          <div className="plan-card-head">
-            <h3>{current.plan.name}</h3>
-            <span className="plan-tag">{planStatusLabel(current.status)}</span>
-          </div>
-          <FeatureList features={current.plan.features} />
-        </section>
-      )}
-
-      {current && plans && (
-        <section aria-label="Comparação dos planos">
-          <h3 className="section-title">COMPARAR PLANOS</h3>
-          {plans.map((plan) => (
-            <article key={plan.id} className="plan-card">
-              <div className="plan-card-head">
-                <h3>{plan.name}</h3>
-                {plan.id === current.plan.id && <span className="plan-tag">Seu plano</span>}
-              </div>
-              <FeatureList features={plan.features} />
-            </article>
-          ))}
-        </section>
       )}
 
       <AreaFooter pending={pending} onBack={onBack} onLogout={onLogout} />

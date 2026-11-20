@@ -60,17 +60,23 @@ export default function ParticipantsSection({ token, poolId, onSessionRejected }
   }
 
   return (
-    <section aria-label="Participantes do bolão">
-      <h3 className="section-title">PARTICIPANTES{data ? ` (${data.participants.length})` : ''}</h3>
+    <section aria-labelledby="participants-title">
+      <h3 id="participants-title" className="block-title">
+        Participantes
+        {data && <span className="count-pill count-pill-muted">{data.participants.length}</span>}
+      </h3>
       {notice && <p className="form-message form-message-success" role="status">{notice}</p>}
       {error && <p className="form-message" role="alert">{error}</p>}
-      {!data && !error && <p className="form-copy" role="status">Carregando participantes...</p>}
+      {!data && !error && <p className="tab-loading" role="status">Carregando participantes...</p>}
       {data && (
-        <ul className="invite-list">
+        <ul className="plain-rows">
           {data.participants.map((participant) => (
-            <li key={participant.id} className="invite-item">
-              <div className="invite-item-head">
-                <strong className="request-name">{participant.name}</strong>
+            <li key={participant.id}>
+              <span className="plain-rows-main">
+                {participant.name}
+                <small>{participationStatusLabels[participant.status] ?? participant.status}</small>
+              </span>
+              <span className={`role-tag role-tag-${participant.role}`}>{participantRoleLabel(participant.role)}</span>
                 {canPromote(data.requesterRole, participant) && confirmingId !== participant.id && (
                   <button type="button" className="small-button" onClick={() => setConfirmingId(participant.id)}>Promover</button>
                 )}
@@ -82,10 +88,6 @@ export default function ParticipantsSection({ token, poolId, onSessionRejected }
                     <button type="button" className="small-button" onClick={() => setConfirmingId(null)}>Cancelar</button>
                   </span>
                 )}
-              </div>
-              <p className="invite-meta">
-                {participantRoleLabel(participant.role)} · {participationStatusLabels[participant.status] ?? participant.status}
-              </p>
             </li>
           ))}
         </ul>

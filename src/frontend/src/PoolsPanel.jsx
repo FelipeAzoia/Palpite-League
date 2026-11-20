@@ -1,20 +1,11 @@
 import { useEffect, useEffectEvent, useState } from 'react'
-import { ArrowRight, CalendarDays, LoaderCircle } from 'lucide-react'
+import { ArrowRight, ChevronRight, LoaderCircle, Plus } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
-import InvitesSection from './InvitesSection.jsx'
-import { canManageInvites } from './invites-view.js'
 import MatchCatalog from './MatchCatalog.jsx'
-import ParticipantsSection from './ParticipantsSection.jsx'
-import PredictionsPage from './PredictionsPage.jsx'
-import ResultsPage from './ResultsPage.jsx'
-import PointsPage from './PointsPage.jsx'
-import RankingPage from './RankingPage.jsx'
-import RequestsSection from './RequestsSection.jsx'
-import { createPool, fetchCreationAvailability, fetchPoolRules, fetchPools } from './pools-api.js'
+import PoolView from './PoolView.jsx'
+import { createPool, fetchCreationAvailability, fetchPools } from './pools-api.js'
 import {
   buildPoolRequest,
-  formatBrl,
-  formatDay,
   poolStatusLabels,
   prizeModelLabels,
   roleLabels,
@@ -22,12 +13,6 @@ import {
   todayInSaoPaulo,
   toggleValue,
 } from './pools-form.js'
-
-const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
-  dateStyle: 'short',
-  timeStyle: 'short',
-  timeZone: 'America/Sao_Paulo',
-})
 
 function FieldError({ id, message }) {
   return message ? <small id={id} className="field-error">{message}</small> : null
@@ -58,32 +43,37 @@ function PoolList({ token, onSessionRejected, onOpen, onCreate }) {
   }, [token])
 
   return (
-    <>
-      <p className="eyebrow">BOLÕES</p>
-      <h2 id="auth-title">Meus bolões</h2>
-      <p className="form-copy">Os bolões em que você participa.</p>
+    <div className="pools-home">
+      <div className="block-head pools-home-head">
+        <div>
+          <h2 id="auth-title">Meus bolões</h2>
+          <p className="toolbar-note">Os bolões em que você participa ou que administra.</p>
+        </div>
+        <button className="small-button small-button-solid" type="button" onClick={onCreate}>
+          <Plus size={14} aria-hidden="true" /> Criar bolão
+        </button>
+      </div>
 
       {error && <p className="form-message" role="alert">{error}</p>}
-      {!pools && !error && <p className="form-copy" role="status">Carregando...</p>}
-      {pools && pools.length === 0 && <p className="form-copy">Você ainda não participa de nenhum bolão.</p>}
+      {!pools && !error && <p className="tab-loading" role="status"><LoaderCircle size={14} className="spin" /> Carregando...</p>}
+      {pools && pools.length === 0 && <p className="empty-state">Você ainda não participa de nenhum bolão. Crie um ou peça um convite a quem administra.</p>}
       {pools && pools.length > 0 && (
         <ul className="pool-list">
           {pools.map((pool) => (
             <li key={pool.id}>
               <button type="button" className="pool-item" onClick={() => onOpen(pool.id)}>
-                <strong>{pool.name}</strong>
-                <span>{poolStatusLabels[pool.status] ?? pool.status} · {roleLabels[pool.role] ?? pool.role}</span>
+                <span className="pool-item-name">{pool.name}</span>
+                <span className="pool-item-meta">
+                  <span className={`state state-pool-${pool.status}`}>{poolStatusLabels[pool.status] ?? pool.status}</span>
+                  {roleLabels[pool.role] ?? pool.role}
+                </span>
+                <ChevronRight className="pool-item-arrow" size={18} aria-hidden="true" />
               </button>
             </li>
           ))}
         </ul>
       )}
-
-      <button className="primary-button" type="button" onClick={onCreate}>
-        <span>Criar bolão</span>
-        <ArrowRight size={17} />
-      </button>
-    </>
+    </div>
   )
 }
 
@@ -260,109 +250,13 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
   )
 }
 
-function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict, onResults, onPoints, onRanking }) {
-  const [rules, setRules] = useState(null)
-  const [error, setError] = useState('')
-  // Incrementado a cada decisão de entrada, para recarregar a lista de participantes.
-  const [membersVersion, setMembersVersion] = useState(0)
-  const handle = useGuardedRequest(onSessionRejected)
-
-  const handleLoadError = useEffectEvent((requestError) => handle(requestError, setError))
-
-  // O PoolsPanel remonta esta página (key) a cada bolão aberto, então o estado já começa limpo.
-  useEffect(() => {
-    let active = true
-    fetchPoolRules(token, poolId).then((result) => {
-      if (active) setRules(result)
-    }).catch((requestError) => {
-      if (active) handleLoadError(requestError)
-    })
-    return () => { active = false }
-  }, [token, poolId])
-
-  const pool = rules?.pool
-
-  return (
-    <>
-      <p className="eyebrow">REGRAS DO BOLÃO</p>
-      <h2 id="auth-title">{pool?.name ?? 'Regras do bolão'}</h2>
-
-      {notice && <p className="form-message form-message-success" role="status">{notice}</p>}
-      {error && <p className="form-message" role="alert">{error}</p>}
-      {!rules && !error && <p className="form-copy" role="status">Carregando...</p>}
-
-      {pool && (
-        <>
-          <dl className="info-list">
-            <div><dt>Status</dt><dd>{poolStatusLabels[pool.status] ?? pool.status}</dd></div>
-            <div><dt>Seu papel</dt><dd>{roleLabels[rules.requesterRole] ?? rules.requesterRole}</dd></div>
-            <div><dt>Período</dt><dd>{formatDay(pool.startsOn)} a {formatDay(pool.endsOn)}</dd></div>
-            <div><dt>Taxa de entrada</dt><dd>{Number(pool.entryFee) === 0 ? 'Sem taxa' : formatBrl(pool.entryFee)}</dd></div>
-            <div><dt>Premiação</dt><dd>{prizeModelLabels[pool.prizeModel] ?? pool.prizeModel}</dd></div>
-            <div><dt>Desempate</dt><dd>{tiebreakerLabels[pool.tiebreaker] ?? pool.tiebreaker}</dd></div>
-            <div><dt>Resultados ao vivo</dt><dd>{pool.liveResults ? 'Sim' : 'Não'}</dd></div>
-          </dl>
-
-          <div className="pool-actions">
-            <button className="primary-button" type="button" onClick={onPredict}>
-              <span>Fazer palpites</span>
-              <ArrowRight size={17} />
-            </button>
-            <button className="small-button" type="button" onClick={onResults}>Ver resultados</button>
-            <button className="small-button" type="button" onClick={onPoints}>Meus pontos</button>
-            <button className="small-button" type="button" onClick={onRanking}>Ranking</button>
-          </div>
-
-          <h3 className="section-title">CONDIÇÕES DE PARTICIPAÇÃO</h3>
-          <ul className="rule-list">
-            {rules.participationConditions.map((condition) => <li key={condition}>{condition}</li>)}
-          </ul>
-
-          {canManageInvites(rules.requesterRole) && (
-            <>
-              <RequestsSection
-                token={token}
-                poolId={poolId}
-                onSessionRejected={onSessionRejected}
-                onDecided={() => setMembersVersion((current) => current + 1)}
-              />
-              <ParticipantsSection key={membersVersion} token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
-              <InvitesSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
-            </>
-          )}
-
-          <h3 className="section-title">PARTIDAS ({pool.matches.length})</h3>
-          <div className="match-list">
-            {pool.matches.map((match) => (
-              <article className="match-card" key={match.id}>
-                <div className="match-teams">
-                  <span>{match.home.name}</span>
-                  <strong aria-hidden="true">×</strong>
-                  <span>{match.away.name}</span>
-                </div>
-                <div className="match-details">
-                  <span><CalendarDays size={14} /> {match.startsAt ? dateFormatter.format(new Date(match.startsAt)) : 'Data a definir'}</span>
-                  <span>Rodada {match.roundNumber}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </>
-      )}
-
-      <div className="mode-switch">
-        <button type="button" onClick={onBack}>Voltar para meus bolões</button>
-      </div>
-    </>
-  )
-}
-
 export default function PoolsPanel({ token, onSessionRejected }) {
   const [view, setView] = useState({ name: 'list' })
 
-  // A chave muda a cada página interna e reinicia a animação de transição.
+  // A chave muda a cada página interna (lista, criação, um bolão) e reinicia a transição;
+  // trocar de aba dentro do bolão não remonta o cabeçalho.
   return (
-    <div className="page-enter" key={view.poolId ? `${view.name}-${view.poolId}` : view.name}>
+    <div className="page-enter" key={view.poolId ? `pool-${view.poolId}` : view.name}>
       <PoolsPage view={view} setView={setView} token={token} onSessionRejected={onSessionRejected} />
     </div>
   )
@@ -378,7 +272,7 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
         onCreated={(result) => {
           const rounds = result.matchCountByRound.map((item) => `rodada ${item.roundNumber}: ${item.matchCount}`).join('; ')
           setView({
-            name: 'rules',
+            name: 'pool',
             poolId: result.pool.id,
             notice: `Bolão criado com ${result.pool.matches.length} ${result.pool.matches.length === 1 ? 'partida' : 'partidas'} (${rounds}).`,
           })
@@ -387,62 +281,14 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
     )
   }
 
-  if (view.name === 'rules') {
+  if (view.name === 'pool') {
     return (
-      <PoolRules
+      <PoolView
         token={token}
         poolId={view.poolId}
         notice={view.notice}
         onSessionRejected={onSessionRejected}
         onBack={() => setView({ name: 'list' })}
-        onPredict={() => setView({ name: 'predictions', poolId: view.poolId })}
-        onResults={() => setView({ name: 'results', poolId: view.poolId })}
-        onPoints={() => setView({ name: 'points', poolId: view.poolId })}
-        onRanking={() => setView({ name: 'ranking', poolId: view.poolId })}
-      />
-    )
-  }
-
-  if (view.name === 'ranking') {
-    return (
-      <RankingPage
-        token={token}
-        poolId={view.poolId}
-        onSessionRejected={onSessionRejected}
-        onBack={() => setView({ name: 'rules', poolId: view.poolId })}
-      />
-    )
-  }
-
-  if (view.name === 'points') {
-    return (
-      <PointsPage
-        token={token}
-        poolId={view.poolId}
-        onSessionRejected={onSessionRejected}
-        onBack={() => setView({ name: 'rules', poolId: view.poolId })}
-      />
-    )
-  }
-
-  if (view.name === 'results') {
-    return (
-      <ResultsPage
-        token={token}
-        poolId={view.poolId}
-        onSessionRejected={onSessionRejected}
-        onBack={() => setView({ name: 'rules', poolId: view.poolId })}
-      />
-    )
-  }
-
-  if (view.name === 'predictions') {
-    return (
-      <PredictionsPage
-        token={token}
-        poolId={view.poolId}
-        onSessionRejected={onSessionRejected}
-        onBack={() => setView({ name: 'rules', poolId: view.poolId })}
       />
     )
   }
@@ -451,7 +297,7 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
     <PoolList
       token={token}
       onSessionRejected={onSessionRejected}
-      onOpen={(poolId) => setView({ name: 'rules', poolId })}
+      onOpen={(poolId) => setView({ name: 'pool', poolId })}
       onCreate={() => setView({ name: 'create' })}
     />
   )
