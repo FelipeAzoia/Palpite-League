@@ -13,7 +13,12 @@ import {
   participantAuditDetailSchemas,
   participationAuditDetailSchemas,
 } from './modules/pools-participations/index.js'
-import { createPredictionsService, createScoringService, predictionAuditDetailSchemas } from './modules/predictions-scoring/index.js'
+import {
+  createPredictionsService,
+  createRankingService,
+  createScoringService,
+  predictionAuditDetailSchemas,
+} from './modules/predictions-scoring/index.js'
 
 // Esquemas dos detalhes de auditoria permitidos por ação (SPEC-002), reunidos de cada módulo.
 export const auditDetailSchemas = Object.freeze({
@@ -122,6 +127,8 @@ export function createApp(database, {
     scorePredictions: () => scoring.scorePendingMatches(),
   }
   app.locals.scoring = scoring
+  const ranking = createRankingService(database)
+  app.locals.ranking = ranking
   app.locals.results = resultsSync
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
@@ -347,6 +354,23 @@ export function createApp(database, {
   app.get('/pools/:poolId/points', authenticateRequest, (request, response, next) => {
     try {
       response.json(predictions.getMyPoints(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-015 — ranking acumulado com desempate e desempenho próprio por rodada (somente leitura).
+  app.get('/pools/:poolId/ranking', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(ranking.getRanking(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/pools/:poolId/performance', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(ranking.getMyPerformance(request.authenticatedUser.id, request.params.poolId))
     } catch (error) {
       next(error)
     }

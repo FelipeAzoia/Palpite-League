@@ -224,6 +224,18 @@ a { color: inherit; text-decoration: none; }
 /* SPEC-014 — pontos */
 .plan-tag.points-total { font-size: 12px; }
 .plan-tag.points-zero { color: #55655a; background: #e7ece7; }
+/* SPEC-015 — ranking */
+.ranking-list { display: grid; gap: 6px; margin: 14px 0 0; padding: 0; list-style: none; }
+.ranking-row { border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+.ranking-row-own { border-color: #8fae79; background: #f4f8ea; }
+.ranking-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'pos name points' 'pos tiebreak tiebreak'; align-items: center; gap: 2px 10px; width: 100%; padding: 10px 12px; border: 0; color: var(--ink); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.ranking-position { grid-area: pos; min-width: 34px; color: var(--forest); font-size: 13px; font-weight: 750; }
+.ranking-name { grid-area: name; min-width: 0; overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-points { grid-area: points; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.ranking-points strong { color: var(--forest); font-size: 14px; }
+.ranking-tiebreak { grid-area: tiebreak; color: var(--muted); font-size: 10px; }
+.ranking-rounds { margin: 0; padding: 0 12px 10px 56px; list-style: none; }
+.ranking-rounds li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 11px; }
 .auth-loading { display: grid; min-height: 100vh; place-items: center; color: var(--forest); }
 .auth-loading svg, .spin { animation: spin 1s linear infinite; }
 
