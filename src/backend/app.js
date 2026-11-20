@@ -15,6 +15,7 @@ import {
 } from './modules/pools-participations/index.js'
 import {
   createPredictionsService,
+  createMedalsService,
   createRankingService,
   createScoringService,
   predictionAuditDetailSchemas,
@@ -33,6 +34,8 @@ export const auditDetailSchemas = Object.freeze({
 export const defaultResultsSyncIntervalMs = 10 * 60 * 1000
 // Intervalo padrão da pontuação (SPEC-014, OPEN-76): 1 minuto.
 export const defaultScoringIntervalMs = 60 * 1000
+// Intervalo padrão das medalhas (SPEC-016, OPEN-81): 1 minuto.
+export const defaultMedalsIntervalMs = 60 * 1000
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { SportsProviderError } from './modules/matches-results/sports-provider.js'
@@ -129,6 +132,9 @@ export function createApp(database, {
   app.locals.scoring = scoring
   const ranking = createRankingService(database)
   app.locals.ranking = ranking
+  const medals = createMedalsService(database, { ranking, logger, now })
+  app.locals.medals = medals
+  app.locals.tasks.reconcileMedals = () => medals.reconcileMedals()
   app.locals.results = resultsSync
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
@@ -354,6 +360,15 @@ export function createApp(database, {
   app.get('/pools/:poolId/points', authenticateRequest, (request, response, next) => {
     try {
       response.json(predictions.getMyPoints(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-016 — medalhas do bolão por rodada (somente leitura; a concessão é da tarefa agendada).
+  app.get('/pools/:poolId/medals', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(medals.getPoolMedals(request.authenticatedUser.id, request.params.poolId))
     } catch (error) {
       next(error)
     }

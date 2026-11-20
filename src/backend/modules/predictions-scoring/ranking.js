@@ -124,6 +124,10 @@ export function createRankingService(database) {
   function getRanking(userId, poolId) {
     const member = requireConfirmedParticipation(database, userId, poolId)
     const { rounds, ranking } = computeRanking(member.poolId, member.tiebreaker)
+    // Medalhas da SPEC-016, só para exibição ao lado do nome; não participam da classificação.
+    const medals = new Map(database.prepare(`
+      SELECT participation_id, COUNT(*) AS count FROM pool_medals WHERE pool_id = ? GROUP BY participation_id
+    `).all(member.poolId).map(({ participation_id: id, count }) => [id, count]))
     // Só posição, nome, total, valor do desempate e pontos por rodada (INV-011).
     return {
       pool: { id: member.poolId, name: member.poolName, status: member.poolStatus },
@@ -136,6 +140,7 @@ export function createRankingService(database) {
         totalPoints: row.totalPoints,
         tiebreakValue: row.tiebreakValue,
         roundPoints: row.roundPoints,
+        medals: medals.get(row.id) ?? 0,
         isRequester: row.id === member.participationId,
       })),
     }

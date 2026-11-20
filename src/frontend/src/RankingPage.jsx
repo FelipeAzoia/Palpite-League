@@ -1,5 +1,6 @@
 import { useEffect, useEffectEvent, useState } from 'react'
-import { LoaderCircle } from 'lucide-react'
+import { LoaderCircle, Medal } from 'lucide-react'
+import { medalCountLabel } from './medals-api.js'
 import { isSessionRejected } from './account-api.js'
 import { tiebreakerLabels } from './pools-form.js'
 import { blockedMessages } from './predictions-api.js'
@@ -54,7 +55,16 @@ export default function RankingPage({ token, poolId, onSessionRejected, onBack }
                   onClick={() => setExpandedId(expanded ? null : participant.id)}
                 >
                   <span className="ranking-position">{positionLabel(participant, ranking.participants)}</span>
-                  <span className="ranking-name">{participant.name}{participant.isRequester ? ' (você)' : ''}</span>
+                  <span className="ranking-name">
+                    {participant.name}{participant.isRequester ? ' (você)' : ''}
+                    {participant.medals > 0 && (
+                      <span className="ranking-medals" title={medalCountLabel(participant.medals)}>
+                        <Medal size={13} aria-hidden="true" />
+                        <span className="sr-only">{medalCountLabel(participant.medals)}</span>
+                        {participant.medals > 1 && <span aria-hidden="true">×{participant.medals}</span>}
+                      </span>
+                    )}
+                  </span>
                   <span className="ranking-points"><strong>{participant.totalPoints}</strong> pts</span>
                   <span className="ranking-tiebreak">{tiebreakColumnLabels[ranking.tiebreaker]}: {participant.tiebreakValue}</span>
                 </button>

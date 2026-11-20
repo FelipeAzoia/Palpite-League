@@ -9,6 +9,7 @@ import PredictionsPage from './PredictionsPage.jsx'
 import ResultsPage from './ResultsPage.jsx'
 import PointsPage from './PointsPage.jsx'
 import RankingPage from './RankingPage.jsx'
+import MedalsPage from './MedalsPage.jsx'
 import RequestsSection from './RequestsSection.jsx'
 import { createPool, fetchCreationAvailability, fetchPoolRules, fetchPools } from './pools-api.js'
 import {
@@ -260,7 +261,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
   )
 }
 
-function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict, onResults, onPoints, onRanking }) {
+function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict, onResults, onPoints, onRanking, onMedals }) {
   const [rules, setRules] = useState(null)
   const [error, setError] = useState('')
   // Incrementado a cada decisão de entrada, para recarregar a lista de participantes.
@@ -311,6 +312,7 @@ function PoolRules({ token, poolId, notice, onSessionRejected, onBack, onPredict
             <button className="small-button" type="button" onClick={onResults}>Ver resultados</button>
             <button className="small-button" type="button" onClick={onPoints}>Meus pontos</button>
             <button className="small-button" type="button" onClick={onRanking}>Ranking</button>
+            <button className="small-button" type="button" onClick={onMedals}>Medalhas</button>
           </div>
 
           <h3 className="section-title">CONDIÇÕES DE PARTICIPAÇÃO</h3>
@@ -399,6 +401,18 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
         onResults={() => setView({ name: 'results', poolId: view.poolId })}
         onPoints={() => setView({ name: 'points', poolId: view.poolId })}
         onRanking={() => setView({ name: 'ranking', poolId: view.poolId })}
+        onMedals={() => setView({ name: 'medals', poolId: view.poolId })}
+      />
+    )
+  }
+
+  if (view.name === 'medals') {
+    return (
+      <MedalsPage
+        token={token}
+        poolId={view.poolId}
+        onSessionRejected={onSessionRejected}
+        onBack={() => setView({ name: 'rules', poolId: view.poolId })}
       />
     )
   }
