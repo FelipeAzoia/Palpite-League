@@ -2,10 +2,10 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { LoaderCircle, Medal } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { blockedMessages } from './predictions-api.js'
-import { fetchPoolMedals, medalCountLabel, winnersLabel } from './medals-api.js'
+import { fetchPoolMedals, medalCountLabel } from './medals-api.js'
 
-// Tela de medalhas do bolão (SPEC-016): melhores jogadores por rodada encerrada e medalhas de cada um.
-export default function MedalsPage({ token, poolId, onSessionRejected, onBack }) {
+// Aba de medalhas (SPEC-016): melhores de cada rodada encerrada e quadro de medalhas.
+export default function MedalsPage({ token, poolId, onSessionRejected }) {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
 
@@ -14,7 +14,6 @@ export default function MedalsPage({ token, poolId, onSessionRejected, onBack })
     else setLoadError(blockedMessages[error.type] ?? error.message)
   })
 
-  // A página é remontada por bolão (key no PoolsPanel), então o estado já começa limpo.
   useEffect(() => {
     let active = true
     fetchPoolMedals(token, poolId).then((result) => {
@@ -25,44 +24,54 @@ export default function MedalsPage({ token, poolId, onSessionRejected, onBack })
     return () => { active = false }
   }, [token, poolId])
 
+  if (loadError) return <p className="form-message" role="alert">{loadError}</p>
+  if (!data) return <p className="tab-loading" role="status"><LoaderCircle size={14} className="spin" /> Carregando medalhas...</p>
+
   return (
-    <>
-      <p className="eyebrow">MEDALHAS</p>
-      <h2 id="auth-title">{data?.pool.name ?? 'Medalhas do bolão'}</h2>
-      <p className="form-copy">Ao fim de cada rodada, quem fez mais pontos ganha uma medalha. Ela não muda pontos nem ranking.</p>
-
-      {loadError && <p className="form-message" role="alert">{loadError}</p>}
-      {!data && !loadError && <p className="form-copy" role="status"><LoaderCircle size={14} className="spin" /> Carregando...</p>}
-
-      {data && (
-        <>
-          <h3 className="section-title">MELHORES DA RODADA</h3>
-          {data.rounds.length === 0 && <p className="form-copy">Nenhuma rodada deste bolão terminou ainda.</p>}
-          <ul className="feature-list">
+    <div className="tab-body tab-split">
+      <section aria-labelledby="medals-rounds">
+        <h3 id="medals-rounds" className="block-title">Melhores de cada rodada</h3>
+        {data.rounds.length === 0 ? (
+          <p className="empty-state">Nenhuma rodada deste bolão terminou ainda. Ao fim de cada uma, quem fizer mais pontos ganha uma medalha.</p>
+        ) : (
+          <ol className="medal-rounds">
             {data.rounds.map((round) => (
-              <li key={round.number}>
-                <span>Rodada {round.number}</span>
-                <strong>{winnersLabel(round)}</strong>
+              <li key={round.number} className={round.winners.length ? 'medal-round' : 'medal-round medal-round-empty'}>
+                <span className="medal-round-number">R{round.number}</span>
+                <div>
+                  {round.winners.length ? (
+                    <>
+                      <strong>{round.winners.map(({ name, isRequester }) => (isRequester ? `${name} (você)` : name)).join(', ')}</strong>
+                      <span>{round.winners[0].points} pts na rodada{round.winners.length > 1 ? ' · empate' : ''}</span>
+                    </>
+                  ) : (
+                    <span>Sem medalha: ninguém pontuou</span>
+                  )}
+                </div>
+                {round.winners.length > 0 && <Medal className="medal-round-icon" size={18} aria-hidden="true" />}
               </li>
             ))}
-          </ul>
+          </ol>
+        )}
+      </section>
 
-          <h3 className="section-title">QUADRO DE MEDALHAS</h3>
-          {data.participants.length === 0 && <p className="form-copy">Ainda não há medalhas neste bolão.</p>}
-          <ul className="feature-list">
+      <section aria-labelledby="medals-board">
+        <h3 id="medals-board" className="block-title">Quadro de medalhas</h3>
+        {data.participants.length === 0 ? (
+          <p className="empty-state">Ainda não há medalhas neste bolão.</p>
+        ) : (
+          <ol className="plain-rows">
             {data.participants.map((participant) => (
-              <li key={participant.participationId} className={participant.isRequester ? 'medal-own' : undefined}>
-                <span className="medal-name"><Medal size={14} aria-hidden="true" /> {participant.name}{participant.isRequester ? ' (você)' : ''}</span>
-                <strong>{medalCountLabel(participant.count)} · rodadas {participant.medalRounds.join(', ')}</strong>
+              <li key={participant.participationId} className={participant.isRequester ? 'is-own' : undefined}>
+                <span className="plain-rows-main">{participant.name}{participant.isRequester && <span className="you-tag">você</span>}</span>
+                <span className="muted-text">rodadas {participant.medalRounds.join(', ')}</span>
+                <strong className="medal-count"><Medal size={14} aria-hidden="true" /> {participant.count}<span className="sr-only"> ({medalCountLabel(participant.count)})</span></strong>
               </li>
             ))}
-          </ul>
-        </>
-      )}
-
-      <div className="mode-switch">
-        <button type="button" onClick={onBack}>Voltar às regras do bolão</button>
-      </div>
-    </>
+          </ol>
+        )}
+        <p className="fine-print">Medalhas são só um reconhecimento: não mudam pontos, ranking nem premiação.</p>
+      </section>
+    </div>
   )
 }

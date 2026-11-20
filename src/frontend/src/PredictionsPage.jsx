@@ -1,31 +1,33 @@
 import { useEffect, useEffectEvent, useState } from 'react'
-import { CalendarDays, LoaderCircle } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
+import { formatKickoff, initialRound } from './match-format.js'
 import {
   blockedMessages,
-  describePrediction,
   draftFrom,
   fetchPredictionMatches,
-  outcomeLabels,
   predictionBody,
   savePrediction,
   situationHints,
   situationLabels,
 } from './predictions-api.js'
+import RoundPicker from './RoundPicker.jsx'
 
-const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
-  dateStyle: 'short',
-  timeStyle: 'short',
-  timeZone: 'America/Sao_Paulo',
-})
+const outcomeShort = { home: 'Mandante', draw: 'Empate', away: 'Visitante' }
 
-function PredictionForm({ match, pending, fieldErrors, message, onCancel, onSubmit }) {
-  const [draft, setDraft] = useState(() => draftFrom(match.prediction))
-  const idPrefix = `prediction-${match.id}`
-
-  function change(field) {
-    return (event) => setDraft((current) => ({ ...current, [field]: event.target.value }))
+// Palpite gravado, no centro da linha: placar em caixa ou o resultado escolhido.
+export function PredictionMark({ prediction }) {
+  if (!prediction) return <span className="mrow-vs" aria-label="sem palpite">×</span>
+  if (prediction.type === 'exact_score') {
+    return <span className="score-box score-box-pick" aria-label={`seu palpite: ${prediction.homeGoals} a ${prediction.awayGoals}`}>{prediction.homeGoals}<i>–</i>{prediction.awayGoals}</span>
   }
+  return <span className="pick-chip">{outcomeShort[prediction.outcome] ?? prediction.outcome}</span>
+}
+
+function PredictionEditor({ match, pending, fieldErrors, message, onCancel, onSubmit }) {
+  const [draft, setDraft] = useState(() => draftFrom(match.prediction))
+  const name = `prediction-${match.id}`
+  const set = (field, value) => setDraft((current) => ({ ...current, [field]: value }))
 
   function submit(event) {
     event.preventDefault()
@@ -33,113 +35,57 @@ function PredictionForm({ match, pending, fieldErrors, message, onCancel, onSubm
   }
 
   return (
-    <form className="prediction-form" onSubmit={submit} noValidate>
-      <fieldset className="prediction-modes">
-        <legend>Modalidade</legend>
-        <label className="check-field">
-          <input type="radio" name={`${idPrefix}-type`} value="result" checked={draft.type === 'result'} onChange={change('type')} />
-          <span>Resultado</span>
-        </label>
-        <label className="check-field">
-          <input type="radio" name={`${idPrefix}-type`} value="exact_score" checked={draft.type === 'exact_score'} onChange={change('type')} />
-          <span>Placar exato</span>
-        </label>
-        {fieldErrors.type && <small className="field-error">{fieldErrors.type}</small>}
-      </fieldset>
+    <form className="mrow-editor" onSubmit={submit} noValidate>
+      <div className="segmented" role="radiogroup" aria-label="Modalidade do palpite">
+        {[['result', 'Resultado'], ['exact_score', 'Placar exato']].map(([value, label]) => (
+          <label key={value} className="segment">
+            <input type="radio" name={`${name}-type`} value={value} checked={draft.type === value} onChange={() => set('type', value)} />
+            <span>{label}</span>
+          </label>
+        ))}
+      </div>
 
       {draft.type === 'result' ? (
-        <label className="field">
-          <span>Resultado</span>
-          <select value={draft.outcome} onChange={change('outcome')} aria-describedby={fieldErrors.outcome ? `${idPrefix}-outcome-error` : undefined}>
-            <option value="">Selecione</option>
-            {Object.entries(outcomeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-          {fieldErrors.outcome && <small id={`${idPrefix}-outcome-error`} className="field-error">{fieldErrors.outcome}</small>}
-        </label>
+        <div className="segmented segmented-wide" role="radiogroup" aria-label="Resultado previsto">
+          {[['home', match.home.name], ['draw', 'Empate'], ['away', match.away.name]].map(([value, label]) => (
+            <label key={value} className="segment">
+              <input type="radio" name={`${name}-outcome`} value={value} checked={draft.outcome === value} onChange={() => set('outcome', value)} />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
       ) : (
-        <div className="score-row">
-          <label className="field">
-            <span>{match.home.name}</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              max="99"
-              step="1"
-              value={draft.homeGoals}
-              onChange={change('homeGoals')}
-              aria-describedby={fieldErrors.homeGoals ? `${idPrefix}-home-error` : undefined}
-            />
-            {fieldErrors.homeGoals && <small id={`${idPrefix}-home-error`} className="field-error">{fieldErrors.homeGoals}</small>}
+        <div className="score-inputs">
+          <label>
+            <span className="sr-only">Gols de {match.home.name}</span>
+            <input type="number" inputMode="numeric" min="0" max="99" step="1" value={draft.homeGoals} onChange={(event) => set('homeGoals', event.target.value)} />
           </label>
-          <strong aria-hidden="true">×</strong>
-          <label className="field">
-            <span>{match.away.name}</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min="0"
-              max="99"
-              step="1"
-              value={draft.awayGoals}
-              onChange={change('awayGoals')}
-              aria-describedby={fieldErrors.awayGoals ? `${idPrefix}-away-error` : undefined}
-            />
-            {fieldErrors.awayGoals && <small id={`${idPrefix}-away-error`} className="field-error">{fieldErrors.awayGoals}</small>}
+          <i aria-hidden="true">–</i>
+          <label>
+            <span className="sr-only">Gols de {match.away.name}</span>
+            <input type="number" inputMode="numeric" min="0" max="99" step="1" value={draft.awayGoals} onChange={(event) => set('awayGoals', event.target.value)} />
           </label>
         </div>
       )}
 
-      {message && <p className="form-message" role="alert">{message}</p>}
-
-      <div className="invite-actions">
-        <button className="small-button" type="submit" disabled={pending}>
-          {pending ? 'Salvando...' : 'Salvar palpite'}
-        </button>
-        <button className="small-button" type="button" onClick={onCancel} disabled={pending}>Cancelar</button>
+      <div className="mrow-editor-actions">
+        <button className="small-button small-button-solid" type="submit" disabled={pending}>{pending ? 'Salvando...' : 'Salvar palpite'}</button>
+        <button className="link-button" type="button" onClick={onCancel} disabled={pending}>Cancelar</button>
       </div>
+      {Object.values(fieldErrors).filter(Boolean).map((text) => <small key={text} className="field-error">{text}</small>)}
+      {message && <p className="form-message" role="alert">{message}</p>}
     </form>
   )
 }
 
-function MatchPrediction({ match, editing, pending, fieldErrors, message, onEdit, onCancel, onSubmit }) {
-  const isOpen = match.situation === 'open'
-  return (
-    <article className="match-card">
-      <div className="match-teams">
-        <span>{match.home.name}</span>
-        <strong aria-hidden="true">×</strong>
-        <span>{match.away.name}</span>
-      </div>
-      <div className="match-details">
-        <span><CalendarDays size={14} /> {match.startsAt ? dateFormatter.format(new Date(match.startsAt)) : 'Data a definir'}</span>
-        <span className={`plan-tag prediction-situation-${match.situation}`}>{situationLabels[match.situation] ?? match.situation}</span>
-      </div>
-      <p className="prediction-own">{describePrediction(match.prediction, match)}</p>
-      {!isOpen && situationHints[match.situation] && <p className="field-hint">{situationHints[match.situation]}</p>}
-
-      {isOpen && !editing && (
-        <button className="small-button" type="button" onClick={onEdit}>
-          {match.prediction ? 'Alterar palpite' : 'Palpitar'}
-        </button>
-      )}
-      {isOpen && editing && (
-        <PredictionForm
-          match={match}
-          pending={pending}
-          fieldErrors={fieldErrors}
-          message={message}
-          onCancel={onCancel}
-          onSubmit={onSubmit}
-        />
-      )}
-    </article>
-  )
+function situationTone(situation) {
+  return situation === 'open' ? 'open' : situation === 'late_entry' ? 'warn' : 'muted'
 }
 
-// Tela de palpites do bolão (SPEC-012): partidas por rodada, situação de cada uma e palpite próprio.
-export default function PredictionsPage({ token, poolId, onSessionRejected, onBack }) {
+// Aba de palpites do bolão (SPEC-012): uma rodada por vez, linhas compactas e edição em linha.
+export default function PredictionsPage({ token, poolId, onSessionRejected, onChanged }) {
   const [data, setData] = useState(null)
+  const [round, setRound] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [pending, setPending] = useState(false)
@@ -147,17 +93,11 @@ export default function PredictionsPage({ token, poolId, onSessionRejected, onBa
   const [message, setMessage] = useState('')
   const [notice, setNotice] = useState('')
 
-  function errorText(error) {
-    return blockedMessages[error.type] ?? error.message
-  }
+  const errorText = (error) => blockedMessages[error.type] ?? error.message
 
-  async function reload() {
-    try {
-      setData(await fetchPredictionMatches(token, poolId))
-    } catch (error) {
-      if (isSessionRejected(error)) onSessionRejected()
-      else setLoadError(errorText(error))
-    }
+  function receive(result) {
+    setData(result)
+    setRound((current) => current ?? initialRound(result.rounds, (match) => match.situation === 'open', (match) => match.status === 'finished'))
   }
 
   const handleLoadError = useEffectEvent((error) => {
@@ -165,11 +105,10 @@ export default function PredictionsPage({ token, poolId, onSessionRejected, onBa
     else setLoadError(errorText(error))
   })
 
-  // A página é remontada por bolão (key no PoolsPanel), então o estado já começa limpo.
   useEffect(() => {
     let active = true
     fetchPredictionMatches(token, poolId).then((result) => {
-      if (active) setData(result)
+      if (active) receive(result)
     }).catch((error) => {
       if (active) handleLoadError(error)
     })
@@ -191,13 +130,14 @@ export default function PredictionsPage({ token, poolId, onSessionRejected, onBa
       const result = await savePrediction(token, poolId, match.id, body)
       setData((current) => ({
         ...current,
-        rounds: current.rounds.map((round) => ({
-          ...round,
-          matches: round.matches.map((item) => (item.id === match.id ? { ...item, prediction: result.prediction } : item)),
+        rounds: current.rounds.map((item) => ({
+          ...item,
+          matches: item.matches.map((entry) => (entry.id === match.id ? { ...entry, prediction: result.prediction } : entry)),
         })),
       }))
       setEditingId(null)
       setNotice(result.changed ? 'Palpite salvo.' : 'Esse palpite já estava salvo.')
+      onChanged?.()
     } catch (error) {
       if (isSessionRejected(error)) {
         onSessionRejected()
@@ -206,10 +146,11 @@ export default function PredictionsPage({ token, poolId, onSessionRejected, onBa
       if (error.status === 409) {
         // A situação mudou no servidor (por exemplo, a partida começou): atualiza a lista.
         setEditingId(null)
-        setNotice('')
-        setMessage('')
-        setLoadError('')
-        await reload()
+        try {
+          receive(await fetchPredictionMatches(token, poolId))
+        } catch {
+          // Mantém a lista atual; a mensagem abaixo explica o bloqueio.
+        }
         setNotice(errorText(error))
         return
       }
@@ -220,41 +161,69 @@ export default function PredictionsPage({ token, poolId, onSessionRejected, onBa
     }
   }
 
+  if (loadError) return <p className="form-message" role="alert">{loadError}</p>
+  if (!data) return <p className="tab-loading" role="status"><LoaderCircle size={14} className="spin" /> Carregando partidas...</p>
+  if (data.rounds.length === 0) return <p className="empty-state">Este bolão não tem partidas.</p>
+
+  const current = data.rounds.find(({ number }) => number === round) ?? data.rounds[0]
+  const pickerRounds = data.rounds.map(({ number, matches }) => {
+    const open = matches.filter(({ situation }) => situation === 'open')
+    const missing = open.filter(({ prediction }) => !prediction).length
+    return {
+      number,
+      tone: missing > 0 ? 'open' : open.length === 0 ? 'done' : undefined,
+      hint: missing > 0 ? `${missing} sem palpite` : open.length === 0 ? 'Palpites encerrados' : 'Palpites feitos',
+    }
+  })
+  const openCount = current.matches.filter(({ situation }) => situation === 'open').length
+  const doneCount = current.matches.filter(({ situation, prediction }) => situation === 'open' && prediction).length
+
   return (
-    <>
-      <p className="eyebrow">PALPITES</p>
-      <h2 id="auth-title">{data?.pool.name ?? 'Palpites do bolão'}</h2>
-      <p className="form-copy">Palpite no resultado ou no placar exato até o início de cada partida.</p>
-
-      {notice && <p className="form-message form-message-success" role="status">{notice}</p>}
-      {loadError && <p className="form-message" role="alert">{loadError}</p>}
-      {!data && !loadError && <p className="form-copy" role="status"><LoaderCircle size={14} className="spin" /> Carregando...</p>}
-
-      {data && data.rounds.length === 0 && <p className="form-copy">Este bolão não tem partidas.</p>}
-      {data && data.rounds.map((round) => (
-        <section key={round.number} aria-label={`Rodada ${round.number}`}>
-          <h3 className="section-title">RODADA {round.number}</h3>
-          <div className="match-list">
-            {round.matches.map((match) => (
-              <MatchPrediction
-                key={match.id}
-                match={match}
-                editing={editingId === match.id}
-                pending={pending}
-                fieldErrors={fieldErrors}
-                message={message}
-                onEdit={() => edit(match.id)}
-                onCancel={() => setEditingId(null)}
-                onSubmit={(body) => submit(match, body)}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
-
-      <div className="mode-switch">
-        <button type="button" onClick={onBack}>Voltar às regras do bolão</button>
+    <div className="tab-body">
+      <div className="tab-toolbar">
+        <RoundPicker rounds={pickerRounds} value={current.number} onChange={(number) => { setRound(number); setEditingId(null) }} />
+        <p className="toolbar-note">
+          {openCount > 0 ? `${doneCount} de ${openCount} partidas abertas com palpite` : 'Todas as partidas desta rodada já começaram'}
+        </p>
       </div>
-    </>
+      {notice && <p className="form-message form-message-success" role="status">{notice}</p>}
+
+      <ol className="match-rows" aria-label={`Partidas da rodada ${current.number}`}>
+        {current.matches.map((match) => {
+          const { day, time } = formatKickoff(match.startsAt)
+          const isOpen = match.situation === 'open'
+          const editing = editingId === match.id
+          return (
+            <li key={match.id} className={editing ? 'mrow mrow-editing' : 'mrow'}>
+              <span className="mrow-when"><b>{time}</b>{day}</span>
+              <span className="mrow-home">{match.home.name}</span>
+              <span className="mrow-center"><PredictionMark prediction={match.prediction} /></span>
+              <span className="mrow-away">{match.away.name}</span>
+              <span className="mrow-side">
+                {isOpen && !editing && (
+                  <button className="small-button" type="button" onClick={() => edit(match.id)}>{match.prediction ? 'Editar' : 'Palpitar'}</button>
+                )}
+                {!isOpen && (
+                  <span className={`state state-${situationTone(match.situation)}`} title={situationHints[match.situation]}>
+                    {situationLabels[match.situation] ?? match.situation}
+                  </span>
+                )}
+              </span>
+              {editing && (
+                <PredictionEditor
+                  match={match}
+                  pending={pending}
+                  fieldErrors={fieldErrors}
+                  message={message}
+                  onCancel={() => setEditingId(null)}
+                  onSubmit={(body) => submit(match, body)}
+                />
+              )}
+            </li>
+          )
+        })}
+      </ol>
+      <p className="fine-print">Resultado certo vale 2 pontos; placar exato vale 5. Os palpites fecham no horário de início de cada partida.</p>
+    </div>
   )
 }

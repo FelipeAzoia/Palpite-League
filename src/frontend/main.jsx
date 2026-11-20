@@ -8,6 +8,7 @@ import InvitePanel from './src/InvitePanel.jsx'
 import { consumeInviteLink, discardInviteCode, pendingInviteCode } from './src/invite-link.js'
 import { consumeRecoveryToken } from './src/recovery-link.js'
 import './styles.css'
+import './pool.css'
 
 const tokenKey = 'palpite-league-session'
 // Account tabs that keep the original two-column layout with the large slogan.

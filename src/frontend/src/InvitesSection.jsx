@@ -82,9 +82,14 @@ export default function InvitesSection({ token, poolId, onSessionRejected }) {
   }
 
   return (
-    <section aria-label="Convites do bolão">
-      <h3 className="section-title">CONVITES</h3>
-      <p className="form-copy">Cada convite é um link de uso único, válido por 7 dias.</p>
+    <section aria-labelledby="invites-title">
+      <div className="block-head">
+        <h3 id="invites-title" className="block-title">Convites</h3>
+        <button className="small-button small-button-solid" type="button" onClick={create} disabled={creating}>
+          {creating ? <><LoaderCircle size={13} className="spin" /> Criando...</> : 'Novo convite'}
+        </button>
+      </div>
+      <p className="fine-print fine-print-top">Cada convite é um link de uso único, válido por 7 dias.</p>
 
       {newLink && (
         <div className="invite-link-box">
@@ -100,40 +105,45 @@ export default function InvitesSection({ token, poolId, onSessionRejected }) {
 
       {error && <p className="form-message" role="alert">{error}</p>}
 
-      <button className="primary-button" type="button" onClick={create} disabled={creating}>
-        <span>{creating ? 'Criando...' : 'Criar convite'}</span>
-        {creating && <LoaderCircle size={17} className="spin" />}
-      </button>
-
-      {!invites && !error && <p className="form-copy" role="status">Carregando convites...</p>}
-      {invites && invites.length === 0 && <p className="form-copy invite-empty">Nenhum convite criado ainda.</p>}
-      {invites && invites.length > 0 && (
-        <ul className="invite-list">
-          {invites.map((invite) => (
-            <li key={invite.id} className="invite-item">
-              <div className="invite-item-head">
-                <span className={`plan-tag invite-${invite.status}`}>{inviteStatusLabels[invite.status] ?? invite.status}</span>
-                {invite.status === 'active' && confirmingId !== invite.id && (
-                  <button type="button" className="small-button danger" onClick={() => setConfirmingId(invite.id)}>Revogar</button>
-                )}
-                {confirmingId === invite.id && (
-                  <span className="invite-actions">
-                    <button type="button" className="small-button danger" disabled={revokingId === invite.id} onClick={() => revoke(invite.id)}>
-                      {revokingId === invite.id ? 'Revogando...' : 'Confirmar revogação'}
-                    </button>
-                    <button type="button" className="small-button" onClick={() => setConfirmingId(null)}>Cancelar</button>
-                  </span>
-                )}
-              </div>
-              <p className="invite-meta">
+      {!invites && !error && <p className="tab-loading" role="status">Carregando convites...</p>}
+      {invites && invites.length === 0 && <p className="empty-state">Nenhum convite criado ainda.</p>}
+      {invites && invites.length > 0 && (() => {
+        const renderInvite = (invite) => (
+          <li key={invite.id}>
+            <span className="plain-rows-main">
+              <span className={`state state-invite-${invite.status}`}>{inviteStatusLabels[invite.status] ?? invite.status}</span>
+              <small>
                 Criado em {formatInviteDate(invite.createdAt)} por {invite.createdBy}
-                <br />Válido até {formatInviteDate(invite.expiresAt)}
-                {invite.usedAt && <><br />Usado em {formatInviteDate(invite.usedAt)}</>}
-              </p>
-            </li>
-          ))}
-        </ul>
-      )}
+                {invite.usedAt ? ` · usado em ${formatInviteDate(invite.usedAt)}` : ` · vale até ${formatInviteDate(invite.expiresAt)}`}
+              </small>
+            </span>
+            {invite.status === 'active' && confirmingId !== invite.id && (
+              <button type="button" className="small-button danger" onClick={() => setConfirmingId(invite.id)}>Revogar</button>
+            )}
+            {confirmingId === invite.id && (
+              <span className="invite-actions">
+                <button type="button" className="small-button danger" disabled={revokingId === invite.id} onClick={() => revoke(invite.id)}>
+                  {revokingId === invite.id ? 'Revogando...' : 'Confirmar'}
+                </button>
+                <button type="button" className="small-button" onClick={() => setConfirmingId(null)}>Cancelar</button>
+              </span>
+            )}
+          </li>
+        )
+        const active = invites.filter(({ status }) => status === 'active')
+        const history = invites.filter(({ status }) => status !== 'active')
+        return (
+          <>
+            {active.length > 0 ? <ul className="plain-rows">{active.map(renderInvite)}</ul> : <p className="empty-state">Nenhum convite ativo.</p>}
+            {history.length > 0 && (
+              <details className="history">
+                <summary>Histórico de convites ({history.length})</summary>
+                <ul className="plain-rows">{history.map(renderInvite)}</ul>
+              </details>
+            )}
+          </>
+        )
+      })()}
     </section>
   )
 }
