@@ -4,6 +4,7 @@ import { fetchProfile, isSessionRejected, updateProfileName } from './account-ap
 import MatchCatalog from './MatchCatalog.jsx'
 import PlanArea from './PlanArea.jsx'
 import PoolsPanel from './PoolsPanel.jsx'
+import FinancialHistory from './FinancialHistory.jsx'
 
 const areas = [
   { id: 'home', label: 'Início' },
@@ -11,6 +12,7 @@ const areas = [
   { id: 'plan', label: 'Plano' },
   { id: 'matches', label: 'Partidas' },
   { id: 'pools', label: 'Bolões' },
+  { id: 'financial', label: 'Financeiro' },
 ]
 
 
@@ -181,6 +183,16 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
 
       {area === 'pools' && (
         <PoolsPanel token={token} onSessionRejected={onSessionRejected} />
+      )}
+
+      {area === 'financial' && (
+        <FinancialHistory
+          token={token}
+          pending={pending}
+          onBack={() => setArea('home')}
+          onLogout={onLogout}
+          onSessionRejected={onSessionRejected}
+        />
       )}
     </div>
   )

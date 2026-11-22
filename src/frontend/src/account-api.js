@@ -16,6 +16,10 @@ export function fetchAvailablePlans(token, options = {}) {
   return requestAuth('/account/plans', { token, ...options })
 }
 
+export function fetchFinancialHistory(token, options = {}) {
+  return requestAuth('/account/financial-history', { token, ...options })
+}
+
 // Sessão ausente, inválida, expirada ou encerrada: a interface leva o usuário ao login (SPEC-005, E1).
 export function isSessionRejected(error) {
   return error?.status === 401

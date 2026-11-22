@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "node --env-file=../../.env --watch index.js",
     "start": "node --env-file=../../.env index.js",
-    "test": "node --test ../../tests/backend/"
+    "test": "node --test ../../tests/backend/*.test.js"
   },
   "dependencies": {
     "better-sqlite3": "11.10.0",
