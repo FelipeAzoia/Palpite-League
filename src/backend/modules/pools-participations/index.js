@@ -8,6 +8,7 @@ export { createInvitesService } from './invites.js'
 export { createParticipationRequestsService, participationAuditDetailSchemas } from './participation-requests.js'
 export { createParticipationDecisionsService, decisionAuditDetailSchemas } from './participation-decisions.js'
 export { createParticipantManagementService, participantAuditDetailSchemas } from './participant-management.js'
+export { createParticipationExitService, exitAuditDetailSchemas } from './participation-exit.js'
 
 export const prizeModels = Object.freeze(['winner_takes_all'])
 export const tiebreakers = Object.freeze(['exact_scores', 'correct_results', 'last_round_points'])

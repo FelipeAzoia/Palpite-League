@@ -25,7 +25,7 @@ function useGuardedRequest(onSessionRejected) {
   }
 }
 
-function PoolList({ token, onSessionRejected, onOpen, onCreate }) {
+function PoolList({ token, notice, onSessionRejected, onOpen, onCreate }) {
   const [pools, setPools] = useState(null)
   const [error, setError] = useState('')
   const handle = useGuardedRequest(onSessionRejected)
@@ -54,6 +54,7 @@ function PoolList({ token, onSessionRejected, onOpen, onCreate }) {
         </button>
       </div>
 
+      {notice && <p className="pool-notice" role="status">{notice}</p>}
       {error && <p className="form-message" role="alert">{error}</p>}
       {!pools && !error && <p className="tab-loading" role="status"><LoaderCircle size={14} className="spin" /> Carregando...</p>}
       {pools && pools.length === 0 && <p className="empty-state">Você ainda não participa de nenhum bolão. Crie um ou peça um convite a quem administra.</p>}
@@ -289,6 +290,7 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
         notice={view.notice}
         onSessionRejected={onSessionRejected}
         onBack={() => setView({ name: 'list' })}
+        onLeft={(message) => setView({ name: 'list', notice: message })}
       />
     )
   }
@@ -296,6 +298,7 @@ function PoolsPage({ view, setView, token, onSessionRejected }) {
   return (
     <PoolList
       token={token}
+      notice={view.notice}
       onSessionRejected={onSessionRejected}
       onOpen={(poolId) => setView({ name: 'pool', poolId })}
       onCreate={() => setView({ name: 'create' })}
