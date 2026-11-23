@@ -3,13 +3,13 @@ import fs from 'node:fs'
 import test from 'node:test'
 import { createSimulatedPaymentsProvider } from '../../src/backend/adapters/simulated-payments-provider.js'
 import { createMercadoPagoTestPaymentsProvider } from '../../src/backend/adapters/mercado-pago-test-payments-provider.js'
-import { addCalendarMonth, subscriptionActions } from '../../src/backend/modules/payments-subscriptions/index.js'
+import { addCalendarMonth, billingPolicyVersion, subscriptionActions } from '../../src/backend/modules/payments-subscriptions/index.js'
 import { expectCommonFormat, startOfTests, withHttpApp } from './support/app-harness.js'
 
 // SPEC-019 — contratação do Premium. A suíte roda com o simulador ou com um Mercado Pago falso,
 // sem credenciais reais e sem rede externa.
 
-const confirm = { confirm: true }
+const confirm = { confirm: true, billingPolicyVersion }
 
 function withSimulator(callback) {
   const provider = createSimulatedPaymentsProvider()
@@ -56,6 +56,7 @@ test('TC-01: condições vêm do backend; valores enviados pelo cliente são rej
       simulated: true,
       canSubscribe: true,
       reason: null,
+      billingPolicy: { version: billingPolicyVersion, title: 'Política de Cobrança e Cancelamento' },
       subscription: null,
     })
 
@@ -100,7 +101,7 @@ test('TC-02 e TC-14: contratar cria assinatura e movimentação pendentes, com a
     assert.equal(requested.action, subscriptionActions.requested)
     assert.deepEqual(requested.actor, { type: 'user', id: ana.id })
     assert.equal(requested.result, 'success')
-    assert.deepEqual(requested.details, { amountCents: 1990, newState: 'pending', origin: 'simulator' })
+    assert.deepEqual(requested.details, { amountCents: 1990, newState: 'pending', origin: 'simulator', billingPolicyVersion })
     assert.equal(auditsOf(context, 'financial_movement', movement.id)[0].action, 'financial.movement_created')
 
     assert.equal((await planOf(context, ana)).plan.id, 'free')

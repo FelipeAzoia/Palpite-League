@@ -48,6 +48,7 @@ export function createSubscriptionStore(database) {
       cancellationPending: row.status === 'cancellation_pending',
       cancellationRequestedAt: row.cancellation_requested_at ?? null,
       endedAt: row.ended_at ?? null,
+      billingPolicyVersion: row.billing_policy_version ?? null,
       movementId: movement?.id ?? null,
       cancellationMovementId: cancellation?.id ?? null,
       payment,

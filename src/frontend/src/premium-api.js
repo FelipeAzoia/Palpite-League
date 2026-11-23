@@ -7,8 +7,11 @@ export function fetchPremiumConditions(token, options = {}) {
   return requestAuth('/account/premium', { token, ...options })
 }
 
-export function subscribePremium(token, options = {}) {
-  return requestAuth('/account/premium/subscription', { method: 'POST', body: { confirm: true }, token, ...options })
+// Envia a confirmação e a versão da Política de Cobrança e Cancelamento que a pessoa aceitou.
+export function subscribePremium(token, billingPolicyVersion, options = {}) {
+  return requestAuth('/account/premium/subscription', {
+    method: 'POST', body: { confirm: true, billingPolicyVersion }, token, ...options,
+  })
 }
 
 // Retorno do checkout: o backend consulta o provedor e aplica o resultado.

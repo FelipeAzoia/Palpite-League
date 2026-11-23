@@ -29,13 +29,13 @@ describe('API da contratação do Premium (SPEC-019)', () => {
     expect(fetcher).toHaveBeenCalledWith('/account/premium', { method: 'GET', headers: { authorization: 'Bearer opaque' } })
   })
 
-  it('contrata enviando só a confirmação explícita, nunca valor ou recorrência', async () => {
+  it('contrata enviando só a confirmação e a versão aceita da política, nunca valor ou recorrência', async () => {
     const fetcher = okFetcher({ subscription: {} })
-    await subscribePremium('opaque', { fetcher })
+    await subscribePremium('opaque', '2026-11-23', { fetcher })
     const [url, options] = fetcher.mock.calls[0]
     expect(url).toBe('/account/premium/subscription')
     expect(options.method).toBe('POST')
-    expect(JSON.parse(options.body)).toEqual({ confirm: true })
+    expect(JSON.parse(options.body)).toEqual({ confirm: true, billingPolicyVersion: '2026-11-23' })
   })
 
   it('confere no retorno do checkout e decide na página simulada', async () => {

@@ -61,8 +61,18 @@ export function formatUtc(isoDate) {
 export const cancellationNotice = Object.freeze([
   'Não há reembolso do valor já pago.',
   'Quando o provedor confirmar o cancelamento, sua conta volta ao plano Gratuito (até 1 bolão ativo criado por você).',
+  'O bolão que você mantiver aberto deixa de ter resultados ao vivo.',
+  'Até a confirmação, você não cria bolões além do limite do Gratuito.',
   'Seus bolões, participações, palpites e medalhas continuam exatamente como estão.',
 ])
+
+// Só cancela quem tem no máximo 1 bolão em andamento criado por si, o limite do Gratuito (CA-18).
+export const freePoolLimit = 1
+
+export function cancellationBlockedMessage(activePools) {
+  if (activePools <= freePoolLimit) return ''
+  return `Para cancelar, você precisa ter no máximo ${freePoolLimit} bolão em andamento criado por você (o limite do plano Gratuito). Hoje você tem ${activePools}: encerre os demais para poder cancelar.`
+}
 
 export function cancellationResultMessage(status) {
   if (status === 'cancelled') return 'Cancelamento confirmado: sua conta voltou ao plano Gratuito.'

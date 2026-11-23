@@ -1,18 +1,27 @@
 import { useState } from 'react'
 import { isSessionRejected } from './account-api.js'
 import { checkSubscriptionCancellation, requestSubscriptionCancellation } from './premium-api.js'
-import { cancellationNotice, cancellationResultMessage, formatUtc, subscriptionStatusLabel } from './premium-view.js'
+import { billingPolicyTitle } from './billing-policy.js'
+import {
+  cancellationBlockedMessage,
+  cancellationNotice,
+  cancellationResultMessage,
+  formatUtc,
+  subscriptionStatusLabel,
+} from './premium-view.js'
 
 // SPEC-020 — consulta da assinatura e cancelamento em dois passos, com o aviso fixo antes da
 // confirmação (OPEN-94). O backend decide o estado: a tela nunca mostra "cancelada" antes da
 // confirmação do provedor.
-export default function SubscriptionManager({ token, subscription, onChanged, onSessionRejected }) {
+export default function SubscriptionManager({ token, subscription, activePools = 0, onOpenPolicy, onChanged, onSessionRejected }) {
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const pending = subscription.status === 'cancellation_pending'
   const ended = subscription.status === 'cancelled' || subscription.status === 'expired'
+  // O backend também recusa (409); a tela só avisa antes, para a pessoa não tentar à toa.
+  const blocked = cancellationBlockedMessage(activePools)
 
   async function run(action) {
     setBusy(true)
@@ -67,9 +76,14 @@ export default function SubscriptionManager({ token, subscription, onChanged, on
       {error && <p className="form-message" role="alert">{error}</p>}
 
       {subscription.status === 'active' && !confirming && (
-        <div className="premium-actions">
-          <button className="small-button danger" type="button" onClick={() => setConfirming(true)}>Cancelar assinatura</button>
-        </div>
+        <>
+          {blocked && <p className="catalog-notice" role="status">{blocked}</p>}
+          <div className="premium-actions">
+            <button className="small-button danger" type="button" disabled={Boolean(blocked)} onClick={() => setConfirming(true)}>
+              Cancelar assinatura
+            </button>
+          </div>
+        </>
       )}
 
       {subscription.status === 'active' && confirming && (
@@ -78,6 +92,10 @@ export default function SubscriptionManager({ token, subscription, onChanged, on
           <ul>
             {cancellationNotice.map((item) => <li key={item}>{item}</li>)}
           </ul>
+          <p>
+            Detalhes na{' '}
+            <button className="policy-link" type="button" onClick={onOpenPolicy}>{billingPolicyTitle}</button>.
+          </p>
           <div className="premium-actions">
             <button className="small-button danger" type="button" disabled={busy} onClick={cancel}>
               {busy ? 'Enviando...' : 'Confirmar cancelamento'}

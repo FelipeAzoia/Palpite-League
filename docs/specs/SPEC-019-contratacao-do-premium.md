@@ -245,3 +245,21 @@ A SPEC-019 estará concluída quando:
 O critério de integração real (CA-21, TC-17) é acompanhado à parte: depende dos smoke tests do sandbox (OPEN-26) e da confirmação da equipe, e enquanto não for executado a Spec fica concluída com a integração real registrada como não atendida.
 
 Se durante a implementação surgir conflito entre código, esta Spec ou os documentos de modelagem, a divergência será registrada e a equipe escolherá entre corrigir a implementação para respeitar a baseline ou propor alteração da baseline para aprovação humana.
+
+---
+
+## 15. Alterações aprovadas pela equipe em 23/11/2026
+
+Decisão humana registrada durante a implementação da SPEC-020. Estas regras complementam as seções anteriores e prevalecem sobre elas no que for diferente.
+
+### 15.1 Política de Cobrança e Cancelamento
+
+- **Nova regra:** antes de contratar, o usuário precisa marcar a caixa "Li e aceito a Política de Cobrança e Cancelamento", com link para o texto da política. Sem o aceite da versão em vigor, a contratação é recusada.
+- **Conteúdo da política:** ambiente de teste sem dinheiro real; valor de R$ 19,90 por mês em BRL; cobrança única no momento da contratação, pelo provedor; ativação só depois da confirmação; recusa sem cobrança repetida; vigência de um mês de calendário; ausência de renovação automática nesta versão (OPEN-90 da SPEC-020); regras de cancelamento da SPEC-020 (incluindo as da seção 15 dela); ausência de reembolso; preservação dos bolões; dados de pagamento informados só no provedor.
+- **Versionamento:** a política tem uma versão (atual: `2026-11-23`). O backend exige essa versão no pedido de contratação e a grava na assinatura e no registro de auditoria da contratação. Ao mudar o texto, muda-se a versão.
+- **Contrato:** "Contratar o Premium" passa a receber também a versão aceita da política; novo erro 400 do tipo aceite da política ausente. "Consultar condições do Premium" passa a informar o título e a versão em vigor.
+
+### 15.2 Critérios e testes acrescentados
+
+- **CA-22 (aceite da política):** Dado um usuário do plano Gratuito, Quando confirma a contratação sem aceitar a versão em vigor da Política de Cobrança e Cancelamento (ausente ou antiga), Então recebe 400 e nada é criado; e Quando aceita a versão em vigor, Então a contratação segue e a versão aceita fica registrada na assinatura e na auditoria.
+- **TC-18 (CA-22):** contratar sem a versão, com versão antiga e com a versão em vigor, e conferir a recusa, o registro da versão e a tela (caixa obrigatória e link que abre a política).

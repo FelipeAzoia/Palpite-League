@@ -3,13 +3,14 @@ import fs from 'node:fs'
 import test from 'node:test'
 import { createSimulatedPaymentsProvider } from '../../src/backend/adapters/simulated-payments-provider.js'
 import { createMercadoPagoTestPaymentsProvider } from '../../src/backend/adapters/mercado-pago-test-payments-provider.js'
-import { lifecycleActions } from '../../src/backend/modules/payments-subscriptions/index.js'
+import { billingPolicyVersion, lifecycleActions } from '../../src/backend/modules/payments-subscriptions/index.js'
 import { expectCommonFormat, startOfTests, withHttpApp } from './support/app-harness.js'
 
 // SPEC-020 — consulta e cancelamento da assinatura, expiração e downgrade. A suíte roda com o
 // simulador ou com um Mercado Pago falso, sem credenciais reais e sem rede externa.
 
 const confirm = { confirm: true }
+const subscribeBody = { confirm: true, billingPolicyVersion }
 const minute = 60 * 1000
 
 function withSimulator(callback) {
@@ -18,7 +19,7 @@ function withSimulator(callback) {
 }
 
 async function becomePremium(context, user) {
-  const created = await context.call('POST', '/account/premium/subscription', { token: user.token, body: confirm })
+  const created = await context.call('POST', '/account/premium/subscription', { token: user.token, body: subscribeBody })
   assert.equal(created.status, 201, created.text)
   await context.call('POST', `/payments/simulated-checkout/${created.json.subscription.movementId}/decision`, {
     token: user.token, body: { decision: 'approve' },
@@ -71,6 +72,7 @@ test('CT-01 e CT-02: consulta mostra o Premium com vigência em UTC e o Gratuito
       limit: 1,
       liveResults: false,
       subscription: null,
+      cancellation: { activePools: 0, limit: 1, allowed: false },
     })
   })
 })
@@ -127,7 +129,7 @@ test('CT-07: a confirmação do provedor cancela, volta ao Gratuito e é auditad
     assert.equal(cancelled.action, lifecycleActions.cancelled)
     assert.deepEqual(cancelled.actor, { type: 'system' })
     assert.equal(cancelled.result, 'success')
-    assert.deepEqual(cancelled.details, { previousState: 'cancellation_pending', newState: 'cancelled', origin: 'simulator' })
+    assert.deepEqual(cancelled.details, { previousState: 'cancellation_pending', newState: 'cancelled', origin: 'simulator', liveResultsRemoved: 0 })
 
     // CT-03: a consulta mostra o estado final e quando passou a valer.
     const view = (await consult(context, ana)).json
@@ -304,14 +306,15 @@ test('OPEN-91: cancelamento pendente que atinge o fim da vigência expira; a con
   })
 })
 
-test('CT-15 e CT-16: bolões, participações, palpites e medalhas ficam intactos; o limite do Gratuito vale para novas criações', async () => {
+test('CT-15, CT-16 e CT-23: bolões ficam intactos (o cancelamento só retira o ao vivo; a expiração, nada); o limite do Gratuito vale para novas criações', async () => {
   for (const ending of ['cancel', 'expire']) {
     await withSimulator(async (context) => {
       const ana = await context.signUp('Ana')
       const bruno = await context.signUp('Bruno')
       const { endsAt } = await becomePremium(context, ana)
       const first = await context.createPool(ana)
-      const second = await context.createPool(ana, { round: 3 })
+      // Para cancelar é preciso ter no máximo 1 bolão em andamento (CA-18); a expiração não depende disso.
+      const second = ending === 'expire' ? await context.createPool(ana, { round: 3 }) : null
       await context.joinPool(ana, bruno, first.poolId)
       const participation = context.database.prepare('SELECT id FROM pool_participations WHERE pool_id = ? AND user_id = ?').get(first.poolId, ana.id).id
       context.database.prepare(`
@@ -319,12 +322,15 @@ test('CT-15 e CT-16: bolões, participações, palpites e medalhas ficam intacto
         VALUES ('p-1', ?, ?, 'result', 'home', '2026-11-14T15:00:00.000Z')
       `).run(participation, first.matches[0].id)
 
-      const snapshot = () => JSON.stringify(['pools', 'pool_matches', 'pool_participations', 'predictions', 'pool_medals']
-        .map((table) => context.database.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()))
+      // Tudo do bolão fica igual, exceto o recurso ao vivo, que o cancelamento retira (CA-19).
+      const snapshot = () => JSON.stringify([
+        context.database.prepare('SELECT id, creator_id, name, starts_on, ends_on, entry_fee_cents, prize_model, tiebreaker, status, created_at FROM pools ORDER BY rowid').all(),
+        ...['pool_matches', 'pool_participations', 'predictions', 'pool_medals'].map((table) => context.database.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()),
+      ])
       const before = snapshot()
 
       if (ending === 'cancel') {
-        await cancel(context, ana)
+        assert.equal((await cancel(context, ana)).status, 202)
         await checkCancellation(context, ana)
       } else {
         context.clock.current = Date.parse(endsAt)
@@ -332,14 +338,15 @@ test('CT-15 e CT-16: bolões, participações, palpites e medalhas ficam intacto
       }
       assert.equal(await planOf(context, ana), 'free')
       assert.equal(snapshot(), before)
-      for (const { poolId } of [first, second]) {
-        const pool = (await context.call('GET', `/pools/${poolId}`, { token: ana.token })).json.pool
-        assert.equal(pool.status, 'active')
-        assert.equal(pool.liveResults, true)
+      for (const pool of [first, second].filter(Boolean)) {
+        const view = (await context.call('GET', `/pools/${pool.poolId}`, { token: ana.token })).json.pool
+        assert.equal(view.status, 'active')
+        assert.equal(view.liveResults, ending === 'expire')
       }
 
       const availability = (await context.call('GET', '/pools/creation-availability', { token: ana.token })).json
-      assert.deepEqual([availability.limit, availability.activePools, availability.canCreate], [1, 2, false])
+      const activePools = ending === 'expire' ? 2 : 1
+      assert.deepEqual([availability.limit, availability.activePools, availability.canCreate], [1, activePools, false])
       const matches = (await context.call('GET', '/catalog/rounds/4/matches?status=scheduled', { token: ana.token })).json.matches
       const blocked = await context.call('POST', '/pools', {
         token: ana.token,
@@ -351,6 +358,101 @@ test('CT-15 e CT-16: bolões, participações, palpites e medalhas ficam intacto
       expectCommonFormat(blocked, 409, 'pool_limit_reached')
     })
   }
+})
+
+test('SPEC-019 TC-18: a contratação exige o aceite da versão em vigor da Política de Cobrança e Cancelamento', async () => {
+  await withSimulator(async (context) => {
+    const ana = await context.signUp('Ana')
+    const subscribe = (body) => context.call('POST', '/account/premium/subscription', { token: ana.token, body })
+    const conditions = (await context.call('GET', '/account/premium', { token: ana.token })).json
+    assert.deepEqual(conditions.billingPolicy, { version: billingPolicyVersion, title: 'Política de Cobrança e Cancelamento' })
+
+    for (const body of [{ confirm: true }, { confirm: true, billingPolicyVersion: '2020-01-01' }, { confirm: true, billingPolicyVersion: true }]) {
+      const refused = await subscribe(body)
+      expectCommonFormat(refused, 400, 'billing_policy_not_accepted')
+      assert.ok(refused.json.fields.billingPolicyVersion)
+    }
+    assert.equal(count(context, 'SELECT COUNT(*) AS n FROM subscriptions'), 0)
+
+    const created = await subscribe(subscribeBody)
+    assert.equal(created.status, 201, created.text)
+    assert.equal(created.json.subscription.billingPolicyVersion, billingPolicyVersion)
+    const [requested] = auditsOf(context, created.json.subscription.id)
+    assert.equal(requested.details.billingPolicyVersion, billingPolicyVersion)
+  })
+})
+
+test('CT-20: só cancela com no máximo 1 bolão em andamento criado pela pessoa', async () => {
+  await withSimulator(async (context) => {
+    const ana = await context.signUp('Ana')
+    const bruno = await context.signUp('Bruno')
+    const { id } = await becomePremium(context, ana)
+    const first = await context.createPool(ana)
+    await context.createPool(ana, { round: 3 })
+    // Participar de bolão de outra pessoa não conta.
+    await becomePremium(context, bruno)
+    const others = await context.createPool(bruno, { round: 4 })
+    await context.joinPool(bruno, ana, others.poolId)
+
+    assert.deepEqual((await consult(context, ana)).json.cancellation, { activePools: 2, limit: 1, allowed: false })
+    const refused = await cancel(context, ana)
+    expectCommonFormat(refused, 409, 'too_many_active_pools')
+    assert.deepEqual(refused.json.details, { activePools: 2, limit: 1 })
+    assert.match(refused.json.message, /no máximo 1 bolão em andamento/)
+    assert.equal((await consult(context, ana)).json.subscription.status, 'active')
+    assert.equal(cancellationMovements(context, id).length, 0)
+
+    // Com um bolão encerrado, fica dentro do limite e pode cancelar.
+    context.database.prepare("UPDATE pools SET status = 'ended' WHERE id = ?").run(first.poolId)
+    assert.equal((await consult(context, ana)).json.cancellation.allowed, true)
+    assert.equal((await cancel(context, ana)).status, 202)
+  })
+})
+
+test('CT-21: confirmado o cancelamento, o bolão aberto perde os resultados ao vivo e isso não volta', async () => {
+  await withSimulator(async (context) => {
+    const ana = await context.signUp('Ana')
+    const { id } = await becomePremium(context, ana)
+    const ended = await context.createPool(ana)
+    context.database.prepare("UPDATE pools SET status = 'ended' WHERE id = ?").run(ended.poolId)
+    const open = await context.createPool(ana, { round: 3 })
+    const live = (poolId) => context.database.prepare('SELECT live_results FROM pools WHERE id = ?').get(poolId).live_results
+
+    await cancel(context, ana)
+    assert.equal(live(open.poolId), 1, 'continua ao vivo enquanto o cancelamento está pendente')
+    await checkCancellation(context, ana)
+    assert.equal(live(open.poolId), 0)
+    assert.equal(live(ended.poolId), 1, 'bolão já encerrado não é alterado')
+
+    const cancelled = auditsOf(context, id).at(-1)
+    assert.equal(cancelled.action, lifecycleActions.cancelled)
+    assert.equal(cancelled.details.liveResultsRemoved, 1)
+    assert.throws(() => context.database.prepare('UPDATE pools SET live_results = 1 WHERE id = ?').run(open.poolId), /immutable/)
+  })
+})
+
+test('CT-22: com o cancelamento pendente, o limite de criação já é o do Gratuito', async () => {
+  await withSimulator(async (context) => {
+    const ana = await context.signUp('Ana')
+    await becomePremium(context, ana)
+    await context.createPool(ana)
+    context.provider.failNext('start', 'timeout', { afterRegistering: true })
+    await cancel(context, ana)
+    assert.equal(await planOf(context, ana), 'premium')
+
+    const availability = (await context.call('GET', '/pools/creation-availability', { token: ana.token })).json
+    assert.deepEqual([availability.limit, availability.activePools, availability.canCreate, availability.cancellationPending], [1, 1, false, true])
+    const matches = (await context.call('GET', '/catalog/rounds/3/matches?status=scheduled', { token: ana.token })).json.matches
+    const blocked = await context.call('POST', '/pools', {
+      token: ana.token,
+      body: {
+        name: 'Outro', startsOn: '2026-11-14', endsOn: '2026-12-31', entryFee: 0,
+        prizeModel: 'winner_takes_all', tiebreaker: 'exact_scores', selection: { matchIds: [matches[0].id] },
+      },
+    })
+    expectCommonFormat(blocked, 409, 'pool_limit_reached')
+    assert.match(blocked.json.details.guidance, /cancelamento do Premium está em andamento/)
+  })
 })
 
 test('CT-18: cancelamento com o Mercado Pago em teste, sem segredos em registros e respostas', async () => {
@@ -373,7 +475,7 @@ test('CT-18: cancelamento com o Mercado Pago em teste, sem segredos em registros
 
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
-    await context.call('POST', '/account/premium/subscription', { token: ana.token, body: confirm })
+    await context.call('POST', '/account/premium/subscription', { token: ana.token, body: subscribeBody })
     preapprovalStatus = 'authorized'
     assert.equal((await context.call('POST', '/account/premium/subscription/check', { token: ana.token })).json.subscription.status, 'active')
 

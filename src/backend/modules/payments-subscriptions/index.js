@@ -11,6 +11,7 @@ export {
 } from './financial-core.js'
 export {
   addCalendarMonth,
+  billingPolicyVersion,
   createPremiumSubscriptionService,
   defaultPremiumPriceCents,
   premiumRecurrence,

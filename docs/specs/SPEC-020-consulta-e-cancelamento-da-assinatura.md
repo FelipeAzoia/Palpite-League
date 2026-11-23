@@ -232,3 +232,35 @@ A SPEC-020 está concluída quando:
 6. toda divergência em relação à baseline tiver sido explicitamente analisada e decidida pela equipe humana.
 
 **Regra fundamental:** a implementação obedece à Spec aprovada. Em conflito entre código, Spec e documentos de modelagem, registra-se a divergência e escolhe-se entre corrigir a implementação ou propor alteração da baseline para aprovação humana.
+
+---
+
+## 15. Alterações aprovadas pela equipe em 23/11/2026
+
+Decisão humana registrada durante a implementação. Estas regras complementam as seções anteriores e **prevalecem** sobre elas no que for diferente; os trechos afetados estão indicados.
+
+### 15.1 Novas regras
+
+- **Condição para cancelar:** o usuário só pode pedir o cancelamento se tiver **no máximo 1 bolão em andamento criado por ele** (o limite do plano Gratuito, RB02). "Em andamento" usa a mesma contagem do limite de criação da SPEC-007 (bolões criados pelo usuário com status ativo); participar de bolões de outras pessoas não conta. Acima disso, o pedido é recusado com conflito e a tela explica quantos bolões precisam ser encerrados.
+- **Perda dos resultados ao vivo:** quando o cancelamento é confirmado, o bolão que o usuário mantém aberto **perde os resultados ao vivo**. As demais regras do bolão e todo o seu conteúdo (participações, palpites, pontos e medalhas) continuam intactos. O recurso ao vivo só pode ser retirado, nunca concedido depois da criação. Bolões já encerrados não são alterados.
+- **Limite durante o cancelamento pendente:** enquanto o cancelamento aguarda confirmação, o plano continua Premium (OPEN-89), mas o limite de criação de bolões já é o do Gratuito, para que a condição acima não seja contornada.
+- **Expiração:** estas regras valem para o cancelamento pedido pelo usuário. A expiração por fim da vigência continua como na seção 5.4: não depende da quantidade de bolões e não retira o recurso ao vivo.
+- **Política de Cobrança e Cancelamento:** as regras de cancelamento são explicadas na política aceita na contratação (SPEC-019, seção 15) e o aviso de cancelamento (OPEN-94) passa a incluir a perda dos resultados ao vivo e o limite durante a pendência, com link para a política.
+
+### 15.2 Trechos alterados
+
+- **INV-003 e OPEN-95:** o downgrade por **cancelamento** passa a retirar o recurso ao vivo do bolão aberto; o restante do INV-003 continua valendo. A expiração segue o INV-003 original.
+- **RB58 e OPEN-24 (SPEC-007):** o recurso ao vivo continua fixado na criação, com a única exceção de ser retirado no cancelamento confirmado do Premium.
+- **5.2 Solicitação de cancelamento:** pré-condição acrescida — no máximo 1 bolão em andamento criado pelo usuário. Exceção nova **E6**: mais bolões em andamento que o limite do Gratuito, recusa por conflito sem alteração.
+- **Contratos (seção 9):** "Consultar assinatura" informa se o cancelamento é permitido, com a contagem de bolões em andamento e o limite; "Solicitar cancelamento" ganha o erro de conflito por excesso de bolões em andamento; o registro de auditoria da confirmação do cancelamento informa quantos bolões perderam os resultados ao vivo.
+
+### 15.3 Critérios e testes acrescentados
+
+- **CA-17 (consulta da condição):** Dado um usuário com assinatura ativa, Quando consulta a assinatura, Então vê quantos bolões em andamento tem, o limite do Gratuito e se pode cancelar.
+- **CA-18 (condição para cancelar):** Dado um usuário com assinatura ativa e mais de 1 bolão em andamento criado por ele, Quando pede o cancelamento, Então recebe conflito, nada é alterado e nenhuma operação é registrada; e com no máximo 1, o pedido é aceito.
+- **CA-19 (perda do ao vivo):** Dado um cancelamento pendente de um usuário com 1 bolão aberto com resultados ao vivo, Quando o provedor confirma o cancelamento, Então o bolão aberto deixa de ter resultados ao vivo, bolões encerrados não mudam, a auditoria registra a quantidade de bolões afetados e o recurso não pode ser reativado.
+- **CA-20 (limite durante a pendência):** Dado um cancelamento pendente, Quando o usuário tenta criar um bolão além do limite do Gratuito, Então a criação é recusada com a orientação de que o cancelamento está em andamento.
+- **CT-20 (CA-17, CA-18):** pedir o cancelamento com 2 bolões em andamento (e participação em bolão de outra pessoa), conferir o conflito e a consulta, encerrar um bolão e pedir de novo.
+- **CT-21 (CA-19):** confirmar o cancelamento com um bolão aberto e outro encerrado, conferir o recurso ao vivo de cada um, a auditoria e a impossibilidade de reativar.
+- **CT-22 (CA-20):** com o cancelamento pendente, conferir a disponibilidade de criação e a recusa da criação.
+- **CT-23 (seção 15.1, expiração):** expirar a assinatura de um usuário com 2 bolões e conferir que ambos mantêm os resultados ao vivo.

@@ -24,13 +24,18 @@ const originSchema = { type: 'enum', values: paymentsProviderSources }
 const changeSchema = { amountCents: { type: 'integer' }, previousState: statusSchema, newState: statusSchema, origin: originSchema }
 
 export const subscriptionAuditDetailSchemas = Object.freeze({
-  [subscriptionActions.requested]: { amountCents: { type: 'integer' }, newState: statusSchema, origin: originSchema },
+  [subscriptionActions.requested]: {
+    amountCents: { type: 'integer' }, newState: statusSchema, origin: originSchema, billingPolicyVersion: { type: 'identifier' },
+  },
   [subscriptionActions.activated]: changeSchema,
   [subscriptionActions.refused]: changeSchema,
 })
 
 export const defaultPremiumPriceCents = 1990
 export const premiumRecurrence = 'monthly'
+// Política de Cobrança e Cancelamento (SPEC-019, CA-22): a contratação exige o aceite da versão em vigor.
+// Ao mudar o texto da política no frontend, mude também esta versão.
+export const billingPolicyVersion = '2026-11-23'
 
 const systemActor = Object.freeze({ type: 'system' })
 
@@ -136,6 +141,7 @@ export function createPremiumSubscriptionService(database, {
       simulated: paymentsProvider.source === 'simulator',
       canSubscribe: reason === null,
       reason,
+      billingPolicy: { version: billingPolicyVersion, title: 'Política de Cobrança e Cancelamento' },
       subscription: current ? view(current) : null,
     }
   }
@@ -152,11 +158,17 @@ export function createPremiumSubscriptionService(database, {
   function validateRequest(body) {
     const input = body !== null && typeof body === 'object' && !Array.isArray(body) ? body : {}
     // Valor, recorrência e qualquer outra condição pertencem ao backend (CA-16).
-    const fields = Object.fromEntries(Object.keys(input).filter((key) => key !== 'confirm')
+    const fields = Object.fromEntries(Object.keys(input).filter((key) => key !== 'confirm' && key !== 'billingPolicyVersion')
       .map((key) => [key, 'As condições da contratação são definidas pelo sistema.']))
     if (Object.keys(fields).length > 0) throw new AppError(400, 'validation_error', 'Confira os campos informados.', fields)
     if (input.confirm !== true) {
       throw new AppError(400, 'confirmation_required', 'Confirme a contratação do Premium para continuar.')
+    }
+    // O aceite vale para a versão em vigor; uma versão antiga ou ausente não serve (CA-22).
+    if (input.billingPolicyVersion !== billingPolicyVersion) {
+      throw new AppError(400, 'billing_policy_not_accepted', 'Leia e aceite a Política de Cobrança e Cancelamento para contratar.', {
+        billingPolicyVersion: 'Aceite a versão atual da política.',
+      })
     }
   }
 
@@ -189,12 +201,13 @@ export function createPremiumSubscriptionService(database, {
           action: subscriptionActions.requested,
           object: { type: 'subscription', id },
           origin,
-          details: { amountCents: priceCents, newState: 'pending', origin },
+          details: { amountCents: priceCents, newState: 'pending', origin, billingPolicyVersion },
         }, () => {
           transaction.prepare(`
-            INSERT INTO subscriptions (id, user_id, status, amount_cents, currency, recurrence, origin, created_at, updated_at)
-            VALUES (?, ?, 'pending', ?, 'BRL', ?, ?, ?, ?)
-          `).run(id, userId, priceCents, premiumRecurrence, origin, at, at)
+            INSERT INTO subscriptions (
+              id, user_id, status, amount_cents, currency, recurrence, origin, billing_policy_version, created_at, updated_at
+            ) VALUES (?, ?, 'pending', ?, 'BRL', ?, ?, ?, ?, ?)
+          `).run(id, userId, priceCents, premiumRecurrence, origin, billingPolicyVersion, at, at)
         })
       },
     })

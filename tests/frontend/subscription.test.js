@@ -80,3 +80,30 @@ describe('Tela da assinatura (SPEC-020)', () => {
     expect(openMovementsSummary([{ type: 'subscription_cancellation', status: 'pending', amountCents: 0 }])).toEqual({ count: 0, label: 'Nada em aberto' })
   })
 })
+
+describe('Política de Cobrança e Cancelamento (alterações de 23/11/2026)', () => {
+  it('tem a mesma versão que o backend exige na contratação', async () => {
+    const { billingPolicyVersion } = await import('../../src/frontend/src/billing-policy.js')
+    const backend = await import('../../src/backend/modules/payments-subscriptions/premium-subscription.js')
+    expect(billingPolicyVersion).toBe(backend.billingPolicyVersion)
+  })
+
+  it('explica cobrança, vigência sem renovação, cancelamento, reembolso, bolões e dados de pagamento', async () => {
+    const { billingPolicySections } = await import('../../src/frontend/src/billing-policy.js')
+    const text = billingPolicySections.flatMap(({ title, items }) => [title, ...items]).join(' ')
+    for (const fragment of [
+      'R$ 19,90 por mês', 'uma única vez', 'só é ativado depois que o provedor confirma', 'não há renovação automática',
+      'no máximo 1 bolão em andamento', 'deixa de ter resultados ao vivo', 'Não há reembolso', 'não pede nem guarda dados de cartão',
+    ]) {
+      expect(text).toContain(fragment)
+    }
+  })
+
+  it('bloqueia o cancelamento com mais de 1 bolão em andamento e avisa sobre o ao vivo', async () => {
+    const { cancellationBlockedMessage } = await import('../../src/frontend/src/premium-view.js')
+    expect(cancellationBlockedMessage(0)).toBe('')
+    expect(cancellationBlockedMessage(1)).toBe('')
+    expect(cancellationBlockedMessage(3)).toMatch(/no máximo 1 bolão em andamento.*Hoje você tem 3/)
+    expect(cancellationNotice.join(' ')).toMatch(/deixa de ter resultados ao vivo/)
+  })
+})

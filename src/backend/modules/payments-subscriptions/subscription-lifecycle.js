@@ -1,6 +1,6 @@
 import { AppError } from '../../shared/app-error.js'
 import { createLogger } from '../../shared/logger.js'
-import { getPlan } from '../auth-users/index.js'
+import { getPlan, simultaneousPoolLimit } from '../auth-users/index.js'
 import { paymentsProviderSources } from './payments-provider.js'
 import { createSubscriptionStore, subscriptionStatuses } from './subscription-store.js'
 
@@ -25,7 +25,7 @@ const changeSchema = { previousState: statusSchema, newState: statusSchema, orig
 
 export const lifecycleAuditDetailSchemas = Object.freeze({
   [lifecycleActions.cancellationRequested]: changeSchema,
-  [lifecycleActions.cancelled]: changeSchema,
+  [lifecycleActions.cancelled]: { ...changeSchema, liveResultsRemoved: { type: 'integer' } },
   [lifecycleActions.cancellationRefused]: changeSchema,
   [lifecycleActions.expired]: { ...changeSchema, endsAt: { type: 'timestamp' } },
 })
@@ -63,6 +63,15 @@ export function createSubscriptionLifecycleService(database, {
     }
   }
 
+  // "Bolões em andamento": os criados pela pessoa e ainda ativos, a mesma contagem do limite de
+  // criação da SPEC-007.
+  const activePoolsOf = (userId) => database.prepare(
+    "SELECT COUNT(*) AS count FROM pools WHERE creator_id = ? AND status = 'active'",
+  ).get(userId).count
+  const activeLivePools = (userId) => database.prepare(
+    "SELECT COUNT(*) AS count FROM pools WHERE creator_id = ? AND status = 'active' AND live_results = 1",
+  ).get(userId).count
+
   function subscriptionOf(movement) {
     const row = findSubscription(movement.operation.id)
     if (!row || row.user_id !== movement.userId) throw new Error('subscription not found for cancellation')
@@ -77,13 +86,22 @@ export function createSubscriptionLifecycleService(database, {
       if (row.status === 'expired') return
       if (row.status !== 'cancellation_pending') throw new Error('subscription is not pending cancellation')
       const at = nowIso()
-      auditStore.runAuditedOperation(audit(row, lifecycleActions.cancelled, 'cancellation_pending', 'cancelled'), () => {
-        database.prepare(`
-          UPDATE subscriptions SET status = 'cancelled', ended_at = ?, updated_at = ?
-          WHERE id = ? AND status = 'cancellation_pending'
-        `).run(at, at, row.id)
-        database.prepare("UPDATE users SET plan = 'free' WHERE id = ?").run(row.user_id)
-      })
+      // O bolão que continua aberto perde os resultados ao vivo (CA-19, decisão de 23/11/2026);
+      // as demais regras e todo o conteúdo do bolão ficam como estão.
+      const livePools = activeLivePools(row.user_id)
+      auditStore.runAuditedOperation(
+        audit(row, lifecycleActions.cancelled, 'cancellation_pending', 'cancelled', systemActor, { liveResultsRemoved: livePools }),
+        () => {
+          database.prepare(`
+            UPDATE subscriptions SET status = 'cancelled', ended_at = ?, updated_at = ?
+            WHERE id = ? AND status = 'cancellation_pending'
+          `).run(at, at, row.id)
+          database.prepare("UPDATE users SET plan = 'free' WHERE id = ?").run(row.user_id)
+          database.prepare(`
+            UPDATE pools SET live_results = 0 WHERE creator_id = ? AND status = 'active' AND live_results = 1
+          `).run(row.user_id)
+        },
+      )
     },
     onRefused(movement) {
       const row = subscriptionOf(movement)
@@ -108,6 +126,12 @@ export function createSubscriptionLifecycleService(database, {
       limit: plan.features.simultaneousPools,
       liveResults: plan.features.liveResultsInCreatedPools,
       subscription: current ? view(current) : null,
+      // Condição para cancelar: no máximo o limite de bolões em andamento do Gratuito (CA-18).
+      cancellation: {
+        activePools: activePoolsOf(userId),
+        limit: simultaneousPoolLimit('free'),
+        allowed: current?.status === 'active' && activePoolsOf(userId) <= simultaneousPoolLimit('free'),
+      },
     }
   }
 
@@ -135,6 +159,15 @@ export function createSubscriptionLifecycleService(database, {
       throw conflict('subscription_ended', 'Sua assinatura já foi encerrada.')
     }
     if (current?.status !== 'active') throw conflict('no_active_subscription', 'Você não tem uma assinatura ativa para cancelar.')
+
+    // Só cancela quem já está dentro do limite do Gratuito (CA-18, decisão de 23/11/2026).
+    const limit = simultaneousPoolLimit('free')
+    const activePools = activePoolsOf(userId)
+    if (activePools > limit) {
+      throw new AppError(409, 'too_many_active_pools',
+        `Para cancelar, você precisa ter no máximo ${limit} bolão em andamento criado por você (o limite do plano Gratuito). Hoje você tem ${activePools}; encerre os demais e tente de novo.`,
+        undefined, { activePools, limit })
+    }
 
     const contract = movementFor(current.id, 'subscription')
     const at = nowIso()
