@@ -405,3 +405,15 @@
 .prize-amount { margin: 0; color: var(--forest); font-family: Georgia, serif; font-size: 30px; line-height: 1; }
 .prize-state { margin: 0; color: #3e4d43; font-size: 13px; font-weight: 600; }
 .prize-block .fine-print { margin-top: 0; }
+
+/* ——— Avisos (SPEC-027) ——— */
+.nav-badge { display: inline-block; min-width: 17px; margin-left: 6px; padding: 1px 5px; border-radius: 99px; color: #f8faef; background: var(--live); font-size: 10px; font-weight: 750; line-height: 1.4; text-align: center; vertical-align: 1px; }
+.notifications-area { display: grid; gap: 16px; }
+.notifications-area .block-head h2 { margin: 0; font-size: 32px; }
+.notification-list { margin: 0; padding: 0; border-top: 1px solid var(--rule-strong); list-style: none; }
+.notification { display: grid; gap: 4px; padding: 12px 4px 12px 14px; border-bottom: 1px solid var(--rule); border-left: 3px solid transparent; }
+.notification-unread { border-left-color: var(--live); background: #fdf8f3; }
+.notification-type { color: #87958a; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.notification-message { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.45; }
+.notification-unread .notification-message { font-weight: 650; }
+.notification-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; color: var(--muted); font-size: 11px; }

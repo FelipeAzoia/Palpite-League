@@ -7,12 +7,15 @@ import PlanArea from './PlanArea.jsx'
 import PoolsPanel from './PoolsPanel.jsx'
 import FinancialHistory from './FinancialHistory.jsx'
 import HomeArea from './HomeArea.jsx'
+import NotificationsArea from './NotificationsArea.jsx'
+import { fetchNotifications, unreadBadge, unreadRefreshIntervalMs } from './notifications-api.js'
 
 const areas = [
   { id: 'home', label: 'Início' },
   { id: 'profile', label: 'Perfil' },
   { id: 'matches', label: 'Partidas' },
   { id: 'pools', label: 'Bolões' },
+  { id: 'notifications', label: 'Avisos' },
 ]
 
 // Planos e Financeiro não têm aba própria: são abertos pelo Perfil (planos também pela criação de
@@ -145,19 +148,42 @@ function ProfileArea({ token, user, pending, onOpenPlans, onOpenFinancial, onLog
   )
 }
 
-export function AreaNav({ area, onAreaChange }) {
+// Contagem de não lidas do indicador da aba Avisos (SPEC-027): carregada ao trocar de área e a cada
+// minuto; uma falha aqui só esconde o indicador.
+function useUnreadCount(token, area) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!token) return undefined
+    let active = true
+    const load = () => fetchNotifications(token, { unread: true, limit: 1 })
+      .then((result) => { if (active) setCount(result.unreadCount) })
+      .catch(() => {})
+    load()
+    const timer = setInterval(load, unreadRefreshIntervalMs)
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [token, area])
+  return [count, setCount]
+}
+
+export function AreaNav({ token, area, onAreaChange, unreadOverride }) {
+  const [unread] = useUnreadCount(token, area)
+  const badge = unreadBadge(unreadOverride ?? unread)
   return (
     <nav className="area-nav" aria-label="Áreas da conta">
       {areas.map((item) => (
         <button key={item.id} type="button" aria-current={navAreaOf(area) === item.id ? 'page' : undefined} onClick={() => onAreaChange(item.id)}>
           {item.label}
+          {item.id === 'notifications' && badge && <span className="nav-badge" aria-label={`${badge} não lidos`}>{badge}</span>}
         </button>
       ))}
     </nav>
   )
 }
 
-export default function AccountPanel({ token, user, pending, area, onAreaChange, onLogout, onSessionRejected, onUserChange }) {
+export default function AccountPanel({ token, user, pending, area, onAreaChange, onLogout, onSessionRejected, onUserChange, onUnreadChange }) {
   const setArea = onAreaChange
   // Bolão a abrir quando o usuário vem da página inicial; a aba Bolões abre direto nele.
   const [poolToOpen, setPoolToOpen] = useState(null)
@@ -215,6 +241,10 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
           onUpgrade={() => setArea('plan')}
           onSessionRejected={onSessionRejected}
         />
+      )}
+
+      {area === 'notifications' && (
+        <NotificationsArea token={token} onSessionRejected={onSessionRejected} onUnreadChange={onUnreadChange} />
       )}
 
       {area === 'financial' && (

@@ -2,6 +2,7 @@ import {
   createApp,
   defaultFinancialReconciliationIntervalMs,
   defaultLiveResultsIntervalMs,
+  defaultNotificationsIntervalMs,
   defaultPoolClosingIntervalMs,
   defaultRefundProcessingIntervalMs,
   defaultMedalsIntervalMs,
@@ -55,6 +56,11 @@ scheduler.register(
   'pool-closing',
   Number(process.env.POOL_CLOSING_INTERVAL_MS || defaultPoolClosingIntervalMs),
   app.locals.tasks.closePools,
+)
+scheduler.register(
+  'notifications',
+  Number(process.env.NOTIFICATIONS_INTERVAL_MS || defaultNotificationsIntervalMs),
+  app.locals.tasks.generateNotifications,
 )
 scheduler.register(
   'financial-reconciliation',

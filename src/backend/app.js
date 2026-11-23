@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
-import { createAuditStore } from './modules/notifications-audit/index.js'
+import { createAuditStore, createNotificationsService } from './modules/notifications-audit/index.js'
 import {
   createLiveResultsService,
   createResultsSyncService,
@@ -75,6 +75,8 @@ export const defaultLiveResultsIntervalMs = 60 * 1000
 export const defaultRefundProcessingIntervalMs = 60 * 1000
 // Intervalo padrão do encerramento automático dos bolões (SPEC-025, OPEN-135): 1 minuto.
 export const defaultPoolClosingIntervalMs = 60 * 1000
+// Intervalo padrão da geração de notificações (SPEC-027, OPEN-155): 1 minuto.
+export const defaultNotificationsIntervalMs = 60 * 1000
 // Intervalo padrão da pontuação (SPEC-014, OPEN-76): 1 minuto.
 export const defaultScoringIntervalMs = 60 * 1000
 // Intervalo padrão das medalhas (SPEC-016, OPEN-81): 1 minuto.
@@ -253,6 +255,8 @@ export function createApp(database, {
   app.locals.tasks.reconcileMedals = () => medals.reconcileMedals()
   const poolClosing = createPoolClosingService(database, { auditStore, ranking, logger, now })
   app.locals.tasks.closePools = () => poolClosing.closeDuePools()
+  const notifications = createNotificationsService(database, { logger, now })
+  app.locals.tasks.generateNotifications = () => notifications.generate()
   app.locals.results = resultsSync
   app.locals.financial = financialCore
   const authenticateRequest = createAuthenticationMiddleware(authService)
@@ -350,6 +354,31 @@ export function createApp(database, {
 
   // SPEC-018 — histórico financeiro próprio (RF41): só as movimentações da sessão, sem filtros.
   // Toda movimentação é de teste; a resposta diz isso explicitamente (INV-016).
+  // SPEC-027 — notificações próprias, dentro da aplicação. Só o destinatário consulta ou marca.
+  app.get('/account/notifications', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(notifications.list(request.authenticatedUser.id, request.query))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/account/notifications/read-all', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(notifications.markAllRead(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/account/notifications/:notificationId/read', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(notifications.markRead(request.authenticatedUser.id, request.params.notificationId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
   app.get('/account/financial-history', authenticateRequest, (request, response, next) => {
     try {
       response.json({ environment: 'test', movements: financialCore.getHistory(request.authenticatedUser.id) })
