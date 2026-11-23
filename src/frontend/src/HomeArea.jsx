@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, LoaderCircle, Minus } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
-import { fetchPoolsSummary, paginate, pointsLabel, poolStatusLabel, positionChange, positionLabel } from './home-summary.js'
+import { fetchPoolsSummary, paginate, pointsLabel, positionChange, positionLabel } from './home-summary.js'
 
 const changeIcons = { up: ArrowUp, down: ArrowDown, same: Minus }
 
@@ -23,7 +23,6 @@ function PoolCell({ pool, onOpenPool }) {
   return (
     <th scope="row">
       <button className="home-pool-link" type="button" onClick={() => onOpenPool(pool.poolId)}>{pool.name}</button>
-      <span className={`state ${pool.status === 'active' ? 'state-open' : ''}`}>{poolStatusLabel(pool.status)}</span>
     </th>
   )
 }

@@ -224,8 +224,11 @@ a { color: inherit; text-decoration: none; }
 .profile-logout .small-button { display: inline-flex; align-items: center; gap: 6px; }
 .home-summary { min-width: 0; }
 .home-summary .block-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 12px; }
-.home-table th[scope='row'] { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-weight: 400; }
-.home-table .col-num { text-align: right; white-space: nowrap; }
+/* Tabela do início: linhas entre os bolões e divisórias verticais entre as colunas. */
+.home-table th[scope='row'] { padding: 0 8px; border-bottom: 1px solid var(--rule); font-weight: 400; letter-spacing: 0; text-transform: none; white-space: normal; }
+.home-table .col-num { width: auto; text-align: center; white-space: nowrap; }
+.home-table th[scope='col'] + th[scope='col'], .home-table td { border-left: 1px solid var(--rule-strong); }
+.home-table .position-change { justify-content: center; }
 .home-pool-link { padding: 0; border: 0; color: var(--forest); background: none; font-size: 13px; font-weight: 700; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
 .home-pool-link:hover { text-decoration: underline; }
 .home-summary .empty-state { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
