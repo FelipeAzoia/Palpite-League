@@ -43,6 +43,11 @@ export default function ResultsPage({ token, poolId, onSessionRejected }) {
     return () => { active = false }
   }, [token, poolId])
 
+  const handleLiveError = useEffectEvent((error) => {
+    if (isSessionRejected(error)) onSessionRejected()
+    else setLive((current) => current ?? { available: false, matches: [] })
+  })
+
   // Dados ao vivo: qualquer negativa (por exemplo, participação ainda não confirmada) só esconde o
   // recurso, sem atrapalhar os resultados oficiais.
   const refreshLive = useEffectEvent(async () => {
@@ -54,14 +59,19 @@ export default function ResultsPage({ token, poolId, onSessionRejected }) {
       setLive(nextLive)
       if (nextResults) setData(nextResults)
     } catch (error) {
-      if (isSessionRejected(error)) onSessionRejected()
-      else setLive((current) => current ?? { available: false, matches: [] })
+      handleLiveError(error)
     }
   })
 
+  // Carga inicial dos dados ao vivo; as atualizações seguintes vêm do intervalo abaixo.
   useEffect(() => {
-    setLive(null)
-    refreshLive()
+    let active = true
+    fetchPoolLive(token, poolId).then((result) => {
+      if (active) setLive(result)
+    }).catch((error) => {
+      if (active) handleLiveError(error)
+    })
+    return () => { active = false }
   }, [token, poolId])
 
   useEffect(() => {
