@@ -15,6 +15,7 @@ import { fetchPredictionMatches } from './predictions-api.js'
 import PredictionsPage, { PredictionMark } from './PredictionsPage.jsx'
 import { fetchRanking } from './ranking-api.js'
 import RankingPage, { MedalMark } from './RankingPage.jsx'
+import RefundRequestsSection from './RefundRequestsSection.jsx'
 import RequestsSection from './RequestsSection.jsx'
 import { fetchPendingRequests } from './requests-api.js'
 import ResultsPage from './ResultsPage.jsx'
@@ -207,6 +208,7 @@ function ManageTab({ token, poolId, onSessionRejected, onChanged }) {
           onSessionRejected={onSessionRejected}
           onDecided={() => { setMembersVersion((current) => current + 1); onChanged() }}
         />
+        <RefundRequestsSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
         <ParticipantsSection key={membersVersion} token={token} poolId={poolId} onSessionRejected={onSessionRejected} />
       </div>
       <InvitesSection token={token} poolId={poolId} onSessionRejected={onSessionRejected} />

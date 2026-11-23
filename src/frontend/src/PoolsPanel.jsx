@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, ChevronRight, LoaderCircle, Plus } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import MatchCatalog from './MatchCatalog.jsx'
+import RefundsSection from './RefundsSection.jsx'
 import PoolView from './PoolView.jsx'
 import { createPool, fetchCreationAvailability, fetchPools } from './pools-api.js'
 import {
@@ -74,6 +75,7 @@ function PoolList({ token, notice, onSessionRejected, onOpen, onCreate }) {
           ))}
         </ul>
       )}
+      <RefundsSection token={token} onSessionRejected={onSessionRejected} />
     </div>
   )
 }
