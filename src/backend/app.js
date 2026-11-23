@@ -22,6 +22,10 @@ import {
   createScoringService,
   predictionAuditDetailSchemas,
 } from './modules/predictions-scoring/index.js'
+import {
+  createFinancialCoreService,
+  financialAuditDetailSchemas,
+} from './modules/payments-subscriptions/index.js'
 
 // Esquemas dos detalhes de auditoria permitidos por ação (SPEC-002), reunidos de cada módulo.
 export const auditDetailSchemas = Object.freeze({
@@ -31,6 +35,7 @@ export const auditDetailSchemas = Object.freeze({
   ...exitAuditDetailSchemas,
   ...predictionAuditDetailSchemas,
   ...resultsAuditDetailSchemas,
+  ...financialAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
@@ -39,8 +44,12 @@ export const defaultResultsSyncIntervalMs = 10 * 60 * 1000
 export const defaultScoringIntervalMs = 60 * 1000
 // Intervalo padrão das medalhas (SPEC-016, OPEN-81): 1 minuto.
 export const defaultMedalsIntervalMs = 60 * 1000
+// Intervalo padrão da conferência financeira (SPEC-018, ADR-0006): 5 minutos.
+export const defaultFinancialReconciliationIntervalMs = 5 * 60 * 1000
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
+import { createSimulatedPaymentsProvider } from './adapters/simulated-payments-provider.js'
+import { createMercadoPagoTestPaymentsProvider } from './adapters/mercado-pago-test-payments-provider.js'
 import { SportsProviderError } from './modules/matches-results/sports-provider.js'
 import { AppError } from './shared/app-error.js'
 import { createLogger } from './shared/logger.js'
@@ -86,12 +95,27 @@ function configuredSportsProvider(now) {
   throw new Error('Unsupported sports catalog source')
 }
 
+// Provedor de pagamentos por configuração (SPEC-018): o simulador é o padrão; o Mercado Pago só em
+// ambiente de teste, com a chave fora do repositório.
+function configuredPaymentsProvider() {
+  const source = process.env.PAYMENTS_PROVIDER || 'simulator'
+  if (source === 'simulator') return createSimulatedPaymentsProvider()
+  if (source === 'mercado-pago-test') {
+    return createMercadoPagoTestPaymentsProvider({
+      accessToken: process.env.MERCADO_PAGO_TEST_ACCESS_TOKEN || '',
+      timeoutMs: Number(process.env.PAYMENTS_PROVIDER_TIMEOUT_MS || 10000),
+    })
+  }
+  throw new Error('Unsupported payments provider')
+}
+
 export function createApp(database, {
   logger = createLogger(),
   now = Date.now,
   recoveryChannel,
   interfaceBaseUrl,
   sportsProvider = configuredSportsProvider(now),
+  paymentsProvider = configuredPaymentsProvider(),
   sportsSeason = Number(process.env.SPORTS_SEASON || 2026),
   sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
 } = {}) {
@@ -104,6 +128,12 @@ export function createApp(database, {
     ...(interfaceBaseUrl ? { interfaceBaseUrl } : {}),
   })
   const profileService = createProfileService(database)
+  const financialCore = createFinancialCoreService(database, {
+    auditStore,
+    paymentsProvider,
+    logger,
+    now,
+  })
   const sportsCatalogService = createSportsCatalogService(database, sportsProvider, {
     logger,
     now,
@@ -132,6 +162,7 @@ export function createApp(database, {
   app.locals.tasks = {
     syncResults: () => resultsSync.syncResults(),
     scorePredictions: () => scoring.scorePendingMatches(),
+    reconcilePayments: () => financialCore.reconcilePending(),
   }
   app.locals.scoring = scoring
   const ranking = createRankingService(database)
@@ -140,6 +171,7 @@ export function createApp(database, {
   app.locals.medals = medals
   app.locals.tasks.reconcileMedals = () => medals.reconcileMedals()
   app.locals.results = resultsSync
+  app.locals.financial = financialCore
   const authenticateRequest = createAuthenticationMiddleware(authService)
 
   app.use((request, response, next) => {
@@ -228,6 +260,16 @@ export function createApp(database, {
   app.get('/account/plans', authenticateRequest, (_request, response, next) => {
     try {
       response.json(profileService.listAvailablePlans())
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-018 — histórico financeiro próprio (RF41): só as movimentações da sessão, sem filtros.
+  // Toda movimentação é de teste; a resposta diz isso explicitamente (INV-016).
+  app.get('/account/financial-history', authenticateRequest, (request, response, next) => {
+    try {
+      response.json({ environment: 'test', movements: financialCore.getHistory(request.authenticatedUser.id) })
     } catch (error) {
       next(error)
     }
