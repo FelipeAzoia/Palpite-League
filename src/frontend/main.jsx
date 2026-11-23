@@ -11,7 +11,8 @@ import './styles.css'
 import './pool.css'
 
 const tokenKey = 'palpite-league-session'
-// Account tabs that keep the original two-column layout with the large slogan.
+// Account tabs that keep the original two-column layout with the large slogan; on the home page the
+// right-hand card shows the pools summary.
 const compactAreas = ['home', 'profile']
 const initialRecoveryToken = typeof window === 'undefined'
   ? null
@@ -164,7 +165,11 @@ function App() {
 
   const copy = viewCopy[view]
   const showInvite = view === 'authenticated' && Boolean(inviteCode)
-  const isAccount = view === 'authenticated' && (showInvite || !compactAreas.includes(accountArea))
+  const isSignedIn = view === 'authenticated'
+  const isAccount = isSignedIn && (showInvite || !compactAreas.includes(accountArea))
+  // Logado, toda página usa a mesma largura (cabeçalho, menu e cartão no mesmo lugar); nas páginas
+  // com o slogan, só ele fica centralizado no espaço ao lado do cartão.
+  const layoutClass = isAccount ? 'auth-layout auth-layout-account' : isSignedIn ? 'auth-layout auth-layout-split' : 'auth-layout'
 
   // Cada página tem sua chave; quando ela muda, o conteúdo é remontado e a transição roda de novo.
   const pageKey = showInvite ? 'invite' : view === 'authenticated' ? `account-${accountArea}` : view
@@ -175,7 +180,7 @@ function App() {
   }
 
   return (
-    <main className={['auth-shell', view === 'authenticated' && !showInvite && 'auth-shell-nav', isAccount && 'auth-shell-account'].filter(Boolean).join(' ')}>
+    <main className={['auth-shell', view === 'authenticated' && !showInvite && 'auth-shell-nav', isSignedIn && 'auth-shell-account'].filter(Boolean).join(' ')}>
       <header className="auth-header">
         <a className="brand" href="/" aria-label="Palpite League">
           <span className="brand-symbol"><BrandIcon size={22} strokeWidth={1.8} /></span>
@@ -187,7 +192,7 @@ function App() {
 
       {view === 'authenticated' && !showInvite && <AreaNav area={accountArea} onAreaChange={setAccountArea} />}
 
-      <section key={isAccount ? 'wide' : 'compact'} className={isAccount ? 'auth-layout auth-layout-account' : 'auth-layout'} aria-live="polite">
+      <section key={isAccount ? 'wide' : 'compact'} className={layoutClass} aria-live="polite">
         {!isAccount && (
           <div className="auth-intro">
             <p className="eyebrow">PALPITE LEAGUE</p>
@@ -304,7 +309,6 @@ function App() {
         </section>
       </section>
 
-      <footer className="auth-footer"><span>PALPITE LEAGUE</span><span>Uma rodada de cada vez.</span></footer>
     </main>
   )
 }

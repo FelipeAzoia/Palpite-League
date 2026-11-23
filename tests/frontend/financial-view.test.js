@@ -5,6 +5,7 @@ import {
   formatMovementDate,
   movementStatusLabel,
   movementTypeLabel,
+  openMovementsSummary,
   originBadge,
   testEnvironmentNotice,
 } from '../../src/frontend/src/financial-view.js'
@@ -32,6 +33,14 @@ describe('Histórico financeiro (SPEC-018)', () => {
     expect(formatBrl(123456789)).toBe('R$ 1.234.567,89')
     expect(formatBrl(5)).toBe('R$ 0,05')
     expect(formatBrl(0.3)).toBe('R$ —')
+  })
+
+  it('resume o que está em aberto para o Perfil', () => {
+    expect(openMovementsSummary([])).toEqual({ count: 0, label: 'Nada em aberto' })
+    expect(openMovementsSummary([{ status: 'confirmed', amountCents: 1990 }, { status: 'refused', amountCents: 500 }]).count).toBe(0)
+    expect(openMovementsSummary([{ status: 'pending', amountCents: 1990 }])).toEqual({ count: 1, label: '1 pagamento em aberto · R$ 19,90' })
+    expect(openMovementsSummary([{ status: 'pending', amountCents: 1990 }, { status: 'pending', amountCents: 1000 }]).label)
+      .toBe('2 pagamentos em aberto · R$ 29,90')
   })
 
   it('identifica a origem: a simulação nunca aparece como confirmação do provedor', () => {

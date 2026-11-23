@@ -168,9 +168,65 @@ export function createRankingService(database) {
     return database.prepare('SELECT tiebreaker FROM pools WHERE id = ?').get(poolId)?.tiebreaker
   }
 
+  // Classificação como estava antes da rodada informada: a mesma regra (classify) com os pontos e
+  // os critérios de desempate dessa rodada descontados de cada participante.
+  function rankingBefore(ranking, perRound, roundNumber, lastRoundNumber, tiebreaker) {
+    return classify(ranking.map((row) => {
+      const round = perRound.get(row.id)?.get(roundNumber)
+      return {
+        id: row.id,
+        name: row.name,
+        totalPoints: row.totalPoints - (round?.points ?? 0),
+        exactScores: row.exactScores - (round?.exactScores ?? 0),
+        correctResults: row.correctResults - (round?.correctResults ?? 0),
+        lastRoundPoints: row.lastRoundPoints - (roundNumber === lastRoundNumber ? round?.points ?? 0 : 0),
+      }
+    }), tiebreaker)
+  }
+
+  // Resumo da página inicial: o que há de novo para o próprio usuário em cada bolão em que tem
+  // participação confirmada. "Novo" é a rodada mais recente com partida encerrada: os pontos ganhos
+  // nela e a colocação antes dela, para indicar se subiu, caiu ou manteve. A colocação atual é a
+  // mesma da consulta do ranking (CA-15). Nenhum dado de outro participante além da contagem.
+  function getMySummary(userId) {
+    const memberships = database.prepare(`
+      SELECT p.id AS pool_id, p.name, p.status, p.tiebreaker, part.id AS participation_id
+      FROM pool_participations part JOIN pools p ON p.id = part.pool_id
+      WHERE part.user_id = ? AND part.status = 'confirmed'
+      ORDER BY p.created_at DESC, p.id
+    `).all(userId)
+
+    return {
+      pools: memberships.map((row) => {
+        const { rounds, ranking } = computeRanking(row.pool_id, row.tiebreaker)
+        const perRound = roundPoints(row.pool_id)
+        const mine = ranking.find((participant) => participant.id === row.participation_id)
+        const played = rounds.filter((round) => round.finishedMatches > 0)
+        const latest = played.at(-1) ?? null
+        // Sem rodada anterior com partida encerrada não há colocação anterior para comparar.
+        const previous = played.length >= 2 && mine
+          ? rankingBefore(ranking, perRound, latest.number, rounds.at(-1).number, row.tiebreaker)
+            .find((participant) => participant.id === mine.id)
+          : null
+        return {
+          poolId: row.pool_id,
+          name: row.name,
+          status: row.status,
+          totalPoints: mine?.totalPoints ?? 0,
+          latestRound: latest?.number ?? null,
+          roundPoints: latest ? perRound.get(row.participation_id)?.get(latest.number)?.points ?? 0 : 0,
+          position: mine?.position ?? null,
+          previousPosition: previous?.position ?? null,
+          participants: ranking.length,
+        }
+      }),
+    }
+  }
+
   return {
     getRanking,
     getMyPerformance,
+    getMySummary,
     computeRanking: (poolId) => computeRanking(poolId, poolTiebreaker(poolId)),
     roundPoints,
     poolRounds,

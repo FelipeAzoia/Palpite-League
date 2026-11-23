@@ -40,6 +40,15 @@ export function formatBrl(amountCents) {
   return `${negative ? '-' : ''}R$ ${reais},${cents}`
 }
 
+// Resumo do que está em aberto (movimentações pendentes), mostrado no Perfil.
+export function openMovementsSummary(movements) {
+  const pending = (movements ?? []).filter((movement) => movement.status === 'pending')
+  if (pending.length === 0) return { count: 0, label: 'Nada em aberto' }
+  const total = pending.reduce((sum, movement) => sum + movement.amountCents, 0)
+  const noun = pending.length === 1 ? 'pagamento em aberto' : 'pagamentos em aberto'
+  return { count: pending.length, label: `${pending.length} ${noun} · ${formatBrl(total)}` }
+}
+
 export function formatMovementDate(isoDate) {
   const date = new Date(isoDate)
   if (Number.isNaN(date.getTime())) return ''

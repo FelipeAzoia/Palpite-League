@@ -1,33 +1,30 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
-import { fetchProfile, isSessionRejected, updateProfileName } from './account-api.js'
+import { fetchFinancialHistory, fetchProfile, isSessionRejected, updateProfileName } from './account-api.js'
+import { openMovementsSummary } from './financial-view.js'
 import MatchCatalog from './MatchCatalog.jsx'
 import PlanArea from './PlanArea.jsx'
 import PoolsPanel from './PoolsPanel.jsx'
 import FinancialHistory from './FinancialHistory.jsx'
+import HomeArea from './HomeArea.jsx'
 
 const areas = [
   { id: 'home', label: 'Início' },
   { id: 'profile', label: 'Perfil' },
-  { id: 'plan', label: 'Plano' },
   { id: 'matches', label: 'Partidas' },
   { id: 'pools', label: 'Bolões' },
-  { id: 'financial', label: 'Financeiro' },
 ]
 
+// Planos e Financeiro não têm aba própria: são abertos pelo Perfil (planos também pela criação de
+// bolão), e enquanto estão abertos a aba Perfil fica destacada.
+const profileSubAreas = ['plan', 'financial']
+const navAreaOf = (area) => (profileSubAreas.includes(area) ? 'profile' : area)
 
-function AreaFooter({ pending, onBack, onLogout }) {
-  return (
-    <div className="mode-switch">
-      <button type="button" onClick={onBack}>Voltar ao início</button>
-      <button type="button" onClick={onLogout} disabled={pending}>Sair da conta</button>
-    </div>
-  )
-}
-
-function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected, onUserChange }) {
+function ProfileArea({ token, user, pending, onOpenPlans, onOpenFinancial, onLogout, onSessionRejected, onUserChange }) {
   const [profile, setProfile] = useState(null)
   const [loadError, setLoadError] = useState('')
+  // Situação do financeiro: carregada à parte, para uma falha aqui não esconder o perfil.
+  const [financial, setFinancial] = useState(null)
   const [name, setName] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [message, setMessage] = useState('')
@@ -45,6 +42,12 @@ function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected
     }).catch((error) => {
       if (isSessionRejected(error)) rejectSession()
       else if (active) setLoadError(error.message)
+    })
+    fetchFinancialHistory(token).then(({ movements }) => {
+      if (active) setFinancial(openMovementsSummary(movements))
+    }).catch((error) => {
+      if (isSessionRejected(error)) rejectSession()
+      else if (active) setFinancial({ count: 0, label: 'Não foi possível consultar agora' })
     })
     return () => { active = false }
   }, [token])
@@ -77,8 +80,15 @@ function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected
 
   return (
     <>
-      <p className="eyebrow">MEU PERFIL</p>
-      <h2 id="auth-title">Meu perfil</h2>
+      <div className="profile-head">
+        <div>
+          <p className="eyebrow">MEU PERFIL</p>
+          <h2 id="auth-title">Meu perfil</h2>
+        </div>
+        <button className="small-button profile-logout" type="button" onClick={onLogout} disabled={pending}>
+          <LogOut size={18} aria-hidden="true" /> {pending ? 'Saindo...' : 'Sair da conta'}
+        </button>
+      </div>
       <p className="form-copy">Veja seus dados e altere o nome exibido.</p>
 
       {loadError && <p className="form-message" role="alert">{loadError}</p>}
@@ -86,9 +96,22 @@ function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected
 
       {profile && (
         <>
-          <dl className="info-list">
+          <dl className="info-list profile-info">
             <div><dt>E-mail</dt><dd>{profile.email}</dd></div>
-            <div><dt>Plano</dt><dd>{profile.plan.name}</dd></div>
+            <div>
+              <dt>Plano</dt>
+              <dd className="profile-action">
+                {profile.plan.name}
+                <button className="small-button" type="button" onClick={onOpenPlans}>Ver planos</button>
+              </dd>
+            </div>
+            <div>
+              <dt>Financeiro</dt>
+              <dd className="profile-action">
+                <span className={financial?.count ? 'profile-open' : undefined}>{financial ? financial.label : 'Consultando...'}</span>
+                <button className="small-button" type="button" onClick={onOpenFinancial}>Ver financeiro</button>
+              </dd>
+            </div>
           </dl>
 
           <form className="auth-form" onSubmit={save} noValidate>
@@ -118,8 +141,6 @@ function ProfileArea({ token, user, pending, onBack, onLogout, onSessionRejected
           </form>
         </>
       )}
-
-      <AreaFooter pending={pending} onBack={onBack} onLogout={onLogout} />
     </>
   )
 }
@@ -128,7 +149,7 @@ export function AreaNav({ area, onAreaChange }) {
   return (
     <nav className="area-nav" aria-label="Áreas da conta">
       {areas.map((item) => (
-        <button key={item.id} type="button" aria-current={area === item.id ? 'page' : undefined} onClick={() => onAreaChange(item.id)}>
+        <button key={item.id} type="button" aria-current={navAreaOf(area) === item.id ? 'page' : undefined} onClick={() => onAreaChange(item.id)}>
           {item.label}
         </button>
       ))}
@@ -138,21 +159,27 @@ export function AreaNav({ area, onAreaChange }) {
 
 export default function AccountPanel({ token, user, pending, area, onAreaChange, onLogout, onSessionRejected, onUserChange }) {
   const setArea = onAreaChange
+  // Bolão a abrir quando o usuário vem da página inicial; a aba Bolões abre direto nele.
+  const [poolToOpen, setPoolToOpen] = useState(null)
+  // Ao sair da aba, a próxima visita a Bolões volta para a lista.
+  if (area !== 'pools' && poolToOpen !== null) setPoolToOpen(null)
+
+  function openPool(poolId) {
+    setPoolToOpen(poolId)
+    setArea('pools')
+  }
 
   return (
     <div className="authenticated-view">
 
       {area === 'home' && (
-        <>
-          <p className="eyebrow">ACESSO CONFIRMADO</p>
-          <h2 id="auth-title">Olá, {user?.name}.</h2>
-          <p className="form-copy">Sua conta está pronta para a próxima rodada.</p>
-          <button className="primary-button" type="button" onClick={onLogout} disabled={pending}>
-            <span>{pending ? 'Saindo...' : 'Sair da conta'}</span>
-            {pending ? <LoaderCircle size={17} className="spin" /> : <LogOut size={17} />}
-          </button>
-          <p className="plan-note">Plano {user?.plan === 'free' ? 'Gratuito' : user?.plan}</p>
-        </>
+        <HomeArea
+          token={token}
+          user={user}
+          onOpenPool={openPool}
+          onBrowsePools={() => openPool(null)}
+          onSessionRejected={onSessionRejected}
+        />
       )}
 
       {area === 'profile' && (
@@ -160,7 +187,8 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
           token={token}
           user={user}
           pending={pending}
-          onBack={() => setArea('home')}
+          onOpenPlans={() => setArea('plan')}
+          onOpenFinancial={() => setArea('financial')}
           onLogout={onLogout}
           onSessionRejected={onSessionRejected}
           onUserChange={onUserChange}
@@ -170,9 +198,7 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
       {area === 'plan' && (
         <PlanArea
           token={token}
-          pending={pending}
-          onBack={() => setArea('home')}
-          onLogout={onLogout}
+          onBack={() => setArea('profile')}
           onSessionRejected={onSessionRejected}
         />
       )}
@@ -182,17 +208,17 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
       )}
 
       {area === 'pools' && (
-        <PoolsPanel token={token} onSessionRejected={onSessionRejected} />
+        <PoolsPanel
+          key={poolToOpen ?? 'list'}
+          token={token}
+          initialPoolId={poolToOpen}
+          onUpgrade={() => setArea('plan')}
+          onSessionRejected={onSessionRejected}
+        />
       )}
 
       {area === 'financial' && (
-        <FinancialHistory
-          token={token}
-          pending={pending}
-          onBack={() => setArea('home')}
-          onLogout={onLogout}
-          onSessionRejected={onSessionRejected}
-        />
+        <FinancialHistory token={token} onBack={() => setArea('profile')} onSessionRejected={onSessionRejected} />
       )}
     </div>
   )
