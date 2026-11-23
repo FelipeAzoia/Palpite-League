@@ -2,6 +2,7 @@ import {
   createApp,
   defaultFinancialReconciliationIntervalMs,
   defaultLiveResultsIntervalMs,
+  defaultRefundProcessingIntervalMs,
   defaultMedalsIntervalMs,
   defaultResultsSyncIntervalMs,
   defaultScoringIntervalMs,
@@ -53,6 +54,11 @@ scheduler.register(
   'financial-reconciliation',
   Number(process.env.FINANCIAL_RECONCILIATION_INTERVAL_MS || defaultFinancialReconciliationIntervalMs),
   app.locals.tasks.reconcilePayments,
+)
+scheduler.register(
+  'refund-processing',
+  Number(process.env.REFUND_PROCESSING_INTERVAL_MS || defaultRefundProcessingIntervalMs),
+  app.locals.tasks.processRefunds,
 )
 scheduler.register(
   'subscription-periods',

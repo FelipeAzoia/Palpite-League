@@ -27,7 +27,11 @@ export const financialActions = Object.freeze({
   confirmed: 'financial.movement_confirmed',
   refused: 'financial.movement_refused',
   providerFailed: 'financial.provider_failed',
+  inconsistent: 'financial.provider_inconsistent',
 })
+
+// Motivos de recusa que o provedor pode informar (SPEC-024, A6).
+export const refusalReasons = Object.freeze(['not_refundable', 'provider_refused'])
 
 const stateSchema = { type: 'enum', values: movementStatuses }
 const typeSchema = { type: 'enum', values: movementTypes }
@@ -49,7 +53,13 @@ export const financialAuditDetailSchemas = Object.freeze({
     origin: originSchema,
   },
   [financialActions.confirmed]: stateChangeSchema,
-  [financialActions.refused]: stateChangeSchema,
+  [financialActions.refused]: { ...stateChangeSchema, refusalReason: { type: 'enum', values: refusalReasons } },
+  [financialActions.inconsistent]: {
+    movementType: typeSchema,
+    amountCents: { type: 'integer' },
+    reportedAmountCents: { type: 'integer' },
+    origin: originSchema,
+  },
   [financialActions.providerFailed]: {
     stage: { type: 'enum', values: ['start', 'consult'] },
     reason: { type: 'enum', values: paymentsProviderFailureCodes },
@@ -99,6 +109,8 @@ function toMovement(row) {
     providerId: row.provider_id,
     continuation: parseContinuation(row.continuation_json),
     originalMovementId: row.original_movement_id,
+    refusalReason: row.refusal_reason ?? null,
+    inconsistency: row.inconsistency ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -214,7 +226,7 @@ export function createFinancialCoreService(database, {
   // onCreate, quando informado, roda dentro dessa mesma transação com a movimentação recém-criada:
   // é onde a Spec proprietária grava o próprio registro (por exemplo, a assinatura) e sua auditoria,
   // de modo que tudo persista junto ou nada persista (SPEC-019 INV-004).
-  function createOrReuse(request, onCreate) {
+  function createOrReuse(request, onCreate, actor = { type: 'user', id: request.userId }) {
     const latest = latestAttempt(request.businessReference)
     if (latest && !sameRequest(latest, request)) {
       throw new AppError(409, 'financial_reference_conflict', 'Já existe outra operação financeira com esta referência.')
@@ -234,7 +246,7 @@ export function createFinancialCoreService(database, {
     const operationKey = `${request.businessReference}:attempt-${attemptNumber}`
     const at = nowIso()
     auditStore.runAuditedOperation({
-      actor: { type: 'user', id: request.userId },
+      actor,
       action: financialActions.created,
       object: { type: 'financial_movement', id },
       origin: provider.source,
@@ -263,6 +275,9 @@ export function createFinancialCoreService(database, {
   // cancelamento exige as operações próprias e nunca cai na operação genérica, que seria uma cobrança
   // (SPEC-020, INV-008).
   const typeOperations = Object.freeze({
+    // A devolução usa a transação original e nunca cai na operação genérica, que seria uma cobrança
+    // (SPEC-024, INV-003); sem as operações próprias, a devolução fica pendente.
+    refund: { start: 'startRefund', consult: 'consultRefund', required: true },
     subscription: { start: 'startSubscription', consult: 'consultSubscription', required: false },
     subscription_cancellation: { start: 'startSubscriptionCancellation', consult: 'consultSubscriptionCancellation', required: true },
     // A renovação é cobrada pelo provedor (SPEC-029); sem as operações próprias não há cobrança.
@@ -295,6 +310,7 @@ export function createFinancialCoreService(database, {
         amountCents: row.amount_cents,
         currency: row.currency,
         userId: row.user_id,
+        ...(row.original_movement_id ? { original: originalReference(row.original_movement_id) } : {}),
         ...(payer ? { payer } : {}),
         ...(providerContext ? { context: providerContext } : {}),
       })
@@ -327,10 +343,16 @@ export function createFinancialCoreService(database, {
     return findById(row.id)
   }
 
-  async function startMovement(input, { onCreate, payer, providerContext, refuseWhenUnavailable } = {}) {
+  // Referência da transação original no provedor, enviada na devolução (SPEC-024, INV-003).
+  function originalReference(movementId) {
+    const original = findById(movementId)
+    return { operationKey: original.operation_key, providerId: original.provider_id }
+  }
+
+  async function startMovement(input, { onCreate, payer, providerContext, refuseWhenUnavailable, actor } = {}) {
     if (onCreate !== undefined && typeof onCreate !== 'function') throw new TypeError('onCreate must be a function')
     const request = validateStart(input)
-    const { row, created } = createOrReuse(request, onCreate)
+    const { row, created } = createOrReuse(request, onCreate, actor)
     if (created) {
       const started = await startAtProvider(row, { payer, providerContext, refuseWhenUnavailable })
       return { movement: toMovement(started), created: true }
@@ -344,7 +366,7 @@ export function createFinancialCoreService(database, {
     return { movement: toMovement(row), created: false }
   }
 
-  function changeState(row, newState, providerId) {
+  function changeState(row, newState, providerId, refusalReason = null) {
     const handler = handlers.get(row.type)
     const movement = toMovement(row)
     const auditEntry = {
@@ -359,6 +381,7 @@ export function createFinancialCoreService(database, {
         newState,
         origin: row.origin,
         ...(providerId ? { providerId } : {}),
+        ...(newState === 'refused' && refusalReason ? { refusalReason } : {}),
       },
     }
 
@@ -366,13 +389,13 @@ export function createFinancialCoreService(database, {
       if (handler) {
         const outcome = newState === 'confirmed'
           ? handler.onConfirmed(movement, { database })
-          : handler.onRefused(movement, { database })
+          : handler.onRefused({ ...movement, refusalReason }, { database })
         if (typeof outcome?.then === 'function') throw new TypeError('financial handlers must be synchronous')
       }
       const changed = database.prepare(`
-        UPDATE financial_movements SET status = ?, provider_id = COALESCE(provider_id, ?), updated_at = ?
+        UPDATE financial_movements SET status = ?, provider_id = COALESCE(provider_id, ?), refusal_reason = ?, updated_at = ?
         WHERE id = ? AND status = 'pending'
-      `).run(newState, providerId ?? null, nowIso(), row.id)
+      `).run(newState, providerId ?? null, newState === 'refused' ? refusalReason : null, nowIso(), row.id)
       if (changed.changes !== 1) throw new Error('financial movement is no longer pending')
     }
 
@@ -402,10 +425,20 @@ export function createFinancialCoreService(database, {
 
     let status
     let providerId
+    let refusalReason = null
+    let reportedAmount = null
     try {
       const result = await operationFor(row.type, 'consult').call(provider, { operationKey: row.operation_key, providerId: row.provider_id })
       status = result?.status
       providerId = result?.providerId ?? row.provider_id ?? null
+      if (result?.refusalReason !== undefined && result?.refusalReason !== null) {
+        if (!refusalReasons.includes(result.refusalReason)) throw new PaymentsProviderError('invalid_response')
+        refusalReason = result.refusalReason
+      }
+      if (result?.amountCents !== undefined && result?.amountCents !== null) {
+        if (!Number.isSafeInteger(result.amountCents)) throw new PaymentsProviderError('invalid_response')
+        reportedAmount = result.amountCents
+      }
       if (!movementStatuses.includes(status) || (providerId !== null && (typeof providerId !== 'string' || !identifierPattern.test(providerId)))) {
         throw new PaymentsProviderError('invalid_response')
       }
@@ -416,11 +449,37 @@ export function createFinancialCoreService(database, {
 
     if (status === 'pending') return { movement: toMovement(findById(row.id)), applied: false }
 
+    // Valor informado diferente do registrado: a confirmação não é aplicada; a movimentação fica
+    // pendente e sinalizada como inconsistente (SPEC-024, A7). A sinalização é auditada uma vez.
+    if (status === 'confirmed' && reportedAmount !== null && reportedAmount !== row.amount_cents) {
+      logger.warn('payments', 'provider_amount_mismatch')
+      if (row.inconsistency !== 'amount_mismatch') {
+        try {
+          database.transaction(() => {
+            database.prepare(`
+              UPDATE financial_movements SET inconsistency = 'amount_mismatch', updated_at = ?
+              WHERE id = ? AND status = 'pending'
+            `).run(nowIso(), row.id)
+            auditStore.recordOutcome({
+              actor: systemActor,
+              action: financialActions.inconsistent,
+              object: { type: 'financial_movement', id: row.id },
+              origin: row.origin,
+              details: { movementType: row.type, amountCents: row.amount_cents, reportedAmountCents: reportedAmount, origin: row.origin },
+            }, 'failure')
+          })()
+        } catch {
+          logger.error('payments', 'inconsistency_not_recorded')
+        }
+      }
+      return { movement: toMovement(findById(row.id)), applied: false }
+    }
+
     // Sem await daqui em diante: a releitura e a mudança acontecem sem outra conferência no meio.
     const current = findById(row.id)
     if (current.status !== 'pending') return { movement: toMovement(current), applied: false }
     try {
-      changeState(current, status, providerId)
+      changeState(current, status, providerId, status === 'refused' ? refusalReason : null)
     } catch {
       // Falha do tratador ou da auditoria: tudo é desfeito e a próxima conferência tenta de novo (E2).
       logger.error('payments', 'state_change_failed')

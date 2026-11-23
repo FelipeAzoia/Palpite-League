@@ -34,6 +34,8 @@ import {
   createPremiumSubscriptionService,
   createSimulatedCheckoutService,
   createEntryFeePaymentService,
+  createRefundProcessingService,
+  refundProcessingAuditDetailSchemas,
   entryFeeAuditDetailSchemas,
   createSubscriptionLifecycleService,
   defaultPremiumAnnualPriceCents,
@@ -56,12 +58,15 @@ export const auditDetailSchemas = Object.freeze({
   ...lifecycleAuditDetailSchemas,
   ...entryFeeAuditDetailSchemas,
   ...refundAuditDetailSchemas,
+  ...refundProcessingAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
 export const defaultResultsSyncIntervalMs = 10 * 60 * 1000
 // Intervalo padrão da atualização ao vivo (SPEC-021, OPEN-99): 1 minuto.
 export const defaultLiveResultsIntervalMs = 60 * 1000
+// Intervalo padrão do início do processamento das devoluções aprovadas (SPEC-024, OPEN-126): 1 minuto.
+export const defaultRefundProcessingIntervalMs = 60 * 1000
 // Intervalo padrão da pontuação (SPEC-014, OPEN-76): 1 minuto.
 export const defaultScoringIntervalMs = 60 * 1000
 // Intervalo padrão das medalhas (SPEC-016, OPEN-81): 1 minuto.
@@ -215,6 +220,7 @@ export function createApp(database, {
     now,
   })
   const refundRequests = createRefundRequestsService(database, { auditStore, now })
+  const refundProcessing = createRefundProcessingService(database, { auditStore, financialCore, logger })
   const participantManagement = createParticipantManagementService(database, { auditStore })
   const participationExit = createParticipationExitService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
@@ -227,6 +233,7 @@ export function createApp(database, {
     refreshLiveScores: () => liveResults.refreshLiveScores(),
     scorePredictions: () => scoring.scorePendingMatches(),
     reconcilePayments: () => financialCore.reconcilePending(),
+    processRefunds: () => refundProcessing.processApproved(),
     processSubscriptions: () => subscriptionLifecycle.processSubscriptions(),
   }
   app.locals.scoring = scoring
@@ -611,6 +618,23 @@ export function createApp(database, {
   app.post('/pools/:poolId/refund-requests/:requestId/approve', authenticateRequest, (request, response, next) => {
     try {
       response.json(refundRequests.approve(request.authenticatedUser.id, request.params.poolId, request.params.requestId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-024 — devoluções aprovadas do bolão e nova tentativa depois de uma recusa (administração).
+  app.get('/pools/:poolId/refunds', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(refundProcessing.listApproved(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/refunds/:requestId/retry', authenticateRequest, async (request, response, next) => {
+    try {
+      response.status(201).json(await refundProcessing.retry(request.authenticatedUser.id, request.params.poolId, request.params.requestId))
     } catch (error) {
       next(error)
     }

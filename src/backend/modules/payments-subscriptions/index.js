@@ -8,6 +8,7 @@ export {
   movementStatuses,
   movementTypes,
   operationOriginTypes,
+  refusalReasons,
 } from './financial-core.js'
 export {
   addBillingCycle,
@@ -23,6 +24,7 @@ export {
   subscriptionStatuses,
 } from './premium-subscription.js'
 export { createSimulatedCheckoutService } from './simulated-checkout.js'
+export { createRefundProcessingService, refundProcessingActions, refundProcessingAuditDetailSchemas } from './refund-processing.js'
 export { createEntryFeePaymentService, entryFeeActions, entryFeeAuditDetailSchemas } from './entry-fee-payment.js'
 export {
   createSubscriptionLifecycleService,

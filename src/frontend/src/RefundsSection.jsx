@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { isSessionRejected } from './account-api.js'
 import { formatBrl } from './financial-view.js'
 import { formatInviteDate } from './invites-view.js'
-import { fetchOwnRefunds, refundReasonLabels, refundStatusLabels, requestRefund } from './refunds-api.js'
+import { fetchOwnRefunds, refundReasonLabels, refundSituation, requestRefund } from './refunds-api.js'
 
 // SPEC-023 — devoluções de quem saiu de bolões com taxa paga. A saída não gera devolução automática:
 // a pessoa pede aqui e a administração do bolão decide.
@@ -57,7 +57,7 @@ export default function RefundsSection({ token, onSessionRejected }) {
                 <small>
                   {formatBrl(item.request?.amountCents ?? item.eligibleAmountCents)}
                   {item.request
-                    ? ` · ${refundStatusLabels[item.request.displayStatus] ?? item.request.displayStatus} · pedido em ${formatInviteDate(item.request.requestedAt)}`
+                    ? ` · ${refundSituation(item.request)} · pedido em ${formatInviteDate(item.request.requestedAt)}`
                     : refundReasonLabels[item.reason] ? ` · ${refundReasonLabels[item.reason]}` : ''}
                 </small>
               </span>
