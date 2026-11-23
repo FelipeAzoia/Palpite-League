@@ -13,12 +13,12 @@ const areas = [
   { id: 'profile', label: 'Perfil' },
   { id: 'matches', label: 'Partidas' },
   { id: 'pools', label: 'Bolões' },
-  { id: 'financial', label: 'Financeiro' },
 ]
 
-
-// A página de planos não tem aba própria: ela é aberta pelo Perfil e pela criação de bolão.
-const navAreaOf = (area) => (area === 'plan' ? 'profile' : area)
+// Planos e Financeiro não têm aba própria: são abertos pelo Perfil (planos também pela criação de
+// bolão), e enquanto estão abertos a aba Perfil fica destacada.
+const profileSubAreas = ['plan', 'financial']
+const navAreaOf = (area) => (profileSubAreas.includes(area) ? 'profile' : area)
 
 function ProfileArea({ token, user, pending, onOpenPlans, onOpenFinancial, onLogout, onSessionRejected, onUserChange }) {
   const [profile, setProfile] = useState(null)
@@ -218,7 +218,7 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
       )}
 
       {area === 'financial' && (
-        <FinancialHistory token={token} onSessionRejected={onSessionRejected} />
+        <FinancialHistory token={token} onBack={() => setArea('profile')} onSessionRejected={onSessionRejected} />
       )}
     </div>
   )
