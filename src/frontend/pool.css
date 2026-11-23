@@ -366,3 +366,17 @@
   .segmented-wide { display: grid; width: 100%; }
   .segmented-wide .segment + .segment { border-top: 1px solid var(--rule); border-left: 0; }
 }
+
+/* ——— Taxa de entrada (SPEC-022) ——— */
+.entry-fee { display: grid; gap: 10px; min-width: 0; padding: 18px; border: 1px solid var(--rule-strong); border-radius: 6px; background: #fff; }
+.entry-fee-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.entry-fee-head .eyebrow { margin-bottom: 6px; }
+.entry-fee-head h3 { margin: 0; color: var(--forest); font-family: Georgia, serif; font-size: 28px; font-weight: 400; line-height: 1; }
+.entry-fee-status { margin: 0; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.entry-fee-done { color: #385e43; }
+.entry-fee-warn { color: #8a6418; }
+.entry-fee-alert { color: #a34f3c; }
+.entry-fee-muted { color: #3e4d43; }
+.entry-fee .test-environment-warning, .entry-fee .simulated-checkout, .entry-fee .premium-actions { margin: 0; }
+.entry-fee .simulated-checkout { display: grid; gap: 10px; }
+.entry-fee .simulated-amount { margin: 0; }
