@@ -74,6 +74,31 @@ a { color: inherit; text-decoration: none; }
   padding: 24px 0;
 }
 .auth-layout-split .auth-intro { align-self: center; justify-self: center; padding-bottom: 0; }
+/* Cartão das páginas com o slogan: mesmo tamanho de cartão, textos e controles maiores. */
+.auth-layout-split .auth-panel .eyebrow { font-size: 12px; }
+.auth-layout-split .auth-panel h2 { font-size: 40px; }
+.auth-layout-split .auth-panel .toolbar-note,
+.auth-layout-split .auth-panel .form-copy { font-size: 16px; }
+.auth-layout-split .auth-panel .block-title { font-size: 22px; }
+.auth-layout-split .auth-panel .segment span { padding: 9px 16px; font-size: 14px; }
+.auth-layout-split .auth-panel .standings { font-size: 16px; }
+.auth-layout-split .auth-panel .standings th[scope='col'] { font-size: 12px; }
+.auth-layout-split .auth-panel .standings td, .auth-layout-split .auth-panel .standings th[scope='row'] { padding-top: 12px; padding-bottom: 12px; }
+.auth-layout-split .auth-panel .home-pool-link { font-size: 16px; }
+.auth-layout-split .auth-panel .state { font-size: 13px; }
+.auth-layout-split .auth-panel .small-button { padding: 9px 14px; font-size: 14px; }
+.auth-layout-split .auth-panel .pager, .auth-layout-split .auth-panel .tab-loading,
+.auth-layout-split .auth-panel .empty-state { font-size: 15px; }
+.auth-layout-split .auth-panel .fine-print { font-size: 13px; }
+.auth-layout-split .auth-panel .info-list div { font-size: 16px; }
+.auth-layout-split .auth-panel .field { font-size: 14px; }
+.auth-layout-split .auth-panel .field input { min-height: 48px; font-size: 16px; }
+.auth-layout-split .auth-panel .primary-button { min-height: 50px; font-size: 15px; }
+.auth-layout-split .auth-panel .form-message { font-size: 14px; }
+.position-change { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; font-weight: 800; }
+.position-change-up { color: #2f7a3e; }
+.position-change-down { color: #b4483a; }
+.position-change-same, .position-change-none { color: var(--muted); }
 .invite-situation { margin: 12px 0 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 5px; color: #3e4d43; background: #fff; font-size: 13px; font-weight: 650; line-height: 1.45; }
 .invite-situation-requested, .invite-situation-approved_awaiting_payment, .invite-situation-confirmed { border-color: #cbdcc4; color: #385e43; background: #eef5ea; }
 .invite-situation-rejected, .invite-situation-left { border-color: #ecd2cb; color: #8a3f31; background: #f8ece8; }

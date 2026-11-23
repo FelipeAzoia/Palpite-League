@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchPoolsSummary, paginate, pointsLabel, poolStatusLabel, positionLabel } from '../../src/frontend/src/home-summary.js'
+import { fetchPoolsSummary, paginate, pointsLabel, poolStatusLabel, positionChange, positionLabel } from '../../src/frontend/src/home-summary.js'
 
 const pools = Array.from({ length: 12 }, (_, index) => ({ poolId: `p${index + 1}` }))
 
@@ -25,6 +25,13 @@ describe('Resumo da página inicial', () => {
     expect(paginate(pools, 0).page).toBe(1)
     expect(paginate([], 1)).toMatchObject({ items: [], page: 1, totalPages: 1, total: 0, from: 0, to: 0, hasNext: false })
     expect(paginate(pools.slice(0, 5), 1)).toMatchObject({ totalPages: 1, hasNext: false })
+  })
+
+  it('indica se subiu, caiu ou manteve a colocação desde antes da rodada mais recente', () => {
+    expect(positionChange(1, 3)).toEqual({ direction: 'up', places: 2, label: 'Subiu 2 posições' })
+    expect(positionChange(2, 1)).toEqual({ direction: 'down', places: 1, label: 'Caiu 1 posição' })
+    expect(positionChange(4, 4)).toEqual({ direction: 'same', places: 0, label: 'Manteve a colocação' })
+    expect(positionChange(2, null).direction).toBe('none')
   })
 
   it('formata pontos, colocação e situação do bolão', () => {

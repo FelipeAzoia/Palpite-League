@@ -45,7 +45,73 @@ test('resumo mostra pontos e colocação do próprio usuário em cada bolão, ig
 
     // Nenhum dado de outro participante além da contagem.
     assert.equal(summary.text.includes('Bruno') || summary.text.includes('Carla'), false)
-    assert.deepEqual(Object.keys(summary.json.pools[0]).sort(), ['name', 'participants', 'poolId', 'position', 'status', 'totalPoints'])
+    assert.deepEqual(Object.keys(summary.json.pools[0]).sort(), [
+      'latestRound', 'name', 'participants', 'poolId', 'position', 'previousPosition', 'roundPoints', 'status', 'totalPoints',
+    ])
+    // Sem partida encerrada ainda: nada de novo e nada para comparar.
+    assert.equal(summary.json.pools[0].latestRound, null)
+    assert.equal(summary.json.pools[0].roundPoints, 0)
+    assert.equal(summary.json.pools[0].previousPosition, null)
+  })
+})
+
+test('resumo traz os pontos da rodada mais recente e a colocação antes dela (subiu, caiu, manteve)', async () => {
+  await withHttpApp(async (context) => {
+    const ana = await context.signUp('Ana')
+    const bruno = await context.signUp('Bruno')
+    const carla = await context.signUp('Carla')
+    const matchesOf = async (round) => (await context.call('GET', `/catalog/rounds/${round}/matches?status=scheduled`, { token: ana.token })).json.matches
+    const [r1a] = await matchesOf(1)
+    const [r2a, r2b] = await matchesOf(2)
+    const { poolId } = await context.createPool(ana, { selection: { matchIds: [r1a.id, r2a.id, r2b.id] } })
+    await context.joinPool(ana, bruno, poolId)
+    await context.joinPool(ana, carla, poolId)
+
+    const participationOf = (user) => context.database.prepare('SELECT id FROM pool_participations WHERE pool_id = ? AND user_id = ?').get(poolId, user.id).id
+    let counter = 0
+    function scored(user, matchId, points) {
+      counter += 1
+      context.database.prepare(`
+        INSERT INTO predictions (id, participation_id, match_id, type, predicted_outcome, points, submitted_at)
+        VALUES (?, ?, ?, 'result', 'home', ?, '2026-11-14T15:00:00.000Z')
+      `).run(`pred-${counter}`, participationOf(user), matchId, points)
+    }
+    const finish = (matchId) => context.database.prepare("UPDATE sports_matches SET status = 'finished', starts_at = '2026-11-10T15:00:00.000Z' WHERE id = ?").run(matchId)
+
+    // Rodada 1: Ana 5, Bruno 2, Carla 2 → Ana 1º, Bruno e Carla 2º (empate).
+    finish(r1a.id)
+    scored(ana, r1a.id, 5)
+    scored(bruno, r1a.id, 2)
+    scored(carla, r1a.id, 2)
+    const roundOne = new Map((await context.call('GET', '/account/pools-summary', { token: ana.token })).json.pools.map((pool) => [pool.poolId, pool]))
+    assert.equal(roundOne.get(poolId).latestRound, 1)
+    assert.equal(roundOne.get(poolId).roundPoints, 5)
+    assert.equal(roundOne.get(poolId).previousPosition, null)
+
+    // Rodada 2: Ana 0, Bruno 7, Carla 0 → Bruno 9, Ana 5, Carla 2.
+    finish(r2a.id)
+    finish(r2b.id)
+    scored(bruno, r2a.id, 5)
+    scored(bruno, r2b.id, 2)
+    scored(ana, r2a.id, 0)
+    scored(carla, r2a.id, 0)
+    for (const [user, total] of [[ana, 5], [bruno, 9], [carla, 2]]) {
+      context.database.prepare('UPDATE pool_participations SET total_points = ? WHERE id = ?').run(total, participationOf(user))
+    }
+
+    const summaryOf = async (user) => (await context.call('GET', '/account/pools-summary', { token: user.token })).json.pools[0]
+    const anaNow = await summaryOf(ana)
+    assert.deepEqual([anaNow.latestRound, anaNow.roundPoints, anaNow.totalPoints, anaNow.position, anaNow.previousPosition], [2, 0, 5, 2, 1])
+    const brunoNow = await summaryOf(bruno)
+    assert.deepEqual([brunoNow.roundPoints, brunoNow.totalPoints, brunoNow.position, brunoNow.previousPosition], [7, 9, 1, 2])
+    const carlaNow = await summaryOf(carla)
+    assert.deepEqual([carlaNow.roundPoints, carlaNow.position, carlaNow.previousPosition], [0, 3, 2])
+
+    // A colocação atual continua igual à do ranking do bolão.
+    for (const user of [ana, bruno, carla]) {
+      const ranking = await context.call('GET', `/pools/${poolId}/ranking`, { token: user.token })
+      assert.equal((await summaryOf(user)).position, ranking.json.participants.find((row) => row.isRequester).position)
+    }
   })
 })
 

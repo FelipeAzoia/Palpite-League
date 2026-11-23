@@ -121,7 +121,7 @@ function ProfileArea({ token, user, pending, onOpenPlans, onLogout, onSessionRej
 
       <div className="profile-logout">
         <button className="small-button" type="button" onClick={onLogout} disabled={pending}>
-          <LogOut size={14} aria-hidden="true" /> {pending ? 'Saindo...' : 'Sair da conta'}
+          <LogOut size={18} aria-hidden="true" /> {pending ? 'Saindo...' : 'Sair da conta'}
         </button>
       </div>
     </>

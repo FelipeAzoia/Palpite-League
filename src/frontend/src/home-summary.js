@@ -36,6 +36,15 @@ export function positionLabel(position, participants) {
   return `${position}º de ${participants}`
 }
 
+// Variação da colocação desde antes da rodada mais recente: posição menor é melhor.
+export function positionChange(position, previousPosition) {
+  if (!position || !previousPosition) return { direction: 'none', places: 0, label: 'Sem rodada anterior para comparar' }
+  const places = previousPosition - position
+  if (places > 0) return { direction: 'up', places, label: `Subiu ${places} ${places === 1 ? 'posição' : 'posições'}` }
+  if (places < 0) return { direction: 'down', places: -places, label: `Caiu ${-places} ${places === -1 ? 'posição' : 'posições'}` }
+  return { direction: 'same', places: 0, label: 'Manteve a colocação' }
+}
+
 export function poolStatusLabel(status) {
   return status === 'ended' ? 'Encerrado' : 'Ativo'
 }
