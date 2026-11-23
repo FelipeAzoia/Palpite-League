@@ -305,7 +305,6 @@ function App() {
         </section>
       </section>
 
-      <footer className="auth-footer"><span>PALPITE LEAGUE</span></footer>
     </main>
   )
 }
