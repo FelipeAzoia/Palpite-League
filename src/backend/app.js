@@ -36,6 +36,8 @@ import {
   createPremiumSubscriptionService,
   createSimulatedCheckoutService,
   createEntryFeePaymentService,
+  createPrizePayoutService,
+  prizeAuditDetailSchemas,
   createRefundProcessingService,
   refundProcessingAuditDetailSchemas,
   entryFeeAuditDetailSchemas,
@@ -62,6 +64,7 @@ export const auditDetailSchemas = Object.freeze({
   ...refundAuditDetailSchemas,
   ...refundProcessingAuditDetailSchemas,
   ...closingAuditDetailSchemas,
+  ...prizeAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
@@ -226,6 +229,7 @@ export function createApp(database, {
   })
   const refundRequests = createRefundRequestsService(database, { auditStore, now })
   const refundProcessing = createRefundProcessingService(database, { auditStore, financialCore, logger })
+  const prizePayouts = createPrizePayoutService(database, { auditStore, financialCore, paymentsProvider, now })
   const participantManagement = createParticipantManagementService(database, { auditStore })
   const participationExit = createParticipationExitService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
@@ -696,6 +700,24 @@ export function createApp(database, {
   app.get('/pools/:poolId/final-result', authenticateRequest, (request, response, next) => {
     try {
       response.json(poolClosing.getFinalResult(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-026 — premiação do bolão encerrado. Só o vencedor solicita, para si; o valor é sempre
+  // calculado no backend e não existe aprovação administrativa.
+  app.get('/pools/:poolId/prize', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(prizePayouts.getPrize(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/prize/request', authenticateRequest, async (request, response, next) => {
+    try {
+      response.status(201).json(await prizePayouts.requestPrize(request.authenticatedUser.id, request.params.poolId, request.body))
     } catch (error) {
       next(error)
     }

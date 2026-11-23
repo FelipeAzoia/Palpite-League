@@ -12,6 +12,7 @@ import { PaymentsProviderError } from '../modules/payments-subscriptions/payment
 //                                   { afterRegistering: true }, o start registra a operação antes
 //                                   de falhar, como um tempo esgotado depois de o provedor receber;
 //   setRefundOutcome(outcome)     — resultado da próxima devolução (SPEC-024);
+//   setPayoutOutcome(outcome)     — resultado do próximo repasse de premiação (SPEC-026);
 //   calls                         — quantas vezes cada operação da porta foi chamada.
 
 export function createSimulatedPaymentsProvider() {
@@ -110,6 +111,30 @@ export function createSimulatedPaymentsProvider() {
     }
   }
 
+  // SPEC-026: o repasse da premiação ao vencedor. Mesmo comportamento da devolução, com o resultado
+  // vindo de setPayoutOutcome ('confirmed' padrão, 'refused', 'pending' ou 'amount_mismatch').
+  let payoutOutcome = 'confirmed'
+  async function startPayout(input) {
+    const started = await startOperation(input)
+    const operation = operations.get(input.operationKey)
+    operation.refundAmountCents = input.amountCents
+    if (payoutOutcome === 'refused') {
+      operation.status = 'refused'
+      operation.refusalReason = 'provider_refused'
+    } else if (payoutOutcome === 'amount_mismatch') {
+      operation.status = 'confirmed'
+      operation.reportedAmountCents = input.amountCents + 1
+    } else {
+      operation.status = payoutOutcome
+    }
+    return { providerId: started.providerId, continuation: null }
+  }
+
+  function setPayoutOutcome(outcome) {
+    if (!['confirmed', 'refused', 'pending', 'amount_mismatch'].includes(outcome)) throw new TypeError('unsupported payout outcome')
+    payoutOutcome = outcome
+  }
+
   function setRefundOutcome(outcome) {
     if (!refundOutcomes.includes(outcome)) throw new TypeError('unsupported refund outcome')
     refundOutcome = outcome
@@ -158,6 +183,10 @@ export function createSimulatedPaymentsProvider() {
     consultRefund,
     setRefundOutcome,
     refundOf,
+    startPayout,
+    // A consulta devolve o valor informado pelo "provedor", como na devolução.
+    consultPayout: consultRefund,
+    setPayoutOutcome,
     confirm: (operationKey) => setStatus(operationKey, 'confirmed'),
     refuse: (operationKey) => setStatus(operationKey, 'refused'),
     failNext,
