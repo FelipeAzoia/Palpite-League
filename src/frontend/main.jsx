@@ -43,6 +43,8 @@ function App() {
   const [recoveryToken, setRecoveryToken] = useState(initialRecoveryToken)
   const [recoverySent, setRecoverySent] = useState(false)
   const [accountArea, setAccountArea] = useState('home')
+  // Contagem de não lidas informada pela própria aba Avisos enquanto ela está aberta (SPEC-027).
+  const [unreadOverride, setUnreadOverride] = useState(null)
   const [inviteCode, setInviteCode] = useState(initialInviteCode)
 
   useEffect(() => {
@@ -190,7 +192,7 @@ function App() {
         <span className="environment"><span /> ambiente local</span>
       </header>
 
-      {view === 'authenticated' && !showInvite && <AreaNav area={accountArea} onAreaChange={setAccountArea} />}
+      {view === 'authenticated' && !showInvite && <AreaNav token={sessionStorage.getItem(tokenKey)} area={accountArea} onAreaChange={setAccountArea} unreadOverride={accountArea === 'notifications' ? unreadOverride ?? undefined : undefined} />}
 
       <section key={isAccount ? 'wide' : 'compact'} className={layoutClass} aria-live="polite">
         {!isAccount && (
@@ -223,6 +225,7 @@ function App() {
               onLogout={logout}
               onSessionRejected={rejectSession}
               onUserChange={setUser}
+              onUnreadChange={setUnreadOverride}
             />
           ) : (
             <>

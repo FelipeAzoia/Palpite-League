@@ -3,6 +3,7 @@ import { requestContext } from '../../shared/request-context.js'
 import { createLogger } from '../../shared/logger.js'
 
 export const moduleName = 'notifications-audit'
+export { createNotificationsService } from './notifications.js'
 
 const validActorTypes = new Set(['user', 'system', 'anonymous'])
 const validResults = new Set(['failure', 'denied'])
