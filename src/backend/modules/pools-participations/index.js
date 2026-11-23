@@ -78,17 +78,33 @@ export function createPoolsService(database, { auditStore, sportsCatalog, now = 
     return database.prepare("SELECT COUNT(*) AS count FROM pools WHERE creator_id = ? AND status = 'active'").get(userId).count
   }
 
+  // Com o cancelamento do Premium pendente, o limite de criação já é o do Gratuito: quem pediu o
+  // cancelamento com no máximo 1 bolão em andamento não abre outros antes de ele valer (SPEC-020, CA-20).
+  function cancellationPending(userId) {
+    return Boolean(database.prepare("SELECT 1 FROM subscriptions WHERE user_id = ? AND status = 'cancellation_pending'").get(userId))
+  }
+
   function availabilityOf(user) {
     const plan = getPlan(user.plan)
-    const limit = simultaneousPoolLimit(user.plan)
+    const pendingCancellation = cancellationPending(user.id)
+    const limit = pendingCancellation ? simultaneousPoolLimit('free') : simultaneousPoolLimit(user.plan)
     const activePools = countActivePools(user.id)
-    return { plan: { id: plan.id, name: plan.name }, limit, activePools, canCreate: activePools < limit }
+    return {
+      plan: { id: plan.id, name: plan.name },
+      limit,
+      activePools,
+      canCreate: activePools < limit,
+      ...(pendingCancellation ? { cancellationPending: true } : {}),
+    }
   }
 
   function limitReached(availability) {
-    const guidance = availability.plan.id === 'free'
+    let guidance = availability.plan.id === 'free'
       ? 'Encerre um bolão ativo para criar outro ou conheça o plano Premium, que permite até 10 bolões simultâneos.'
       : 'Encerre um bolão ativo para criar outro.'
+    if (availability.cancellationPending) {
+      guidance = 'Seu cancelamento do Premium está em andamento: até ele ser concluído, vale o limite do plano Gratuito.'
+    }
     return new AppError(
       409,
       'pool_limit_reached',

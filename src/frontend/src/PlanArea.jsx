@@ -113,6 +113,7 @@ export default function PlanArea({ token, onBack, onSessionRejected }) {
         <PremiumSection
           token={token}
           conditions={data.premium}
+          activePools={data.availability.activePools}
           onChanged={() => setReloadKey((key) => key + 1)}
           onSessionRejected={onSessionRejected}
         />

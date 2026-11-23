@@ -140,5 +140,41 @@ export function createMercadoPagoTestPaymentsProvider({
     return { providerId: providerId ?? null, status }
   }
 
-  return { source: 'test_provider', startOperation, consultOperation, startSubscription, consultSubscription }
+  // SPEC-020 — cancelamento da assinatura (preapproval) no Mercado Pago em teste. A confirmação
+  // verificável é a assinatura com status "cancelled" na consulta; qualquer outro status permanece
+  // pendente, e a falha da chamada deixa o cancelamento pendente sem repetição automática.
+  const preapprovalIdOf = (providerId, prefix) => (
+    typeof providerId === 'string' && providerId.startsWith(prefix) ? providerId.slice(prefix.length) : null
+  )
+
+  async function startSubscriptionCancellation({ operationKey, context }) {
+    requireSubscriptionsProof()
+    const preapprovalId = preapprovalIdOf(context?.subscriptionProviderId, 'mp-sub-')
+    if (!preapprovalId) throw new PaymentsProviderError('response_error')
+    const body = await request('PUT', `/preapproval/${encodeURIComponent(preapprovalId)}`, {
+      idempotencyKey: operationKey,
+      body: { status: 'cancelled' },
+    })
+    if (typeof body?.id !== 'string' || body.id !== preapprovalId) throw new PaymentsProviderError('invalid_response')
+    return { providerId: `mp-cancel-${preapprovalId}`, continuation: null }
+  }
+
+  async function consultSubscriptionCancellation({ providerId }) {
+    requireSubscriptionsProof()
+    const preapprovalId = preapprovalIdOf(providerId, 'mp-cancel-')
+    if (!preapprovalId) throw new PaymentsProviderError('invalid_response')
+    const body = await request('GET', `/preapproval/${encodeURIComponent(preapprovalId)}`)
+    if (typeof body?.status !== 'string') throw new PaymentsProviderError('invalid_response')
+    return { providerId, status: body.status === 'cancelled' ? 'confirmed' : 'pending' }
+  }
+
+  return {
+    source: 'test_provider',
+    startOperation,
+    consultOperation,
+    startSubscription,
+    consultSubscription,
+    startSubscriptionCancellation,
+    consultSubscriptionCancellation,
+  }
 }

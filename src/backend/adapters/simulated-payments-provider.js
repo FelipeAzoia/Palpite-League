@@ -50,6 +50,15 @@ export function createSimulatedPaymentsProvider() {
     }
   }
 
+  // SPEC-020: o cancelamento da assinatura. O provedor simulado aceita o cancelamento na hora, como o
+  // provedor de teste; a confirmação só vale para a aplicação depois da conferência (INV-002).
+  // refuse(key) simula a recusa e failNext('start', ...) a indisponibilidade.
+  async function startSubscriptionCancellation(input) {
+    const started = await startOperation(input)
+    operations.get(input.operationKey).status = 'confirmed'
+    return { providerId: started.providerId, continuation: null }
+  }
+
   async function consultOperation(reference) {
     calls.consult += 1
     const failure = takeFailure('consult')
@@ -80,6 +89,8 @@ export function createSimulatedPaymentsProvider() {
     // Extensão de assinatura (SPEC-019): no simulador, o mesmo fluxo da operação genérica.
     startSubscription: startOperation,
     consultSubscription: consultOperation,
+    startSubscriptionCancellation,
+    consultSubscriptionCancellation: consultOperation,
     confirm: (operationKey) => setStatus(operationKey, 'confirmed'),
     refuse: (operationKey) => setStatus(operationKey, 'refused'),
     failNext,

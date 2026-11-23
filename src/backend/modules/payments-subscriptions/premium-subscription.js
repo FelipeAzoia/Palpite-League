@@ -3,6 +3,7 @@ import { AppError } from '../../shared/app-error.js'
 import { getPlan } from '../auth-users/index.js'
 import { formatCents } from './financial-core.js'
 import { paymentsProviderSources } from './payments-provider.js'
+import { createSubscriptionStore, premiumStatuses, subscriptionStatuses } from './subscription-store.js'
 
 // SPEC-019 — contratação do Premium e ativação dos recursos.
 // - a assinatura nasce pendente, na mesma transação da movimentação e da auditoria (INV-004);
@@ -10,7 +11,7 @@ import { paymentsProviderSources } from './payments-provider.js'
 //   ativa, a vigência e a auditoria (INV-001); a recusa deixa a assinatura recusada e o plano igual;
 // - valor, moeda e recorrência vêm do backend (INV-002, INV-012).
 
-export const subscriptionStatuses = Object.freeze(['pending', 'active', 'refused'])
+export { subscriptionStatuses }
 
 export const subscriptionActions = Object.freeze({
   requested: 'subscription.requested',
@@ -23,13 +24,18 @@ const originSchema = { type: 'enum', values: paymentsProviderSources }
 const changeSchema = { amountCents: { type: 'integer' }, previousState: statusSchema, newState: statusSchema, origin: originSchema }
 
 export const subscriptionAuditDetailSchemas = Object.freeze({
-  [subscriptionActions.requested]: { amountCents: { type: 'integer' }, newState: statusSchema, origin: originSchema },
+  [subscriptionActions.requested]: {
+    amountCents: { type: 'integer' }, newState: statusSchema, origin: originSchema, billingPolicyVersion: { type: 'identifier' },
+  },
   [subscriptionActions.activated]: changeSchema,
   [subscriptionActions.refused]: changeSchema,
 })
 
 export const defaultPremiumPriceCents = 1990
 export const premiumRecurrence = 'monthly'
+// Política de Cobrança e Cancelamento (SPEC-019, CA-22): a contratação exige o aceite da versão em vigor.
+// Ao mudar o texto da política no frontend, mude também esta versão.
+export const billingPolicyVersion = '2026-11-23'
 
 const systemActor = Object.freeze({ type: 'system' })
 
@@ -73,41 +79,8 @@ export function createPremiumSubscriptionService(database, {
     if (!user) throw rejectedSession()
     return user
   }
-  const findSubscription = (id) => database.prepare('SELECT * FROM subscriptions WHERE id = ?').get(id)
-  // A contratação "atual": a ativa, senão a pendente, senão a mais recente recusada.
-  const currentSubscription = (userId) => database.prepare(`
-    SELECT * FROM subscriptions WHERE user_id = ?
-    ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END, created_at DESC, rowid DESC
-    LIMIT 1
-  `).get(userId)
-  const movementFor = (subscriptionId) => database.prepare(`
-    SELECT id, continuation_json FROM financial_movements
-    WHERE operation_type = 'subscription' AND operation_id = ?
-    ORDER BY attempt_number DESC LIMIT 1
-  `).get(subscriptionId)
-
-  function view(row) {
-    const movement = movementFor(row.id)
-    let payment = null
-    if (row.status === 'pending' && movement?.continuation_json) {
-      try { payment = JSON.parse(movement.continuation_json) } catch { payment = null }
-    }
-    return {
-      id: row.id,
-      status: row.status,
-      amountCents: row.amount_cents,
-      amount: formatCents(row.amount_cents),
-      currency: row.currency,
-      recurrence: row.recurrence,
-      origin: row.origin,
-      simulated: row.origin === 'simulator',
-      startsAt: row.starts_at,
-      endsAt: row.ends_at,
-      createdAt: row.created_at,
-      movementId: movement?.id ?? null,
-      payment,
-    }
-  }
+  const { findSubscription, currentSubscription, movementFor, view } = createSubscriptionStore(database)
+  const hasPremium = (user, current) => user.plan === 'premium' || premiumStatuses.includes(current?.status)
 
   function changeAudit(row, newState) {
     return {
@@ -154,7 +127,7 @@ export function createPremiumSubscriptionService(database, {
     const user = readUser(userId)
     const current = currentSubscription(userId)
     let reason = null
-    if (user.plan === 'premium' || current?.status === 'active') reason = 'already_premium'
+    if (hasPremium(user, current)) reason = 'already_premium'
     else if (current?.status === 'pending') reason = 'pending_subscription'
     const plan = getPlan('premium')
     return {
@@ -168,6 +141,7 @@ export function createPremiumSubscriptionService(database, {
       simulated: paymentsProvider.source === 'simulator',
       canSubscribe: reason === null,
       reason,
+      billingPolicy: { version: billingPolicyVersion, title: 'Política de Cobrança e Cancelamento' },
       subscription: current ? view(current) : null,
     }
   }
@@ -176,7 +150,7 @@ export function createPremiumSubscriptionService(database, {
   // movimentação; o tratador aplica o resultado se ele for definitivo.
   async function refresh(row) {
     if (row.status !== 'pending') return row
-    const movement = movementFor(row.id)
+    const movement = movementFor(row.id, 'subscription')
     if (movement) await financialCore.checkMovement(movement.id)
     return findSubscription(row.id)
   }
@@ -184,11 +158,17 @@ export function createPremiumSubscriptionService(database, {
   function validateRequest(body) {
     const input = body !== null && typeof body === 'object' && !Array.isArray(body) ? body : {}
     // Valor, recorrência e qualquer outra condição pertencem ao backend (CA-16).
-    const fields = Object.fromEntries(Object.keys(input).filter((key) => key !== 'confirm')
+    const fields = Object.fromEntries(Object.keys(input).filter((key) => key !== 'confirm' && key !== 'billingPolicyVersion')
       .map((key) => [key, 'As condições da contratação são definidas pelo sistema.']))
     if (Object.keys(fields).length > 0) throw new AppError(400, 'validation_error', 'Confira os campos informados.', fields)
     if (input.confirm !== true) {
       throw new AppError(400, 'confirmation_required', 'Confirme a contratação do Premium para continuar.')
+    }
+    // O aceite vale para a versão em vigor; uma versão antiga ou ausente não serve (CA-22).
+    if (input.billingPolicyVersion !== billingPolicyVersion) {
+      throw new AppError(400, 'billing_policy_not_accepted', 'Leia e aceite a Política de Cobrança e Cancelamento para contratar.', {
+        billingPolicyVersion: 'Aceite a versão atual da política.',
+      })
     }
   }
 
@@ -196,7 +176,7 @@ export function createPremiumSubscriptionService(database, {
     validateRequest(body)
     const user = readUser(userId)
     let current = currentSubscription(userId)
-    if (user.plan === 'premium' || current?.status === 'active') throw alreadyPremium()
+    if (hasPremium(user, current)) throw alreadyPremium()
 
     // Já existe contratação pendente: consulta a anterior antes de qualquer outra coisa (E2, A3).
     if (current?.status === 'pending') {
@@ -221,12 +201,13 @@ export function createPremiumSubscriptionService(database, {
           action: subscriptionActions.requested,
           object: { type: 'subscription', id },
           origin,
-          details: { amountCents: priceCents, newState: 'pending', origin },
+          details: { amountCents: priceCents, newState: 'pending', origin, billingPolicyVersion },
         }, () => {
           transaction.prepare(`
-            INSERT INTO subscriptions (id, user_id, status, amount_cents, currency, recurrence, origin, created_at, updated_at)
-            VALUES (?, ?, 'pending', ?, 'BRL', ?, ?, ?, ?)
-          `).run(id, userId, priceCents, premiumRecurrence, origin, at, at)
+            INSERT INTO subscriptions (
+              id, user_id, status, amount_cents, currency, recurrence, origin, billing_policy_version, created_at, updated_at
+            ) VALUES (?, ?, 'pending', ?, 'BRL', ?, ?, ?, ?, ?)
+          `).run(id, userId, priceCents, premiumRecurrence, origin, billingPolicyVersion, at, at)
         })
       },
     })

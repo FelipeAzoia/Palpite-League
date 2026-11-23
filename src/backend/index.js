@@ -4,6 +4,7 @@ import {
   defaultMedalsIntervalMs,
   defaultResultsSyncIntervalMs,
   defaultScoringIntervalMs,
+  defaultSubscriptionExpirationIntervalMs,
 } from './app.js'
 import { createDatabase } from './shared/database.js'
 import { runMigrations } from './shared/migrations.js'
@@ -46,6 +47,11 @@ scheduler.register(
   'financial-reconciliation',
   Number(process.env.FINANCIAL_RECONCILIATION_INTERVAL_MS || defaultFinancialReconciliationIntervalMs),
   app.locals.tasks.reconcilePayments,
+)
+scheduler.register(
+  'subscription-expiration',
+  Number(process.env.SUBSCRIPTION_EXPIRATION_INTERVAL_MS || defaultSubscriptionExpirationIntervalMs),
+  app.locals.tasks.expireSubscriptions,
 )
 
 const server = app.listen(port, () => {
