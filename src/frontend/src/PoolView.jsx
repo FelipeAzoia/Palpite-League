@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import EntryFeeSection from './EntryFeeSection.jsx'
+import FinalResultSection from './FinalResultSection.jsx'
 import { canManageInvites } from './invites-view.js'
 import InvitesSection from './InvitesSection.jsx'
 import LeaveSection from './LeaveSection.jsx'
@@ -124,7 +125,10 @@ function OverviewTab({ summary, onTab, leave }) {
   return (
     <div className="tab-body tab-split">
       <div className="stack">
-        <section aria-labelledby="overview-standings">
+        {pool.status === 'ended' && ranking && (
+          <FinalResultSection token={leave.token} poolId={leave.poolId} onSessionRejected={leave.onSessionRejected} />
+        )}
+        {pool.status !== 'ended' && <section aria-labelledby="overview-standings">
           <div className="block-head">
             <h3 id="overview-standings" className="block-title">Classificação</h3>
             {ranking && <button type="button" className="link-button" onClick={() => onTab('ranking')}>Ranking completo <ArrowRight size={13} aria-hidden="true" /></button>}
@@ -146,31 +150,33 @@ function OverviewTab({ summary, onTab, leave }) {
           ) : (
             <p className="empty-state">A classificação aparece para participantes confirmados.</p>
           )}
-        </section>
+        </section>}
 
-        <section aria-labelledby="overview-next">
-          <div className="block-head">
-            <h3 id="overview-next" className="block-title">Próximos palpites</h3>
-            {summary.predictions && <button type="button" className="link-button" onClick={() => onTab('predictions')}>Todos os palpites <ArrowRight size={13} aria-hidden="true" /></button>}
-          </div>
-          {upcoming.length === 0 ? (
-            <p className="empty-state">Nenhuma partida aberta para palpite agora.</p>
-          ) : (
-            <ol className="match-rows match-rows-compact">
-              {upcoming.map((match) => {
-                const { day, time } = formatKickoff(match.startsAt)
-                return (
-                  <li key={match.id} className="mrow">
-                    <span className="mrow-when"><b>{time}</b>{day}</span>
-                    <span className="mrow-home">{match.home.name}</span>
-                    <span className="mrow-center"><PredictionMark prediction={match.prediction} /></span>
-                    <span className="mrow-away">{match.away.name}</span>
-                  </li>
-                )
-              })}
-            </ol>
-          )}
-        </section>
+        {pool.status !== 'ended' && (
+          <section aria-labelledby="overview-next">
+            <div className="block-head">
+              <h3 id="overview-next" className="block-title">Próximos palpites</h3>
+              {summary.predictions && <button type="button" className="link-button" onClick={() => onTab('predictions')}>Todos os palpites <ArrowRight size={13} aria-hidden="true" /></button>}
+            </div>
+            {upcoming.length === 0 ? (
+              <p className="empty-state">Nenhuma partida aberta para palpite agora.</p>
+            ) : (
+              <ol className="match-rows match-rows-compact">
+                {upcoming.map((match) => {
+                  const { day, time } = formatKickoff(match.startsAt)
+                  return (
+                    <li key={match.id} className="mrow">
+                      <span className="mrow-when"><b>{time}</b>{day}</span>
+                      <span className="mrow-home">{match.home.name}</span>
+                      <span className="mrow-center"><PredictionMark prediction={match.prediction} /></span>
+                      <span className="mrow-away">{match.away.name}</span>
+                    </li>
+                  )
+                })}
+              </ol>
+            )}
+          </section>
+        )}
       </div>
 
       <aside className="stack" aria-label="Regras do bolão">
