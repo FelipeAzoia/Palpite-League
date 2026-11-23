@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import EntryFeeSection from './EntryFeeSection.jsx'
 import FinalResultSection from './FinalResultSection.jsx'
+import HistoryPage from './HistoryPage.jsx'
 import PrizeSection from './PrizeSection.jsx'
 import { canManageInvites } from './invites-view.js'
 import InvitesSection from './InvitesSection.jsx'
@@ -30,6 +31,7 @@ const tabs = [
   { id: 'points', label: 'Pontos', member: true },
   { id: 'ranking', label: 'Ranking', member: true },
   { id: 'medals', label: 'Medalhas', member: true },
+  { id: 'history', label: 'Histórico', member: true },
   { id: 'manage', label: 'Gestão', manager: true },
 ]
 
@@ -292,6 +294,7 @@ export default function PoolView({ token, poolId, initialTab = 'overview', notic
         {activeTab === 'points' && <PointsPage {...shared} />}
         {activeTab === 'ranking' && <RankingPage {...shared} />}
         {activeTab === 'medals' && <MedalsPage {...shared} />}
+        {activeTab === 'history' && <HistoryPage {...shared} />}
         {activeTab === 'manage' && <ManageTab {...shared} onChanged={refresh} />}
       </div>
     </div>

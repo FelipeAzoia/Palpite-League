@@ -105,10 +105,10 @@ export function createParticipationExitService(database, { auditStore, sportsCat
     }, () => {
       // Revalida na transação; a atualização condicional garante uma única saída (INV-012).
       const updated = database.prepare(`
-        UPDATE pool_participations SET status = 'left'
+        UPDATE pool_participations SET status = 'left', left_at = ?
         WHERE id = ? AND status = 'confirmed' AND role <> 'administrator'
           AND pool_id IN (SELECT id FROM pools WHERE status = 'active')
-      `).run(own.participation_id)
+      `).run(atIso, own.participation_id)
       if (updated.changes !== 1) throw poolNotFound()
       removed = database.prepare(`
         DELETE FROM predictions

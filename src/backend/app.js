@@ -27,6 +27,7 @@ import {
 import {
   createPredictionsService,
   createMedalsService,
+  createHistoryService,
   createRankingService,
   createScoringService,
   predictionAuditDetailSchemas,
@@ -254,6 +255,7 @@ export function createApp(database, {
   app.locals.medals = medals
   app.locals.tasks.reconcileMedals = () => medals.reconcileMedals()
   const poolClosing = createPoolClosingService(database, { auditStore, ranking, logger, now })
+  const history = createHistoryService(database, { ranking })
   app.locals.tasks.closePools = () => poolClosing.closeDuePools()
   const notifications = createNotificationsService(database, { logger, now })
   app.locals.tasks.generateNotifications = () => notifications.generate()
@@ -747,6 +749,24 @@ export function createApp(database, {
   app.post('/pools/:poolId/prize/request', authenticateRequest, async (request, response, next) => {
     try {
       response.status(201).json(await prizePayouts.requestPrize(request.authenticatedUser.id, request.params.poolId, request.body))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-028 — histórico do bolão, somente leitura: participante confirmado, ou quem saiu (só o
+  // período em que participou).
+  app.get('/pools/:poolId/history', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(history.getHistory(request.authenticatedUser.id, request.params.poolId, request.query))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/account/left-pools', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(history.listLeftPools(request.authenticatedUser.id))
     } catch (error) {
       next(error)
     }

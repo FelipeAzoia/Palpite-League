@@ -417,3 +417,17 @@
 .notification-message { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.45; }
 .notification-unread .notification-message { font-weight: 650; }
 .notification-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; color: var(--muted); font-size: 11px; }
+
+/* ——— Histórico (SPEC-028) ——— */
+.history { gap: 22px; }
+.history-title { margin: 0; font-size: 32px; }
+.history-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); }
+.history-summary > div { min-width: 0; padding: 12px 16px 12px 0; }
+.history-summary > div + div { padding-left: 16px; border-left: 1px solid var(--rule); }
+.history-summary dt { color: #87958a; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.history-summary dd { margin: 6px 0 0; color: var(--forest); font-family: Georgia, serif; font-size: 20px; line-height: 1.2; }
+.history-round { display: grid; gap: 8px; }
+.history-round-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.history-round-head .block-title { margin: 0; }
+.history-round-figures { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; color: var(--muted); font-size: 12px; }
+.history-round-figures b { color: var(--ink); }
