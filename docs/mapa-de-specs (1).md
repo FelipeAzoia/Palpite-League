@@ -849,6 +849,7 @@ Enquanto as pendências externas não forem resolvidas, os provedores simulados 
 
 Mudanças de código que uma Spec precisou fazer em módulos de Specs anteriores, sem alterar o comportamento aprovado delas:
 
+- Ajuste operacional concluído: a documentação local passou a indicar `GET /health` e a instalação do frontend com `npm install --prefix src/frontend` antes dos testes Vitest.
 - **SPEC-018 (núcleo financeiro), pelas SPEC-022, 024 e 026:**
   - a falha do provedor ao iniciar a cobrança da taxa de entrada encerra a tentativa como recusada, sem cobrança (OPEN-111);
   - devolução e repasse da premiação têm operações próprias na porta de pagamentos e nunca usam a operação genérica, que seria uma cobrança;
