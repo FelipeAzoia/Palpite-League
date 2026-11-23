@@ -12,7 +12,7 @@ import {
 
 // SPEC-018 — histórico financeiro próprio (RF41), do mais recente para o mais antigo, sem filtros,
 // com o aviso permanente de ambiente de teste e o selo de origem em cada movimentação.
-export default function FinancialHistory({ token, pending = false, onBack, onLogout, onSessionRejected }) {
+export default function FinancialHistory({ token, onSessionRejected }) {
   const [movements, setMovements] = useState(null)
   const [loadError, setLoadError] = useState('')
   const rejectSession = useEffectEvent(() => onSessionRejected())
@@ -61,11 +61,6 @@ export default function FinancialHistory({ token, pending = false, onBack, onLog
           ))}
         </ul>
       )}
-
-      <div className="mode-switch">
-        <button type="button" onClick={onBack}>Voltar ao início</button>
-        <button type="button" onClick={onLogout} disabled={pending}>Sair da conta</button>
-      </div>
     </section>
   )
 }

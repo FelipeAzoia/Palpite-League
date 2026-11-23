@@ -218,13 +218,7 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
       )}
 
       {area === 'financial' && (
-        <FinancialHistory
-          token={token}
-          pending={pending}
-          onBack={() => setArea('home')}
-          onLogout={onLogout}
-          onSessionRejected={onSessionRejected}
-        />
+        <FinancialHistory token={token} onSessionRejected={onSessionRejected} />
       )}
     </div>
   )
