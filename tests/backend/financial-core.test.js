@@ -449,8 +449,10 @@ test('TC-10: movimentações finais não são reabertas, reescritas nem apagadas
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
     const bruno = await context.signUp('Bruno')
-    const core = context.app.locals.financial
-    assert.deepEqual(Object.keys(core).sort(), ['checkMovement', 'getHistory', 'reconcilePending', 'registerHandler', 'startMovement'])
+    assert.deepEqual(Object.keys(context.app.locals.financial).sort(), ['checkMovement', 'getHistory', 'reconcilePending', 'registerHandler', 'startMovement'])
+    // Núcleo sem tratadores: a participação 'p-1' é fictícia, e o tratador real da taxa de entrada
+    // (SPEC-022) exige uma participação existente.
+    const core = coreFor(context, { paymentsProvider: provider })
 
     const fee = { type: 'entry_fee', amountCents: 1500, userId: ana.id, operation: { type: 'participation', id: 'p-1' } }
     const { movement: paid } = await core.startMovement(fee)

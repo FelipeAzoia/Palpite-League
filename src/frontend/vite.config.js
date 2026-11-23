@@ -11,6 +11,7 @@ export default defineConfig({
       '/pools': 'http://localhost:3000',
       '/catalog': 'http://localhost:3000',
       '/invites': 'http://localhost:3000',
+      '/payments': 'http://localhost:3000',
     },
   },
 })

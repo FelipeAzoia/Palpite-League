@@ -23,6 +23,7 @@ export {
   subscriptionStatuses,
 } from './premium-subscription.js'
 export { createSimulatedCheckoutService } from './simulated-checkout.js'
+export { createEntryFeePaymentService, entryFeeActions, entryFeeAuditDetailSchemas } from './entry-fee-payment.js'
 export {
   createSubscriptionLifecycleService,
   lifecycleActions,
