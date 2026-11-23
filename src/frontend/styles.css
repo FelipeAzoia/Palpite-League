@@ -64,10 +64,10 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   padding: 24px 0;
 }
-/* Páginas logadas com o slogan (Início e Perfil): mesma largura e mesmo recuo das demais; o cartão
-   começa na mesma altura e encosta na margem direita, e só o slogan fica centralizado ao lado. */
+/* Páginas logadas com o slogan (Início e Perfil): mesma largura e mesmo recuo das demais; a tela é
+   dividida ao meio, com o slogan centralizado na metade esquerda e o cartão ocupando a direita. */
 .auth-layout-split {
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: 48px;
   width: 100%;
