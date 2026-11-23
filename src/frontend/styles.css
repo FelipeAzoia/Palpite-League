@@ -249,6 +249,15 @@ a { color: inherit; text-decoration: none; }
 .premium-price { margin: 0 0 6px; color: var(--forest); font-size: 18px; }
 .premium-price span { color: var(--muted); font-size: 12px; }
 .premium-offer .feature-list { margin-bottom: 14px; }
+.cycle-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 10px; margin: 0 0 14px; }
+.cycle-option { position: relative; display: grid; gap: 4px; padding: 12px 14px; border: 1px solid #ccd7cd; border-radius: 6px; background: #fff; cursor: pointer; }
+.cycle-option input { position: absolute; opacity: 0; pointer-events: none; }
+.cycle-option.is-selected { border-color: var(--forest); box-shadow: inset 0 0 0 1px var(--forest); background: #f5f9ef; }
+.cycle-option:focus-within { outline: 2px solid #7ea33a; outline-offset: 2px; }
+.cycle-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: #55655a; font-size: 12px; font-weight: 750; }
+.cycle-option strong { color: var(--forest); font-size: 17px; }
+.cycle-option small { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.cycle-badge { padding: 1px 7px; border-radius: 99px; color: var(--forest); background: #e4edc6; font-size: 10px; font-weight: 800; }
 .premium-confirm { padding: 12px; border: 1px solid var(--line); border-radius: 5px; background: #f7faf4; font-size: 12px; line-height: 1.5; }
 .premium-confirm p { margin: 0 0 10px; }
 .policy-accept { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 4px; font-size: 13px; line-height: 1.5; cursor: pointer; }

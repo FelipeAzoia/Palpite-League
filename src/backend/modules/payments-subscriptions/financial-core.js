@@ -18,7 +18,7 @@ import {
 //   depois de uma recusa, e nada é repetido automaticamente (INV-006, INV-007);
 // - o banco impede reabrir, reescrever ou apagar movimentações finais (migração 012).
 
-export const movementTypes = Object.freeze(['entry_fee', 'subscription', 'refund', 'payout', 'subscription_cancellation'])
+export const movementTypes = Object.freeze(['entry_fee', 'subscription', 'refund', 'payout', 'subscription_cancellation', 'subscription_renewal'])
 export const operationOriginTypes = Object.freeze(['participation', 'subscription', 'refund_request', 'pool'])
 export const movementStatuses = providerStatuses
 
@@ -265,6 +265,8 @@ export function createFinancialCoreService(database, {
   const typeOperations = Object.freeze({
     subscription: { start: 'startSubscription', consult: 'consultSubscription', required: false },
     subscription_cancellation: { start: 'startSubscriptionCancellation', consult: 'consultSubscriptionCancellation', required: true },
+    // A renovação é cobrada pelo provedor (SPEC-029); sem as operações próprias não há cobrança.
+    subscription_renewal: { start: 'startSubscriptionRenewal', consult: 'consultSubscriptionRenewal', required: true },
   })
 
   function unsupportedOperation() {

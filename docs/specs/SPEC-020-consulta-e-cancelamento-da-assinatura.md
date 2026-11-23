@@ -264,3 +264,14 @@ Decisão humana registrada durante a implementação. Estas regras complementam 
 - **CT-21 (CA-19):** confirmar o cancelamento com um bolão aberto e outro encerrado, conferir o recurso ao vivo de cada um, a auditoria e a impossibilidade de reativar.
 - **CT-22 (CA-20):** com o cancelamento pendente, conferir a disponibilidade de criação e a recusa da criação.
 - **CT-23 (seção 15.1, expiração):** expirar a assinatura de um usuário com 2 bolões e conferir que ambos mantêm os resultados ao vivo.
+
+---
+
+## 16. Alterações pela SPEC-029 (23/11/2026)
+
+A SPEC-029 (renovação recorrente, plano anual e pagamento em atraso) altera esta Spec; no que for diferente, ela prevalece:
+
+- **Confirmação do cancelamento (5.3, CA-06):** leva à **renovação cancelada**, não mais à cancelada imediata. O Premium continua até o fim do período pago; no fim do período a assinatura fica cancelada, o plano volta ao Gratuito e o bolão aberto perde o recurso ao vivo (regra da seção 15 desta Spec, que passa a valer nesse momento).
+- **Expiração (5.4, CA-11):** assinatura ativa no fim da vigência é **renovada**, não expira. A expiração passa a acontecer no fim da carência de 3 dias sem pagamento e, como antes, quando o cancelamento ainda está pendente no fim do período (OPEN-91).
+- **Limite de criação:** além do cancelamento pendente, vale o limite do Gratuito também com a renovação cancelada.
+- **Estados:** acrescentados "renovação pendente" e "renovação cancelada" (seção 7 da SPEC-029).

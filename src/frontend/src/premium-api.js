@@ -8,9 +8,10 @@ export function fetchPremiumConditions(token, options = {}) {
 }
 
 // Envia a confirmação e a versão da Política de Cobrança e Cancelamento que a pessoa aceitou.
-export function subscribePremium(token, billingPolicyVersion, options = {}) {
+// Envia também o ciclo escolhido (SPEC-029); o valor de cada ciclo é sempre do backend.
+export function subscribePremium(token, billingPolicyVersion, billingCycle = 'monthly', options = {}) {
   return requestAuth('/account/premium/subscription', {
-    method: 'POST', body: { confirm: true, billingPolicyVersion }, token, ...options,
+    method: 'POST', body: { confirm: true, billingPolicyVersion, billingCycle }, token, ...options,
   })
 }
 
@@ -42,4 +43,9 @@ export function requestSubscriptionCancellation(token, options = {}) {
 
 export function checkSubscriptionCancellation(token, options = {}) {
   return requestAuth('/account/subscription/cancellation/check', { method: 'POST', token, ...options })
+}
+
+// SPEC-029 — nova tentativa de pagar a renovação em atraso (só depois de uma recusa).
+export function retryRenewalPayment(token, options = {}) {
+  return requestAuth('/account/subscription/renewal/retry', { method: 'POST', token, ...options })
 }

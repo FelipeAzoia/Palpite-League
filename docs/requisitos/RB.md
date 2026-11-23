@@ -20,9 +20,9 @@ Usuários com plano Premium poderão criar até 10 bolões simultaneamente.
 
 ## RB04 — Assinatura Premium
 
-O plano Premium será disponibilizado mediante assinatura paga, com cobrança única no momento da contratação e vigência de um mês, conforme as condições comerciais definidas pela plataforma. Não há renovação nem cobrança automática: ao fim da vigência a assinatura expira e, para continuar no Premium, o usuário contrata novamente.
+O plano Premium será disponibilizado mediante assinatura paga e recorrente, com ciclo mensal ou anual escolhido na contratação. A cobrança de cada ciclo é feita automaticamente pelo provedor de pagamentos, e a vigência é renovada a cada cobrança confirmada, até o usuário cancelar ou deixar de pagar.
 
-> **Alterada em 23/11/2026 (decisão da equipe):** a versão anterior previa cobrança recorrente. Para evitar retrabalho, a renovação automática e o tratamento de inadimplência ficaram fora do escopo; o comportamento já implementado (SPEC-019 e SPEC-020, OPEN-90) passa a ser a regra. Se a recorrência voltar a ser necessária, exigirá uma nova Spec.
+> **Atualizada em 23/11/2026 (decisão da equipe, SPEC-029):** detalha a recorrência com os ciclos mensal e anual; ver também RB66, RB67 e RB68.
 
 ---
 
@@ -399,3 +399,21 @@ As regras definidas no momento da criação deverão permanecer associadas ao bo
 ## RB65 — Registro do aceite
 
 O sistema deverá manter o registro do aceite das regras realizado por cada participante antes da confirmação de sua entrada no bolão.
+
+---
+
+## RB66 — Plano anual com desconto
+
+O plano Premium poderá ser contratado com ciclo anual, pago de uma vez por ciclo, com desconto em relação a doze mensalidades. O valor atual é de R$ 199,00 por ano, equivalente a dois meses grátis em relação a doze mensalidades de R$ 19,90.
+
+---
+
+## RB67 — Renovação e pagamento em atraso
+
+Ao fim de cada período, a assinatura será renovada por mais um ciclo quando a cobrança for confirmada. Se a cobrança da renovação não for confirmada, a assinatura ficará com o pagamento pendente por uma carência de 3 dias, mantendo os recursos Premium; terminada a carência sem pagamento, a assinatura expira e o usuário retorna ao plano Gratuito.
+
+---
+
+## RB68 — Cancelamento ao fim do período pago
+
+O cancelamento da assinatura interromperá as próximas cobranças, sem reembolso do período já pago. Os recursos Premium continuarão disponíveis até o fim do período pago, quando o usuário retornará ao plano Gratuito.

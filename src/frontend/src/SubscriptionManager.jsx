@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { isSessionRejected } from './account-api.js'
-import { checkSubscriptionCancellation, requestSubscriptionCancellation } from './premium-api.js'
+import { checkSubscriptionCancellation, requestSubscriptionCancellation, retryRenewalPayment } from './premium-api.js'
+import { formatBrl } from './financial-view.js'
 import { billingPolicyTitle } from './billing-policy.js'
 import {
   cancellationBlockedMessage,
   cancellationNotice,
   cancellationResultMessage,
+  cycleName,
   formatUtc,
+  recurrenceLabel,
+  retryResultMessage,
   subscriptionStatusLabel,
 } from './premium-view.js'
 
@@ -20,6 +24,8 @@ export default function SubscriptionManager({ token, subscription, activePools =
   const [error, setError] = useState('')
   const pending = subscription.status === 'cancellation_pending'
   const ended = subscription.status === 'cancelled' || subscription.status === 'expired'
+  const pastDue = subscription.status === 'past_due'
+  const attention = pending || pastDue
   // O backend também recusa (409); a tela só avisa antes, para a pessoa não tentar à toa.
   const blocked = cancellationBlockedMessage(activePools)
 
@@ -54,7 +60,14 @@ export default function SubscriptionManager({ token, subscription, activePools =
 
   const check = () => run(async () => {
     const { subscription: checked } = await checkSubscriptionCancellation(token)
-    setMessage(cancellationResultMessage(checked.status))
+    setMessage(cancellationResultMessage(checked.status, checked))
+    onChanged()
+  })
+
+  // Nova tentativa de pagar a renovação em atraso, só depois de uma recusa (SPEC-029, RF44).
+  const retry = () => run(async () => {
+    const { subscription: retried } = await retryRenewalPayment(token)
+    setMessage(retryResultMessage(retried.status))
     onChanged()
   })
 
@@ -63,10 +76,17 @@ export default function SubscriptionManager({ token, subscription, activePools =
       <dl className="info-list subscription-details">
         <div>
           <dt>Assinatura</dt>
-          <dd className={pending ? 'profile-open' : undefined}>{subscriptionStatusLabel(subscription.status)}</dd>
+          <dd className={attention ? 'profile-open' : undefined}>{subscriptionStatusLabel(subscription.status)}</dd>
+        </div>
+        <div>
+          <dt>Plano</dt>
+          <dd>{cycleName(subscription.billingCycle)} · {formatBrl(subscription.amountCents)} {recurrenceLabel(subscription.billingCycle)}</dd>
         </div>
         <div><dt>Início da vigência</dt><dd>{formatUtc(subscription.startsAt)}</dd></div>
-        <div><dt>Fim da vigência</dt><dd>{formatUtc(subscription.endsAt)}</dd></div>
+        {subscription.nextChargeAt && <div><dt>Próxima cobrança</dt><dd>{formatUtc(subscription.nextChargeAt)}</dd></div>}
+        {subscription.premiumUntil && <div><dt>Premium até</dt><dd>{formatUtc(subscription.premiumUntil)}</dd></div>}
+        {pastDue && <div><dt>Regularize até</dt><dd className="profile-open">{formatUtc(subscription.graceEndsAt)}</dd></div>}
+        {ended && <div><dt>Fim do período</dt><dd>{formatUtc(subscription.endsAt)}</dd></div>}
         {pending && <div><dt>Cancelamento pedido em</dt><dd>{formatUtc(subscription.cancellationRequestedAt)}</dd></div>}
         {ended && <div><dt>{subscription.status === 'expired' ? 'Expirou em' : 'Cancelada em'}</dt><dd>{formatUtc(subscription.endedAt)}</dd></div>}
         {subscription.simulated && <div><dt>Operação</dt><dd><span className="simulation-badge">SIMULAÇÃO</span></dd></div>}
@@ -102,6 +122,18 @@ export default function SubscriptionManager({ token, subscription, activePools =
             </button>
             <button className="small-button" type="button" disabled={busy} onClick={() => setConfirming(false)}>Manter assinatura</button>
           </div>
+        </div>
+      )}
+
+      {pastDue && (
+        <div className="premium-actions">
+          {subscription.canRetryPayment ? (
+            <button className="small-button small-button-solid" type="button" disabled={busy} onClick={retry}>
+              {busy ? 'Tentando...' : 'Tentar pagar novamente'}
+            </button>
+          ) : (
+            <p className="toolbar-note">A cobrança da renovação aguarda a resposta do provedor.</p>
+          )}
         </div>
       )}
 

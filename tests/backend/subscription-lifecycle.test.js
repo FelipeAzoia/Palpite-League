@@ -45,6 +45,9 @@ function cancellationMovements(context, subscriptionId) {
 }
 
 const auditsOf = (context, id) => context.auditStore.findByObject({ type: 'subscription', id })
+// Tarefa periódica dos períodos (SPEC-029): renovações, carências e fins de período.
+const processPeriods = (context) => context.app.locals.tasks.processSubscriptions()
+const graceMs = 3 * 24 * 60 * minute
 
 test('CT-01 e CT-02: consulta mostra o Premium com vigência em UTC e o Gratuito sem vigência', async () => {
   await withSimulator(async (context) => {
@@ -73,6 +76,7 @@ test('CT-01 e CT-02: consulta mostra o Premium com vigência em UTC e o Gratuito
       liveResults: false,
       subscription: null,
       cancellation: { activePools: 0, limit: 1, allowed: false },
+      renewal: { canRetryPayment: false },
     })
   })
 })
@@ -110,32 +114,43 @@ test('CT-05 e CT-17: o cancelamento fica pendente, registra a operação simulad
   })
 })
 
-test('CT-07: a confirmação do provedor cancela, volta ao Gratuito e é auditada pelo sistema', async () => {
+test('CT-07 (com a SPEC-029): a confirmação interrompe a renovação; o Premium vale até o fim do período e então volta ao Gratuito', async () => {
   await withSimulator(async (context) => {
     const ana = await context.signUp('Ana')
-    const { id } = await becomePremium(context, ana)
+    const { id, endsAt } = await becomePremium(context, ana)
     await cancel(context, ana)
     context.clock.current += minute
 
     const checked = await checkCancellation(context, ana)
     assert.equal(checked.status, 200, checked.text)
-    assert.equal(checked.json.subscription.status, 'cancelled')
-    assert.equal(checked.json.subscription.endedAt, new Date(startOfTests + minute).toISOString())
-    assert.equal(await planOf(context, ana), 'free')
+    assert.equal(checked.json.subscription.status, 'non_renewing')
+    assert.equal(checked.json.subscription.premiumUntil, endsAt)
+    assert.equal(checked.json.subscription.nextChargeAt, null)
+    assert.equal(await planOf(context, ana), 'premium')
     assert.equal((await context.call('GET', '/pools/creation-availability', { token: ana.token })).json.limit, 1)
     assert.equal(cancellationMovements(context, id)[0].status, 'confirmed')
 
+    const renewalCancelled = auditsOf(context, id).at(-1)
+    assert.equal(renewalCancelled.action, lifecycleActions.renewalCancelled)
+    assert.deepEqual(renewalCancelled.actor, { type: 'system' })
+    assert.deepEqual(renewalCancelled.details, { previousState: 'cancellation_pending', newState: 'non_renewing', origin: 'simulator', endsAt })
+
+    // Nenhuma cobrança nova no fim do período: a assinatura passa a cancelada e o plano a Gratuito.
+    context.clock.current = Date.parse(endsAt)
+    assert.deepEqual(await processPeriods(context), { renewed: 0, pastDue: 0, expired: 0, cancelled: 1 })
+    assert.equal(count(context, "SELECT COUNT(*) AS n FROM financial_movements WHERE type = 'subscription_renewal'"), 0)
+    assert.equal(await planOf(context, ana), 'free')
     const cancelled = auditsOf(context, id).at(-1)
     assert.equal(cancelled.action, lifecycleActions.cancelled)
     assert.deepEqual(cancelled.actor, { type: 'system' })
     assert.equal(cancelled.result, 'success')
-    assert.deepEqual(cancelled.details, { previousState: 'cancellation_pending', newState: 'cancelled', origin: 'simulator', liveResultsRemoved: 0 })
+    assert.deepEqual(cancelled.details, { previousState: 'non_renewing', newState: 'cancelled', origin: 'simulator', liveResultsRemoved: 0 })
 
-    // CT-03: a consulta mostra o estado final e quando passou a valer.
+    // CT-03: a consulta mostra o estado final e quando passou a valer (o fim do período pago).
     const view = (await consult(context, ana)).json
     assert.equal(view.plan.id, 'free')
     assert.equal(view.subscription.status, 'cancelled')
-    assert.equal(view.subscription.endedAt, new Date(startOfTests + minute).toISOString())
+    assert.equal(view.subscription.endedAt, endsAt)
   })
 })
 
@@ -191,8 +206,8 @@ test('CT-09: provedor indisponível mantém o cancelamento pendente, nunca cance
     // O provedor processa o pedido que recebeu; a conferência seguinte aplica.
     context.provider.confirm(cancellationMovements(context, id)[0].operation_key)
     await context.app.locals.tasks.reconcilePayments()
-    assert.equal((await consult(context, ana)).json.subscription.status, 'cancelled')
-    assert.equal(await planOf(context, ana), 'free')
+    assert.equal((await consult(context, ana)).json.subscription.status, 'non_renewing')
+    assert.equal(await planOf(context, ana), 'premium')
   })
 })
 
@@ -211,9 +226,9 @@ test('CT-10 e CT-11: confirmação repetida e pedidos simultâneos não duplicam
       context.provider.confirm(key)
       await Promise.all([checkCancellation(context, ana), context.app.locals.tasks.reconcilePayments()])
     }
-    assert.equal(count(context, 'SELECT COUNT(*) AS n FROM audit_records WHERE action = ? AND object_id = ?', lifecycleActions.cancelled, id), 1)
+    assert.equal(count(context, 'SELECT COUNT(*) AS n FROM audit_records WHERE action = ? AND object_id = ?', lifecycleActions.renewalCancelled, id), 1)
     assert.equal(cancellationMovements(context, id).length, 1)
-    assert.equal((await consult(context, ana)).json.subscription.status, 'cancelled')
+    assert.equal((await consult(context, ana)).json.subscription.status, 'non_renewing')
   })
 })
 
@@ -234,14 +249,23 @@ test('CT-12 e CT-04: cancelar sem assinatura ativa, já pendente, cancelada ou e
     assert.equal((await consult(context, bruno)).json.subscription, null)
     assert.equal(cancellationMovements(context, id).length, 0)
 
+    const { endsAt } = (await consult(context, ana)).json.subscription
     await cancel(context, ana)
     expectCommonFormat(await cancel(context, ana), 409, 'cancellation_already_pending')
     await checkCancellation(context, ana)
+    expectCommonFormat(await cancel(context, ana), 409, 'renewal_already_cancelled')
+    context.clock.current = Date.parse(endsAt)
+    await processPeriods(context)
     expectCommonFormat(await cancel(context, ana), 409, 'subscription_ended')
 
-    await becomePremium(context, carla)
-    context.clock.current += 40 * 24 * 60 * minute
-    context.app.locals.tasks.expireSubscriptions()
+    // Com a renovação pendente não se cancela; depois da carência sem pagamento, a assinatura expirou.
+    const carlaSubscription = await becomePremium(context, carla)
+    context.provider.setRenewalOutcome('refused')
+    context.clock.current = Date.parse(carlaSubscription.endsAt)
+    await processPeriods(context)
+    expectCommonFormat(await cancel(context, carla), 409, 'renewal_pending')
+    context.clock.current = Date.parse(carlaSubscription.endsAt) + graceMs
+    await processPeriods(context)
     expectCommonFormat(await cancel(context, carla), 409, 'subscription_ended')
 
     for (const [method, path] of [
@@ -254,30 +278,36 @@ test('CT-12 e CT-04: cancelar sem assinatura ativa, já pendente, cancelada ou e
   })
 })
 
-test('CT-13 e CT-14: a expiração vale no instante UTC do fim da vigência, pelo sistema, e reexecutar não muda nada', async () => {
+test('CT-13 e CT-14 (com a SPEC-029): sem pagamento da renovação, expira no instante UTC do fim da carência, pelo sistema; reexecutar não muda nada', async () => {
   await withSimulator(async (context) => {
     const ana = await context.signUp('Ana')
     const { id, endsAt } = await becomePremium(context, ana)
+    context.provider.setRenewalOutcome('refused')
+    const graceEndsAt = new Date(Date.parse(endsAt) + graceMs).toISOString()
 
     context.clock.current = Date.parse(endsAt) - 1
-    assert.deepEqual(context.app.locals.tasks.expireSubscriptions(), { checked: 0, expired: 0 })
+    assert.deepEqual(await processPeriods(context), { renewed: 0, pastDue: 0, expired: 0, cancelled: 0 })
+    context.clock.current = Date.parse(endsAt)
+    assert.deepEqual(await processPeriods(context), { renewed: 0, pastDue: 1, expired: 0, cancelled: 0 })
     assert.equal(await planOf(context, ana), 'premium')
 
-    context.clock.current = Date.parse(endsAt)
-    assert.deepEqual(context.app.locals.tasks.expireSubscriptions(), { checked: 1, expired: 1 })
+    context.clock.current = Date.parse(graceEndsAt) - 1
+    assert.deepEqual(await processPeriods(context), { renewed: 0, pastDue: 0, expired: 0, cancelled: 0 })
+    context.clock.current = Date.parse(graceEndsAt)
+    assert.deepEqual(await processPeriods(context), { renewed: 0, pastDue: 0, expired: 1, cancelled: 0 })
     const view = (await consult(context, ana)).json
     assert.equal(view.plan.id, 'free')
     assert.equal(view.subscription.status, 'expired')
-    assert.equal(view.subscription.endedAt, endsAt)
+    assert.equal(view.subscription.endedAt, graceEndsAt)
 
     const expired = auditsOf(context, id).at(-1)
     assert.equal(expired.action, lifecycleActions.expired)
     assert.deepEqual(expired.actor, { type: 'system' })
-    assert.deepEqual(expired.details, { previousState: 'active', newState: 'expired', origin: 'simulator', endsAt })
+    assert.deepEqual(expired.details, { previousState: 'past_due', newState: 'expired', origin: 'simulator', endsAt })
     assert.match(expired.occurredAt, /Z$/)
 
     context.clock.current += 60 * minute
-    assert.deepEqual(context.app.locals.tasks.expireSubscriptions(), { checked: 0, expired: 0 })
+    assert.deepEqual(await processPeriods(context), { renewed: 0, pastDue: 0, expired: 0, cancelled: 0 })
     assert.equal(count(context, 'SELECT COUNT(*) AS n FROM audit_records WHERE action = ?', lifecycleActions.expired), 1)
 
     // Depois de expirada, a pessoa pode contratar de novo (SPEC-019).
@@ -293,7 +323,7 @@ test('OPEN-91: cancelamento pendente que atinge o fim da vigência expira; a con
     await cancel(context, ana)
 
     context.clock.current = Date.parse(endsAt)
-    context.app.locals.tasks.expireSubscriptions()
+    await processPeriods(context)
     assert.equal((await consult(context, ana)).json.subscription.status, 'expired')
     assert.equal(auditsOf(context, id).at(-1).details.previousState, 'cancellation_pending')
 
@@ -330,11 +360,18 @@ test('CT-15, CT-16 e CT-23: bolões ficam intactos (o cancelamento só retira o 
       const before = snapshot()
 
       if (ending === 'cancel') {
+        // Cancelamento confirmado: vale no fim do período pago (SPEC-029).
         assert.equal((await cancel(context, ana)).status, 202)
         await checkCancellation(context, ana)
-      } else {
         context.clock.current = Date.parse(endsAt)
-        context.app.locals.tasks.expireSubscriptions()
+        await processPeriods(context)
+      } else {
+        // Renovação não paga: expira no fim da carência (SPEC-029).
+        context.provider.setRenewalOutcome('refused')
+        context.clock.current = Date.parse(endsAt)
+        await processPeriods(context)
+        context.clock.current = Date.parse(endsAt) + graceMs
+        await processPeriods(context)
       }
       assert.equal(await planOf(context, ana), 'free')
       assert.equal(snapshot(), before)
@@ -409,10 +446,10 @@ test('CT-20: só cancela com no máximo 1 bolão em andamento criado pela pessoa
   })
 })
 
-test('CT-21: confirmado o cancelamento, o bolão aberto perde os resultados ao vivo e isso não volta', async () => {
+test('CT-21 (com a SPEC-029): no fim do período cancelado, o bolão aberto perde os resultados ao vivo e isso não volta', async () => {
   await withSimulator(async (context) => {
     const ana = await context.signUp('Ana')
-    const { id } = await becomePremium(context, ana)
+    const { id, endsAt } = await becomePremium(context, ana)
     const ended = await context.createPool(ana)
     context.database.prepare("UPDATE pools SET status = 'ended' WHERE id = ?").run(ended.poolId)
     const open = await context.createPool(ana, { round: 3 })
@@ -421,6 +458,9 @@ test('CT-21: confirmado o cancelamento, o bolão aberto perde os resultados ao v
     await cancel(context, ana)
     assert.equal(live(open.poolId), 1, 'continua ao vivo enquanto o cancelamento está pendente')
     await checkCancellation(context, ana)
+    assert.equal(live(open.poolId), 1, 'continua ao vivo até o fim do período pago')
+    context.clock.current = Date.parse(endsAt)
+    await processPeriods(context)
     assert.equal(live(open.poolId), 0)
     assert.equal(live(ended.poolId), 1, 'bolão já encerrado não é alterado')
 
@@ -483,8 +523,9 @@ test('CT-18: cancelamento com o Mercado Pago em teste, sem segredos em registros
     assert.equal(requested.status, 202, requested.text)
     assert.equal(requested.json.subscription.simulated, false)
     assert.deepEqual(requests.find((item) => item.method === 'PUT'), { method: 'PUT', path: '/preapproval/pre-9' })
-    assert.equal((await checkCancellation(context, ana)).json.subscription.status, 'cancelled')
-    assert.equal(await planOf(context, ana), 'free')
+    // Cancelado no provedor: a renovação para e o Premium vale até o fim do período (SPEC-029).
+    assert.equal((await checkCancellation(context, ana)).json.subscription.status, 'non_renewing')
+    assert.equal(await planOf(context, ana), 'premium')
 
     const audits = JSON.stringify(context.database.prepare('SELECT * FROM audit_records').all())
     const movements = JSON.stringify(context.database.prepare('SELECT * FROM financial_movements').all())
@@ -507,7 +548,8 @@ test('CT-18: cancelamento com o Mercado Pago em teste, sem segredos em registros
   }, { paymentsProvider: generic })
 
   const example = fs.readFileSync(new URL('../../.env.example', import.meta.url), 'utf8')
-  assert.match(example, /^SUBSCRIPTION_EXPIRATION_INTERVAL_MS=$/m)
+  assert.match(example, /^SUBSCRIPTION_PERIODS_INTERVAL_MS=$/m)
+  assert.match(example, /^PREMIUM_TEST_ANNUAL_PRICE_CENTS=$/m)
 })
 
 test('CT-19: transições inválidas são rejeitadas no banco e estados finais não são reabertos', async () => {
@@ -518,8 +560,14 @@ test('CT-19: transições inválidas são rejeitadas no banco e estados finais n
     await cancel(context, ana)
     await checkCancellation(context, ana)
     const expired = await becomePremium(context, bruno)
+    context.provider.setRenewalOutcome('refused')
+    // O fim do período encerra a cancelada e põe a outra na carência; o fim da carência a expira.
     context.clock.current = Date.parse(expired.endsAt)
-    context.app.locals.tasks.expireSubscriptions()
+    await processPeriods(context)
+    context.clock.current = Date.parse(expired.endsAt) + graceMs
+    await processPeriods(context)
+    assert.equal((await consult(context, ana)).json.subscription.status, 'cancelled')
+    assert.equal((await consult(context, bruno)).json.subscription.status, 'expired')
 
     for (const id of [cancelled.id, expired.id]) {
       for (const status of ['active', 'cancellation_pending', 'pending']) {

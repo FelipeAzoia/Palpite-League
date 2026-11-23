@@ -88,11 +88,12 @@ describe('Política de Cobrança e Cancelamento (alterações de 23/11/2026)', (
     expect(billingPolicyVersion).toBe(backend.billingPolicyVersion)
   })
 
-  it('explica cobrança, vigência sem renovação, cancelamento, reembolso, bolões e dados de pagamento', async () => {
+  it('explica planos, renovação automática, carência, cancelamento ao fim do período, reembolso, bolões e dados de pagamento', async () => {
     const { billingPolicySections } = await import('../../src/frontend/src/billing-policy.js')
     const text = billingPolicySections.flatMap(({ title, items }) => [title, ...items]).join(' ')
     for (const fragment of [
-      'R$ 19,90 por mês', 'uma única vez', 'só é ativado depois que o provedor confirma', 'não há renovação automática',
+      'R$ 19,90 por mês', 'R$ 199,00 por ano', '2 meses grátis', 'só é ativado depois que o provedor confirma',
+      'renovada automaticamente', '3 dias de carência', 'continua até o fim do período já pago',
       'no máximo 1 bolão em andamento', 'deixa de ter resultados ao vivo', 'Não há reembolso', 'não pede nem guarda dados de cartão',
     ]) {
       expect(text).toContain(fragment)

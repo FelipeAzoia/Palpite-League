@@ -51,6 +51,10 @@ test('TC-01: condições vêm do backend; valores enviados pelo cliente são rej
       amount: '19.90',
       currency: 'BRL',
       recurrence: 'monthly',
+      cycles: [
+        { id: 'monthly', priceCents: 1990, amount: '19.90', monthlyEquivalentCents: 1990, savingsCents: 0 },
+        { id: 'annual', priceCents: 19900, amount: '199.00', monthlyEquivalentCents: 1658, savingsCents: 3980 },
+      ],
       environment: 'test',
       origin: 'simulator',
       simulated: true,
@@ -101,7 +105,7 @@ test('TC-02 e TC-14: contratar cria assinatura e movimentação pendentes, com a
     assert.equal(requested.action, subscriptionActions.requested)
     assert.deepEqual(requested.actor, { type: 'user', id: ana.id })
     assert.equal(requested.result, 'success')
-    assert.deepEqual(requested.details, { amountCents: 1990, newState: 'pending', origin: 'simulator', billingPolicyVersion })
+    assert.deepEqual(requested.details, { amountCents: 1990, newState: 'pending', origin: 'simulator', billingPolicyVersion, billingCycle: 'monthly' })
     assert.equal(auditsOf(context, 'financial_movement', movement.id)[0].action, 'financial.movement_created')
 
     assert.equal((await planOf(context, ana)).plan.id, 'free')

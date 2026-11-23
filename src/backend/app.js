@@ -27,6 +27,7 @@ import {
   createPremiumSubscriptionService,
   createSimulatedCheckoutService,
   createSubscriptionLifecycleService,
+  defaultPremiumAnnualPriceCents,
   defaultPremiumPriceCents,
   lifecycleAuditDetailSchemas,
   financialAuditDetailSchemas,
@@ -54,8 +55,8 @@ export const defaultScoringIntervalMs = 60 * 1000
 export const defaultMedalsIntervalMs = 60 * 1000
 // Intervalo padrão da conferência financeira (SPEC-018, ADR-0006): 5 minutos.
 export const defaultFinancialReconciliationIntervalMs = 5 * 60 * 1000
-// Intervalo padrão da expiração das assinaturas (SPEC-020, OPEN-90): 1 minuto.
-export const defaultSubscriptionExpirationIntervalMs = 60 * 1000
+// Intervalo padrão do processamento dos períodos das assinaturas (SPEC-020 OPEN-90, SPEC-029 RNF21): 1 minuto.
+export const defaultSubscriptionPeriodsIntervalMs = 60 * 1000
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { createSimulatedPaymentsProvider } from './adapters/simulated-payments-provider.js'
@@ -130,6 +131,7 @@ export function createApp(database, {
   sportsProvider = configuredSportsProvider(now),
   paymentsProvider = configuredPaymentsProvider(),
   premiumPriceCents = Number(process.env.PREMIUM_TEST_PRICE_CENTS || defaultPremiumPriceCents),
+  premiumAnnualPriceCents = Number(process.env.PREMIUM_TEST_ANNUAL_PRICE_CENTS || defaultPremiumAnnualPriceCents),
   sportsSeason = Number(process.env.SPORTS_SEASON || 2026),
   sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
 } = {}) {
@@ -154,6 +156,7 @@ export function createApp(database, {
     paymentsProvider,
     now,
     priceCents: premiumPriceCents,
+    annualPriceCents: premiumAnnualPriceCents,
   })
   const subscriptionLifecycle = createSubscriptionLifecycleService(database, {
     auditStore,
@@ -195,7 +198,7 @@ export function createApp(database, {
     syncResults: () => resultsSync.syncResults(),
     scorePredictions: () => scoring.scorePendingMatches(),
     reconcilePayments: () => financialCore.reconcilePending(),
-    expireSubscriptions: () => subscriptionLifecycle.expireSubscriptions(),
+    processSubscriptions: () => subscriptionLifecycle.processSubscriptions(),
   }
   app.locals.scoring = scoring
   const ranking = createRankingService(database)
@@ -344,7 +347,7 @@ export function createApp(database, {
   })
 
   // SPEC-020 — consulta da assinatura, cancelamento (pendente até a confirmação do provedor) e
-  // conferência do cancelamento. A expiração é a tarefa periódica expireSubscriptions.
+  // conferência do cancelamento. Renovações, carências e fins de período são a tarefa processSubscriptions.
   app.get('/account/subscription', authenticateRequest, (request, response, next) => {
     try {
       response.json(subscriptionLifecycle.getSubscription(request.authenticatedUser.id))
@@ -365,6 +368,15 @@ export function createApp(database, {
   app.post('/account/subscription/cancellation/check', authenticateRequest, async (request, response, next) => {
     try {
       response.json({ subscription: await subscriptionLifecycle.checkCancellation(request.authenticatedUser.id) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-029 — nova tentativa de pagar a renovação em atraso, só depois de uma recusa (RF44).
+  app.post('/account/subscription/renewal/retry', authenticateRequest, async (request, response, next) => {
+    try {
+      response.json({ subscription: await subscriptionLifecycle.retryRenewalPayment(request.authenticatedUser.id) })
     } catch (error) {
       next(error)
     }
