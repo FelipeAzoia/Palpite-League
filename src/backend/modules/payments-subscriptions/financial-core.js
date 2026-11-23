@@ -284,7 +284,9 @@ export function createFinancialCoreService(database, {
   // Inicia a operação no provedor depois da transação. Uma falha deixa a movimentação pendente,
   // sem repetição automática; a conferência seguinte consulta o estado pela chave (E1, CA-07).
   // Os dados do pagador e o contexto vão só para o provedor: não são gravados nem auditados (INV-011).
-  async function startAtProvider(row, { payer, providerContext } = {}) {
+  // Com refuseWhenUnavailable, a falha no início encerra a tentativa como recusada, sem cobrança no
+  // provedor (SPEC-022, OPEN-111): o titular pode tentar de novo, e nada é repetido automaticamente.
+  async function startAtProvider(row, { payer, providerContext, refuseWhenUnavailable = false } = {}) {
     let result
     try {
       result = await operationFor(row.type, 'start').call(provider, {
@@ -302,6 +304,15 @@ export function createFinancialCoreService(database, {
       }
     } catch (error) {
       recordProviderFailure(row, 'start', error)
+      if (refuseWhenUnavailable) {
+        try {
+          const current = findById(row.id)
+          if (current.status === 'pending' && current.provider_id === null) changeState(current, 'refused', null)
+        } catch {
+          // A recusa é refeita pela conferência seguinte, que consulta o provedor pela chave.
+          logger.error('payments', 'state_change_failed')
+        }
+      }
       return findById(row.id)
     }
 
@@ -316,12 +327,12 @@ export function createFinancialCoreService(database, {
     return findById(row.id)
   }
 
-  async function startMovement(input, { onCreate, payer, providerContext } = {}) {
+  async function startMovement(input, { onCreate, payer, providerContext, refuseWhenUnavailable } = {}) {
     if (onCreate !== undefined && typeof onCreate !== 'function') throw new TypeError('onCreate must be a function')
     const request = validateStart(input)
     const { row, created } = createOrReuse(request, onCreate)
     if (created) {
-      const started = await startAtProvider(row, { payer, providerContext })
+      const started = await startAtProvider(row, { payer, providerContext, refuseWhenUnavailable })
       return { movement: toMovement(started), created: true }
     }
     // Repetição de uma operação ainda pendente: consulta o estado antes de qualquer outra coisa,

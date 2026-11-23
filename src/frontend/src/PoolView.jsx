@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
+import EntryFeeSection from './EntryFeeSection.jsx'
 import { canManageInvites } from './invites-view.js'
 import InvitesSection from './InvitesSection.jsx'
 import LeaveSection from './LeaveSection.jsx'
@@ -59,7 +60,7 @@ function openMatches(predictions) {
     .sort((first, second) => Date.parse(first.startsAt) - Date.parse(second.startsAt))
 }
 
-function PoolHeader({ summary, onBack }) {
+function PoolHeader({ summary, onBack, payment }) {
   const { rules, ranking } = summary
   const pool = rules.pool
   const me = ranking?.participants.find(({ isRequester }) => isRequester)
@@ -81,7 +82,10 @@ function PoolHeader({ summary, onBack }) {
       </div>
 
       {summary.awaitingPayment ? (
-        <p className="pool-alert">Sua participação está aprovada e aguarda o pagamento da taxa de entrada. Depois da confirmação você poderá palpitar e aparecerá no ranking.</p>
+        <>
+          <p className="pool-alert">Sua participação está aprovada e aguarda o pagamento da taxa de entrada. Depois da confirmação você poderá palpitar e aparecerá no ranking.</p>
+          <EntryFeeSection {...payment} />
+        </>
       ) : (
         <dl className="pool-figures">
           <div>
@@ -255,7 +259,7 @@ export default function PoolView({ token, poolId, initialTab = 'overview', notic
 
   return (
     <div className="pool-view">
-      <PoolHeader summary={summary} onBack={onBack} />
+      <PoolHeader summary={summary} onBack={onBack} payment={{ ...shared, onConfirmed: refresh }} />
       {notice && <p className="form-message form-message-success" role="status">{notice}</p>}
 
       <nav className="pool-tabs" aria-label="Seções do bolão">

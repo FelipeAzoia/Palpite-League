@@ -31,6 +31,8 @@ import {
   createFinancialCoreService,
   createPremiumSubscriptionService,
   createSimulatedCheckoutService,
+  createEntryFeePaymentService,
+  entryFeeAuditDetailSchemas,
   createSubscriptionLifecycleService,
   defaultPremiumAnnualPriceCents,
   defaultPremiumPriceCents,
@@ -50,6 +52,7 @@ export const auditDetailSchemas = Object.freeze({
   ...financialAuditDetailSchemas,
   ...subscriptionAuditDetailSchemas,
   ...lifecycleAuditDetailSchemas,
+  ...entryFeeAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
@@ -201,6 +204,13 @@ export function createApp(database, {
     now,
   })
   const participationDecisions = createParticipationDecisionsService(database, { auditStore, pools: poolsService, now })
+  const entryFeePayments = createEntryFeePaymentService(database, {
+    auditStore,
+    financialCore,
+    paymentsProvider,
+    confirmParticipation: participationDecisions.confirmParticipation,
+    now,
+  })
   const participantManagement = createParticipantManagementService(database, { auditStore })
   const participationExit = createParticipationExitService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
@@ -555,6 +565,32 @@ export function createApp(database, {
   app.get('/pools/:poolId/results', authenticateRequest, (request, response, next) => {
     try {
       response.json(resultsSync.getPoolResults(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-022 — pagamento da taxa de entrada pelo titular da participação aprovada. O valor vem
+  // sempre do bolão; a participação só é confirmada pela conferência do pagamento.
+  app.get('/pools/:poolId/entry-fee', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(entryFeePayments.getPayment(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/entry-fee/payment', authenticateRequest, async (request, response, next) => {
+    try {
+      response.status(201).json(await entryFeePayments.startPayment(request.authenticatedUser.id, request.params.poolId, request.body))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/entry-fee/payment/check', authenticateRequest, async (request, response, next) => {
+    try {
+      response.json(await entryFeePayments.checkPayment(request.authenticatedUser.id, request.params.poolId))
     } catch (error) {
       next(error)
     }
