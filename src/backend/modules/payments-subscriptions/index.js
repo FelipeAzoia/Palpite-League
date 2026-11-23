@@ -20,6 +20,12 @@ export {
 } from './premium-subscription.js'
 export { createSimulatedCheckoutService } from './simulated-checkout.js'
 export {
+  createSubscriptionLifecycleService,
+  lifecycleActions,
+  lifecycleAuditDetailSchemas,
+} from './subscription-lifecycle.js'
+export { premiumStatuses } from './subscription-store.js'
+export {
   assertPaymentsProvider,
   PaymentsProviderError,
   paymentsProviderFailureCodes,

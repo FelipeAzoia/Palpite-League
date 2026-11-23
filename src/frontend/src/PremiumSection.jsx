@@ -9,6 +9,7 @@ import {
   subscribePremium,
 } from './premium-api.js'
 import { checkResultMessage, premiumAdvantages, premiumStage, priceLabel, stageMessage } from './premium-view.js'
+import SubscriptionManager from './SubscriptionManager.jsx'
 
 // Página de pagamento simulado (SPEC-019, OPEN-86): faz o papel do checkout quando o simulador está
 // ativo. Aprovar ou recusar só decide do lado do "provedor"; quem ativa é a conferência do backend.
@@ -130,7 +131,9 @@ export default function PremiumSection({ token, conditions, onChanged, onSession
     )
   }
 
-  const canOffer = stage === 'offer' || stage === 'refused'
+  // Depois de cancelada ou expirada, a pessoa pode contratar de novo (SPEC-019).
+  const canOffer = stage === 'offer' || stage === 'refused' || stage === 'ended'
+  const hasSubscriptionDetails = ['active', 'cancellation_pending', 'ended'].includes(stage) && subscription?.startsAt
 
   return (
     <section className="premium-section" aria-labelledby="premium-title">
@@ -143,6 +146,15 @@ export default function PremiumSection({ token, conditions, onChanged, onSession
       {message && <p className="form-message form-message-success" role="status">{message}</p>}
       {error && <p className="form-message" role="alert">{error}</p>}
       {stage !== 'offer' && <p className="toolbar-note">{stageMessage(stage, subscription)}</p>}
+
+      {hasSubscriptionDetails && (
+        <SubscriptionManager
+          token={token}
+          subscription={subscription}
+          onChanged={onChanged}
+          onSessionRejected={onSessionRejected}
+        />
+      )}
 
       {canOffer && (
         <div className="premium-offer">

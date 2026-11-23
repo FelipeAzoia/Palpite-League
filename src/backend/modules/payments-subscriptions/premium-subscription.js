@@ -3,6 +3,7 @@ import { AppError } from '../../shared/app-error.js'
 import { getPlan } from '../auth-users/index.js'
 import { formatCents } from './financial-core.js'
 import { paymentsProviderSources } from './payments-provider.js'
+import { createSubscriptionStore, premiumStatuses, subscriptionStatuses } from './subscription-store.js'
 
 // SPEC-019 — contratação do Premium e ativação dos recursos.
 // - a assinatura nasce pendente, na mesma transação da movimentação e da auditoria (INV-004);
@@ -10,7 +11,7 @@ import { paymentsProviderSources } from './payments-provider.js'
 //   ativa, a vigência e a auditoria (INV-001); a recusa deixa a assinatura recusada e o plano igual;
 // - valor, moeda e recorrência vêm do backend (INV-002, INV-012).
 
-export const subscriptionStatuses = Object.freeze(['pending', 'active', 'refused'])
+export { subscriptionStatuses }
 
 export const subscriptionActions = Object.freeze({
   requested: 'subscription.requested',
@@ -73,41 +74,8 @@ export function createPremiumSubscriptionService(database, {
     if (!user) throw rejectedSession()
     return user
   }
-  const findSubscription = (id) => database.prepare('SELECT * FROM subscriptions WHERE id = ?').get(id)
-  // A contratação "atual": a ativa, senão a pendente, senão a mais recente recusada.
-  const currentSubscription = (userId) => database.prepare(`
-    SELECT * FROM subscriptions WHERE user_id = ?
-    ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END, created_at DESC, rowid DESC
-    LIMIT 1
-  `).get(userId)
-  const movementFor = (subscriptionId) => database.prepare(`
-    SELECT id, continuation_json FROM financial_movements
-    WHERE operation_type = 'subscription' AND operation_id = ?
-    ORDER BY attempt_number DESC LIMIT 1
-  `).get(subscriptionId)
-
-  function view(row) {
-    const movement = movementFor(row.id)
-    let payment = null
-    if (row.status === 'pending' && movement?.continuation_json) {
-      try { payment = JSON.parse(movement.continuation_json) } catch { payment = null }
-    }
-    return {
-      id: row.id,
-      status: row.status,
-      amountCents: row.amount_cents,
-      amount: formatCents(row.amount_cents),
-      currency: row.currency,
-      recurrence: row.recurrence,
-      origin: row.origin,
-      simulated: row.origin === 'simulator',
-      startsAt: row.starts_at,
-      endsAt: row.ends_at,
-      createdAt: row.created_at,
-      movementId: movement?.id ?? null,
-      payment,
-    }
-  }
+  const { findSubscription, currentSubscription, movementFor, view } = createSubscriptionStore(database)
+  const hasPremium = (user, current) => user.plan === 'premium' || premiumStatuses.includes(current?.status)
 
   function changeAudit(row, newState) {
     return {
@@ -154,7 +122,7 @@ export function createPremiumSubscriptionService(database, {
     const user = readUser(userId)
     const current = currentSubscription(userId)
     let reason = null
-    if (user.plan === 'premium' || current?.status === 'active') reason = 'already_premium'
+    if (hasPremium(user, current)) reason = 'already_premium'
     else if (current?.status === 'pending') reason = 'pending_subscription'
     const plan = getPlan('premium')
     return {
@@ -176,7 +144,7 @@ export function createPremiumSubscriptionService(database, {
   // movimentação; o tratador aplica o resultado se ele for definitivo.
   async function refresh(row) {
     if (row.status !== 'pending') return row
-    const movement = movementFor(row.id)
+    const movement = movementFor(row.id, 'subscription')
     if (movement) await financialCore.checkMovement(movement.id)
     return findSubscription(row.id)
   }
@@ -196,7 +164,7 @@ export function createPremiumSubscriptionService(database, {
     validateRequest(body)
     const user = readUser(userId)
     let current = currentSubscription(userId)
-    if (user.plan === 'premium' || current?.status === 'active') throw alreadyPremium()
+    if (hasPremium(user, current)) throw alreadyPremium()
 
     // Já existe contratação pendente: consulta a anterior antes de qualquer outra coisa (E2, A3).
     if (current?.status === 'pending') {

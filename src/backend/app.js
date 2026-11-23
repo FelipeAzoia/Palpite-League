@@ -26,7 +26,9 @@ import {
   createFinancialCoreService,
   createPremiumSubscriptionService,
   createSimulatedCheckoutService,
+  createSubscriptionLifecycleService,
   defaultPremiumPriceCents,
+  lifecycleAuditDetailSchemas,
   financialAuditDetailSchemas,
   subscriptionAuditDetailSchemas,
 } from './modules/payments-subscriptions/index.js'
@@ -41,6 +43,7 @@ export const auditDetailSchemas = Object.freeze({
   ...resultsAuditDetailSchemas,
   ...financialAuditDetailSchemas,
   ...subscriptionAuditDetailSchemas,
+  ...lifecycleAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
@@ -51,6 +54,8 @@ export const defaultScoringIntervalMs = 60 * 1000
 export const defaultMedalsIntervalMs = 60 * 1000
 // Intervalo padrão da conferência financeira (SPEC-018, ADR-0006): 5 minutos.
 export const defaultFinancialReconciliationIntervalMs = 5 * 60 * 1000
+// Intervalo padrão da expiração das assinaturas (SPEC-020, OPEN-90): 1 minuto.
+export const defaultSubscriptionExpirationIntervalMs = 60 * 1000
 import { createSimulatedSportsProvider } from './adapters/simulated-sports-provider.js'
 import { createApiFootballSportsProvider } from './adapters/api-football-sports-provider.js'
 import { createSimulatedPaymentsProvider } from './adapters/simulated-payments-provider.js'
@@ -150,6 +155,13 @@ export function createApp(database, {
     now,
     priceCents: premiumPriceCents,
   })
+  const subscriptionLifecycle = createSubscriptionLifecycleService(database, {
+    auditStore,
+    financialCore,
+    paymentsProvider,
+    logger,
+    now,
+  })
   // A página de pagamento simulado só existe com o simulador ativo (SPEC-019, INV-008).
   const simulatedCheckout = paymentsProvider.source === 'simulator'
     ? createSimulatedCheckoutService(database, paymentsProvider)
@@ -183,6 +195,7 @@ export function createApp(database, {
     syncResults: () => resultsSync.syncResults(),
     scorePredictions: () => scoring.scorePendingMatches(),
     reconcilePayments: () => financialCore.reconcilePending(),
+    expireSubscriptions: () => subscriptionLifecycle.expireSubscriptions(),
   }
   app.locals.scoring = scoring
   const ranking = createRankingService(database)
@@ -325,6 +338,33 @@ export function createApp(database, {
   app.post('/account/premium/subscription/check', authenticateRequest, async (request, response, next) => {
     try {
       response.json({ subscription: await premiumSubscriptions.checkSubscription(request.authenticatedUser.id) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-020 — consulta da assinatura, cancelamento (pendente até a confirmação do provedor) e
+  // conferência do cancelamento. A expiração é a tarefa periódica expireSubscriptions.
+  app.get('/account/subscription', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(subscriptionLifecycle.getSubscription(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/account/subscription/cancellation', authenticateRequest, async (request, response, next) => {
+    try {
+      const subscription = await subscriptionLifecycle.requestCancellation(request.authenticatedUser.id, request.body)
+      response.status(202).json({ subscription })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/account/subscription/cancellation/check', authenticateRequest, async (request, response, next) => {
+    try {
+      response.json({ subscription: await subscriptionLifecycle.checkCancellation(request.authenticatedUser.id) })
     } catch (error) {
       next(error)
     }

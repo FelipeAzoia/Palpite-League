@@ -26,3 +26,17 @@ export function decideSimulatedPayment(token, movementId, decision, options = {}
     method: 'POST', body: { decision }, token, ...options,
   })
 }
+
+// SPEC-020 — consulta da assinatura, pedido de cancelamento (só a confirmação explícita) e
+// conferência do cancelamento pendente.
+export function fetchSubscription(token, options = {}) {
+  return requestAuth('/account/subscription', { token, ...options })
+}
+
+export function requestSubscriptionCancellation(token, options = {}) {
+  return requestAuth('/account/subscription/cancellation', { method: 'POST', body: { confirm: true }, token, ...options })
+}
+
+export function checkSubscriptionCancellation(token, options = {}) {
+  return requestAuth('/account/subscription/cancellation/check', { method: 'POST', token, ...options })
+}

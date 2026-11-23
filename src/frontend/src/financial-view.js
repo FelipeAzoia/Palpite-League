@@ -9,6 +9,7 @@ const typeLabels = Object.freeze({
   subscription: 'Assinatura',
   refund: 'Devolução',
   payout: 'Premiação',
+  subscription_cancellation: 'Cancelamento da assinatura',
 })
 
 const statusLabels = Object.freeze({
@@ -40,9 +41,10 @@ export function formatBrl(amountCents) {
   return `${negative ? '-' : ''}R$ ${reais},${cents}`
 }
 
-// Resumo do que está em aberto (movimentações pendentes), mostrado no Perfil.
+// Resumo do que está em aberto (pagamentos pendentes), mostrado no Perfil. O cancelamento da
+// assinatura não é pagamento e fica de fora.
 export function openMovementsSummary(movements) {
-  const pending = (movements ?? []).filter((movement) => movement.status === 'pending')
+  const pending = (movements ?? []).filter((movement) => movement.status === 'pending' && movement.type !== 'subscription_cancellation')
   if (pending.length === 0) return { count: 0, label: 'Nada em aberto' }
   const total = pending.reduce((sum, movement) => sum + movement.amountCents, 0)
   const noun = pending.length === 1 ? 'pagamento em aberto' : 'pagamentos em aberto'

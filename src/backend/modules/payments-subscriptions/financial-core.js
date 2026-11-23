@@ -18,7 +18,7 @@ import {
 //   depois de uma recusa, e nada é repetido automaticamente (INV-006, INV-007);
 // - o banco impede reabrir, reescrever ou apagar movimentações finais (migração 012).
 
-export const movementTypes = Object.freeze(['entry_fee', 'subscription', 'refund', 'payout'])
+export const movementTypes = Object.freeze(['entry_fee', 'subscription', 'refund', 'payout', 'subscription_cancellation'])
 export const operationOriginTypes = Object.freeze(['participation', 'subscription', 'refund_request', 'pool'])
 export const movementStatuses = providerStatuses
 
@@ -124,7 +124,10 @@ function validateStart(input) {
   if (!input || typeof input !== 'object') throw invalid('A operação financeira é obrigatória.')
   const type = requiredText(input.type, 'type')
   if (!movementTypes.includes(type)) throw invalid('Tipo de movimentação inválido.')
-  if (!Number.isSafeInteger(input.amountCents) || input.amountCents <= 0) {
+  // O cancelamento da assinatura não movimenta dinheiro: é registrado com valor zero (SPEC-020).
+  if (type === 'subscription_cancellation') {
+    if (input.amountCents !== 0) throw invalid('O cancelamento da assinatura não tem valor.')
+  } else if (!Number.isSafeInteger(input.amountCents) || input.amountCents <= 0) {
     throw invalid('O valor deve ser informado em centavos inteiros e positivos.')
   }
   if (input.currency !== undefined && input.currency !== 'BRL') throw invalid('A moeda deve ser BRL.')
@@ -255,31 +258,41 @@ export function createFinancialCoreService(database, {
     return { row: findById(id), created: true }
   }
 
-  // Operações da porta por tipo: as Specs proprietárias estendem a porta genérica (OPEN-85); a
-  // assinatura usa startSubscription/consultSubscription quando o adaptador as oferece (SPEC-019).
-  function startOperationFor(type) {
-    if (type === 'subscription' && typeof provider.startSubscription === 'function') return provider.startSubscription
-    return provider.startOperation
+  // Operações da porta por tipo: as Specs proprietárias estendem a porta genérica (OPEN-85). A
+  // assinatura usa startSubscription/consultSubscription quando o adaptador as oferece (SPEC-019); o
+  // cancelamento exige as operações próprias e nunca cai na operação genérica, que seria uma cobrança
+  // (SPEC-020, INV-008).
+  const typeOperations = Object.freeze({
+    subscription: { start: 'startSubscription', consult: 'consultSubscription', required: false },
+    subscription_cancellation: { start: 'startSubscriptionCancellation', consult: 'consultSubscriptionCancellation', required: true },
+  })
+
+  function unsupportedOperation() {
+    throw new PaymentsProviderError('response_error')
   }
 
-  function consultOperationFor(type) {
-    if (type === 'subscription' && typeof provider.consultSubscription === 'function') return provider.consultSubscription
-    return provider.consultOperation
+  function operationFor(type, kind) {
+    const operations = typeOperations[type]
+    const specific = operations ? provider[operations[kind]] : undefined
+    if (typeof specific === 'function') return specific
+    if (operations?.required) return unsupportedOperation
+    return kind === 'start' ? provider.startOperation : provider.consultOperation
   }
 
   // Inicia a operação no provedor depois da transação. Uma falha deixa a movimentação pendente,
   // sem repetição automática; a conferência seguinte consulta o estado pela chave (E1, CA-07).
-  // Os dados do pagador vão só para o provedor: não são gravados nem auditados (INV-011).
-  async function startAtProvider(row, payer) {
+  // Os dados do pagador e o contexto vão só para o provedor: não são gravados nem auditados (INV-011).
+  async function startAtProvider(row, { payer, providerContext } = {}) {
     let result
     try {
-      result = await startOperationFor(row.type).call(provider, {
+      result = await operationFor(row.type, 'start').call(provider, {
         operationKey: row.operation_key,
         type: row.type,
         amountCents: row.amount_cents,
         currency: row.currency,
         userId: row.user_id,
         ...(payer ? { payer } : {}),
+        ...(providerContext ? { context: providerContext } : {}),
       })
       if (!result || typeof result.providerId !== 'string' || !identifierPattern.test(result.providerId)
         || (result.continuation != null && (typeof result.continuation !== 'object' || Array.isArray(result.continuation)))) {
@@ -301,12 +314,12 @@ export function createFinancialCoreService(database, {
     return findById(row.id)
   }
 
-  async function startMovement(input, { onCreate, payer } = {}) {
+  async function startMovement(input, { onCreate, payer, providerContext } = {}) {
     if (onCreate !== undefined && typeof onCreate !== 'function') throw new TypeError('onCreate must be a function')
     const request = validateStart(input)
     const { row, created } = createOrReuse(request, onCreate)
     if (created) {
-      const started = await startAtProvider(row, payer)
+      const started = await startAtProvider(row, { payer, providerContext })
       return { movement: toMovement(started), created: true }
     }
     // Repetição de uma operação ainda pendente: consulta o estado antes de qualquer outra coisa,
@@ -377,7 +390,7 @@ export function createFinancialCoreService(database, {
     let status
     let providerId
     try {
-      const result = await consultOperationFor(row.type).call(provider, { operationKey: row.operation_key, providerId: row.provider_id })
+      const result = await operationFor(row.type, 'consult').call(provider, { operationKey: row.operation_key, providerId: row.provider_id })
       status = result?.status
       providerId = result?.providerId ?? row.provider_id ?? null
       if (!movementStatuses.includes(status) || (providerId !== null && (typeof providerId !== 'string' || !identifierPattern.test(providerId)))) {
