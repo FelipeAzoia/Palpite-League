@@ -10,6 +10,8 @@ import {
   createParticipationExitService,
   createParticipationRequestsService,
   createPoolsService,
+  createRefundRequestsService,
+  refundAuditDetailSchemas,
   decisionAuditDetailSchemas,
   exitAuditDetailSchemas,
   participantAuditDetailSchemas,
@@ -48,6 +50,7 @@ export const auditDetailSchemas = Object.freeze({
   ...subscriptionAuditDetailSchemas,
   ...lifecycleAuditDetailSchemas,
   ...entryFeeAuditDetailSchemas,
+  ...refundAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
@@ -198,6 +201,7 @@ export function createApp(database, {
     confirmParticipation: participationDecisions.confirmParticipation,
     now,
   })
+  const refundRequests = createRefundRequestsService(database, { auditStore, now })
   const participantManagement = createParticipantManagementService(database, { auditStore })
   const participationExit = createParticipationExitService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
@@ -550,6 +554,56 @@ export function createApp(database, {
   app.get('/pools/:poolId/results', authenticateRequest, (request, response, next) => {
     try {
       response.json(resultsSync.getPoolResults(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-023 — pedido de devolução por quem saiu do bolão e decisão da administração. O valor é
+  // sempre o da taxa confirmada; a aprovação só autoriza (a devolução é da SPEC-024).
+  app.get('/account/refund-requests', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(refundRequests.listOwn(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/pools/:poolId/refund-request', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(refundRequests.getOwnRequest(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/refund-request', authenticateRequest, (request, response, next) => {
+    try {
+      response.status(201).json(refundRequests.requestRefund(request.authenticatedUser.id, request.params.poolId, request.body))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/pools/:poolId/refund-requests', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(refundRequests.listPending(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/refund-requests/:requestId/approve', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(refundRequests.approve(request.authenticatedUser.id, request.params.poolId, request.params.requestId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/pools/:poolId/refund-requests/:requestId/reject', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(refundRequests.reject(request.authenticatedUser.id, request.params.poolId, request.params.requestId))
     } catch (error) {
       next(error)
     }

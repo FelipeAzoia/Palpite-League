@@ -380,3 +380,6 @@
 .entry-fee .test-environment-warning, .entry-fee .simulated-checkout, .entry-fee .premium-actions { margin: 0; }
 .entry-fee .simulated-checkout { display: grid; gap: 10px; }
 .entry-fee .simulated-amount { margin: 0; }
+
+/* ——— Devoluções (SPEC-023) ——— */
+.refunds-block { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--rule); }
