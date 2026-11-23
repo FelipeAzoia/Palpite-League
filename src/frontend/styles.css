@@ -227,6 +227,10 @@ a { color: inherit; text-decoration: none; }
 /* Tabela do início: linhas entre os bolões e divisórias verticais entre as colunas. */
 .home-table th[scope='row'] { padding: 0 8px; border-bottom: 1px solid var(--rule); font-weight: 400; letter-spacing: 0; text-transform: none; white-space: normal; }
 .home-table .col-num { width: auto; text-align: center; white-space: nowrap; }
+/* Mais espaço entre as colunas; tudo centralizado, menos a coluna do bolão. */
+.home-table th[scope='col'].col-num { padding: 0 24px 9px; text-align: center; }
+.home-table td.col-num { padding: 0 24px; text-align: center; }
+.home-table th:first-child { padding-right: 24px; text-align: left; }
 .home-table th[scope='col'] + th[scope='col'], .home-table td { border-left: 1px solid var(--rule-strong); }
 .home-table .position-change { justify-content: center; }
 .home-pool-link { padding: 0; border: 0; color: var(--forest); background: none; font-size: 13px; font-weight: 700; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
