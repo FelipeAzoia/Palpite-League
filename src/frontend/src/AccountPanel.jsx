@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
-import { fetchProfile, isSessionRejected, updateProfileName } from './account-api.js'
+import { fetchFinancialHistory, fetchProfile, isSessionRejected, updateProfileName } from './account-api.js'
+import { openMovementsSummary } from './financial-view.js'
 import MatchCatalog from './MatchCatalog.jsx'
 import PlanArea from './PlanArea.jsx'
 import PoolsPanel from './PoolsPanel.jsx'
@@ -19,9 +20,11 @@ const areas = [
 // A página de planos não tem aba própria: ela é aberta pelo Perfil e pela criação de bolão.
 const navAreaOf = (area) => (area === 'plan' ? 'profile' : area)
 
-function ProfileArea({ token, user, pending, onOpenPlans, onLogout, onSessionRejected, onUserChange }) {
+function ProfileArea({ token, user, pending, onOpenPlans, onOpenFinancial, onLogout, onSessionRejected, onUserChange }) {
   const [profile, setProfile] = useState(null)
   const [loadError, setLoadError] = useState('')
+  // Situação do financeiro: carregada à parte, para uma falha aqui não esconder o perfil.
+  const [financial, setFinancial] = useState(null)
   const [name, setName] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [message, setMessage] = useState('')
@@ -39,6 +42,12 @@ function ProfileArea({ token, user, pending, onOpenPlans, onLogout, onSessionRej
     }).catch((error) => {
       if (isSessionRejected(error)) rejectSession()
       else if (active) setLoadError(error.message)
+    })
+    fetchFinancialHistory(token).then(({ movements }) => {
+      if (active) setFinancial(openMovementsSummary(movements))
+    }).catch((error) => {
+      if (isSessionRejected(error)) rejectSession()
+      else if (active) setFinancial({ count: 0, label: 'Não foi possível consultar agora' })
     })
     return () => { active = false }
   }, [token])
@@ -71,8 +80,15 @@ function ProfileArea({ token, user, pending, onOpenPlans, onLogout, onSessionRej
 
   return (
     <>
-      <p className="eyebrow">MEU PERFIL</p>
-      <h2 id="auth-title">Meu perfil</h2>
+      <div className="profile-head">
+        <div>
+          <p className="eyebrow">MEU PERFIL</p>
+          <h2 id="auth-title">Meu perfil</h2>
+        </div>
+        <button className="small-button profile-logout" type="button" onClick={onLogout} disabled={pending}>
+          <LogOut size={18} aria-hidden="true" /> {pending ? 'Saindo...' : 'Sair da conta'}
+        </button>
+      </div>
       <p className="form-copy">Veja seus dados e altere o nome exibido.</p>
 
       {loadError && <p className="form-message" role="alert">{loadError}</p>}
@@ -80,13 +96,20 @@ function ProfileArea({ token, user, pending, onOpenPlans, onLogout, onSessionRej
 
       {profile && (
         <>
-          <dl className="info-list">
+          <dl className="info-list profile-info">
             <div><dt>E-mail</dt><dd>{profile.email}</dd></div>
             <div>
               <dt>Plano</dt>
-              <dd className="profile-plan">
+              <dd className="profile-action">
                 {profile.plan.name}
                 <button className="small-button" type="button" onClick={onOpenPlans}>Ver planos</button>
+              </dd>
+            </div>
+            <div>
+              <dt>Financeiro</dt>
+              <dd className="profile-action">
+                <span className={financial?.count ? 'profile-open' : undefined}>{financial ? financial.label : 'Consultando...'}</span>
+                <button className="small-button" type="button" onClick={onOpenFinancial}>Ver financeiro</button>
               </dd>
             </div>
           </dl>
@@ -118,12 +141,6 @@ function ProfileArea({ token, user, pending, onOpenPlans, onLogout, onSessionRej
           </form>
         </>
       )}
-
-      <div className="profile-logout">
-        <button className="small-button" type="button" onClick={onLogout} disabled={pending}>
-          <LogOut size={18} aria-hidden="true" /> {pending ? 'Saindo...' : 'Sair da conta'}
-        </button>
-      </div>
     </>
   )
 }
@@ -171,6 +188,7 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
           user={user}
           pending={pending}
           onOpenPlans={() => setArea('plan')}
+          onOpenFinancial={() => setArea('financial')}
           onLogout={onLogout}
           onSessionRejected={onSessionRejected}
           onUserChange={onUserChange}
