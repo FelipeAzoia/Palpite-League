@@ -3,3 +3,4 @@ export { createPredictionsService, predictionAuditDetailSchemas } from './predic
 export { createScoringService, scorePrediction } from './scoring.js'
 export { classify, createRankingService, tiebreakValue } from './ranking.js'
 export { createMedalsService, roundWinners } from './medals.js'
+export { createHistoryService } from './history.js'

@@ -3,6 +3,8 @@ import { ArrowRight, ChevronRight, LoaderCircle, Plus } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import MatchCatalog from './MatchCatalog.jsx'
 import RefundsSection from './RefundsSection.jsx'
+import HistoryPage from './HistoryPage.jsx'
+import LeftPoolsSection from './LeftPoolsSection.jsx'
 import PoolView from './PoolView.jsx'
 import { createPool, fetchCreationAvailability, fetchPools } from './pools-api.js'
 import {
@@ -26,7 +28,7 @@ function useGuardedRequest(onSessionRejected) {
   }
 }
 
-function PoolList({ token, notice, onSessionRejected, onOpen, onCreate }) {
+function PoolList({ token, notice, onSessionRejected, onOpen, onCreate, onOpenHistory }) {
   const [pools, setPools] = useState(null)
   const [error, setError] = useState('')
   const handle = useGuardedRequest(onSessionRejected)
@@ -76,6 +78,7 @@ function PoolList({ token, notice, onSessionRejected, onOpen, onCreate }) {
         </ul>
       )}
       <RefundsSection token={token} onSessionRejected={onSessionRejected} />
+      <LeftPoolsSection token={token} onSessionRejected={onSessionRejected} onOpenHistory={onOpenHistory} />
     </div>
   )
 }
@@ -309,6 +312,10 @@ function PoolsPage({ view, setView, token, onUpgrade, onSessionRejected }) {
     )
   }
 
+  if (view.name === 'history') {
+    return <HistoryPage token={token} poolId={view.poolId} onSessionRejected={onSessionRejected} onBack={() => setView({ name: 'list' })} />
+  }
+
   if (view.name === 'pool') {
     return (
       <PoolView
@@ -329,6 +336,7 @@ function PoolsPage({ view, setView, token, onUpgrade, onSessionRejected }) {
       onSessionRejected={onSessionRejected}
       onOpen={(poolId) => setView({ name: 'pool', poolId })}
       onCreate={() => setView({ name: 'create' })}
+      onOpenHistory={(poolId) => setView({ name: 'history', poolId })}
     />
   )
 }
