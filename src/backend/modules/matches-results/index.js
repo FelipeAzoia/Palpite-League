@@ -161,7 +161,104 @@ export function createSportsCatalogService(database, provider, {
     runInTransaction(database, () => {
       const previous = database.prepare('SELECT source, season FROM sports_catalog_metadata WHERE id = 1').get()
       if (previous && (previous.source !== provider.source || previous.season !== season)) {
-        database.exec('DELETE FROM sports_matches; DELETE FROM sports_rounds; DELETE FROM sports_teams;')
+        const hasCatalogReferences = database.prepare(`
+          SELECT 1
+          FROM pool_matches
+          UNION ALL
+          SELECT 1 FROM predictions
+          LIMIT 1
+        `).get()
+        if (hasCatalogReferences) {
+          const existingTeams = database.prepare('SELECT id, provider_id FROM sports_teams ORDER BY provider_id').all()
+          const sortedCatalogTeams = [...catalog.teams].sort((left, right) => left.name.localeCompare(right.name))
+          const teamIdByProviderId = new Map()
+          for (let index = 0; index < sortedCatalogTeams.length; index += 1) {
+            const team = sortedCatalogTeams[index]
+            const existing = existingTeams[index]
+            const id = existing?.id ?? randomUUID()
+            if (existing) {
+              database.prepare('UPDATE sports_teams SET provider_id = ?, name = ?, crest = ? WHERE id = ?')
+                .run(team.id, team.name, team.crest, id)
+            } else {
+              database.prepare('INSERT INTO sports_teams (id, provider_id, name, crest) VALUES (?, ?, ?, ?)')
+                .run(id, team.id, team.name, team.crest)
+            }
+            teamIdByProviderId.set(team.id, id)
+          }
+
+          const existingRounds = new Map(database.prepare('SELECT id, number FROM sports_rounds').all()
+            .map((round) => [round.number, round.id]))
+          const roundIdByProviderId = new Map()
+          for (const round of catalog.rounds) {
+            const existingId = existingRounds.get(round.number) ?? randomUUID()
+            if (existingRounds.has(round.number)) {
+              database.prepare('UPDATE sports_rounds SET provider_id = ?, number = ? WHERE id = ?')
+                .run(round.id, round.number, existingId)
+            } else {
+              database.prepare('INSERT INTO sports_rounds (id, provider_id, number, starts_on, ends_on) VALUES (?, ?, ?, NULL, NULL)')
+                .run(existingId, round.id, round.number)
+            }
+            roundIdByProviderId.set(round.id, existingId)
+          }
+
+          for (const round of catalog.rounds) {
+            const roundId = roundIdByProviderId.get(round.id)
+            const catalogMatches = catalog.matches.filter((match) => match.roundId === round.id)
+              .sort((left, right) => String(left.startsAt ?? '').localeCompare(String(right.startsAt ?? ''))
+                || left.id.localeCompare(right.id))
+            const existingMatches = database.prepare('SELECT id, provider_id FROM sports_matches WHERE round_id = ? ORDER BY starts_at, id')
+              .all(roundId)
+            for (let index = 0; index < catalogMatches.length; index += 1) {
+              const match = catalogMatches[index]
+              const existing = existingMatches[index]
+              if (existing) {
+                database.prepare(`
+                  UPDATE sports_matches
+                  SET provider_id = ?, round_id = ?, home_team_id = ?, away_team_id = ?, starts_at = ?, status = ?
+                  WHERE id = ?
+                `).run(
+                  match.id,
+                  roundId,
+                  teamIdByProviderId.get(match.homeTeamId),
+                  teamIdByProviderId.get(match.awayTeamId),
+                  match.startsAt,
+                  match.status,
+                  existing.id,
+                )
+              } else {
+                database.prepare(`
+                  INSERT INTO sports_matches (
+                    id, provider_id, round_id, home_team_id, away_team_id, starts_at, status
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                `).run(
+                  randomUUID(),
+                  match.id,
+                  roundId,
+                  teamIdByProviderId.get(match.homeTeamId),
+                  teamIdByProviderId.get(match.awayTeamId),
+                  match.startsAt,
+                  match.status,
+                )
+              }
+            }
+          }
+
+          const datesByRound = new Map()
+          for (const match of database.prepare('SELECT round_id, starts_at FROM sports_matches WHERE starts_at IS NOT NULL').all()) {
+            const date = localDate(match.starts_at)
+            const dates = datesByRound.get(match.round_id) ?? { startsOn: date, endsOn: date }
+            dates.startsOn = date < dates.startsOn ? date : dates.startsOn
+            dates.endsOn = date > dates.endsOn ? date : dates.endsOn
+            datesByRound.set(match.round_id, dates)
+          }
+          const updateRoundDates = database.prepare('UPDATE sports_rounds SET starts_on = ?, ends_on = ? WHERE id = ?')
+          for (const round of database.prepare('SELECT id FROM sports_rounds').all()) {
+            const dates = datesByRound.get(round.id)
+            updateRoundDates.run(dates?.startsOn ?? null, dates?.endsOn ?? null, round.id)
+          }
+        } else {
+          database.exec('DELETE FROM sports_matches; DELETE FROM sports_rounds; DELETE FROM sports_teams;')
+        }
       }
 
       const teamIdByProviderId = new Map()
