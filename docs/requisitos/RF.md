@@ -44,7 +44,7 @@ Quando um usuário acessar as informações de sua conta, o sistema deverá apre
 
 **Tipo EARS: Event-driven**
 
-Quando um usuário solicitar a contratação do plano Premium, o sistema deverá disponibilizar o processo de pagamento e ativar os recursos Premium após a confirmação da assinatura.
+Quando um usuário solicitar a contratação do plano Premium, escolhendo o ciclo mensal ou anual, o sistema deverá disponibilizar o processo de pagamento e ativar os recursos Premium após a confirmação da assinatura.
 
 ---
 
@@ -52,7 +52,7 @@ Quando um usuário solicitar a contratação do plano Premium, o sistema deverá
 
 **Tipo EARS: Event-driven**
 
-Quando um usuário acessar sua assinatura Premium, o sistema deverá apresentar seu status, período de vigência e informações relacionadas à cobrança.
+Quando um usuário acessar sua assinatura Premium, o sistema deverá apresentar seu status, ciclo, período de vigência e informações relacionadas à cobrança, incluindo a próxima cobrança ou, se a renovação foi cancelada, o fim dos recursos Premium.
 
 ---
 
@@ -60,7 +60,7 @@ Quando um usuário acessar sua assinatura Premium, o sistema deverá apresentar 
 
 **Tipo EARS: Event-driven**
 
-Quando um usuário solicitar o cancelamento da assinatura Premium, o sistema deverá registrar a solicitação e interromper novas cobranças conforme as condições da assinatura.
+Quando um usuário solicitar o cancelamento da assinatura Premium, o sistema deverá registrar a solicitação e interromper novas cobranças conforme as condições da assinatura, mantendo os recursos Premium até o fim do período já pago.
 
 ---
 
@@ -317,3 +317,19 @@ Quando ocorrer um evento relevante para o usuário, como aprovação de entrada,
 **Tipo EARS: Event-driven**
 
 Quando um participante acessar o histórico de um bolão, o sistema deverá apresentar informações sobre partidas, palpites, pontuações, ranking e resultados registrados durante sua participação.
+
+---
+
+## RF43 — Renovação automática da assinatura
+
+**Tipo EARS: Event-driven**
+
+Quando o período de uma assinatura Premium ativa terminar, o sistema deverá registrar a cobrança da renovação realizada pelo provedor de pagamentos e, confirmada a cobrança, estender a vigência por mais um ciclo.
+
+---
+
+## RF44 — Regularização do pagamento em atraso
+
+**Tipo EARS: Event-driven**
+
+Quando a cobrança da renovação for recusada durante a carência, o sistema deverá permitir que o usuário solicite uma nova tentativa de pagamento e, confirmada, reativar a assinatura com a vigência estendida a partir do fim do período anterior.

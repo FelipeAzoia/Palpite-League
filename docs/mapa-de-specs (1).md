@@ -142,6 +142,7 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 | SPEC-026 | Solicitação e processamento da premiação | 018, 025 |
 | SPEC-027 | Notificações de eventos | 010, 013, 016, 019, 020, 026 |
 | SPEC-028 | Histórico do bolão | 012, 013, 014, 015 |
+| SPEC-029 | Renovação recorrente, plano anual e pagamento em atraso | 018, 019, 020 |
 
 ---
 
@@ -564,6 +565,22 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 - **Dependências:** SPEC-012, SPEC-013, SPEC-014, SPEC-015.
 - **Justificativa da posição:** visão de leitura sobre dados produzidos pelas Specs de palpite, resultado, pontuação e ranking.
 - **Questões em aberto relacionadas:** OPEN-18, OPEN-34.
+
+### SPEC-029 — Renovação recorrente, plano anual e pagamento em atraso
+
+- **Acrescentada em 23/11/2026** por decisão da equipe, depois da aprovação das 28 Specs originais.
+- **Objetivo:** tornar a assinatura Premium recorrente (mensal ou anual com desconto), renovar a vigência a cada cobrança confirmada, tratar a renovação não paga com carência de 3 dias e encerrar o Premium no fim do período pago quando a renovação é cancelada.
+- **Valor entregue:** assinatura contínua, plano anual mais barato e cancelamento sem perda do período pago.
+- **RF:** RF06, RF07, RF08, RF43, RF44 (com registro conforme RF31).
+- **RB:** RB04, RB66, RB67, RB68; contexto: RB09 a RB12, RB55, RB56.
+- **RNF:** RNF04, RNF09, RNF10, RNF11, RNF15, RNF16, RNF21.
+- **Caso de uso/fluxo:** UC02 (contratação, consulta e cancelamento), estendido pela renovação.
+- **Entidades:** Assinatura, MovimentacaoFinanceira, Usuario, Bolao (somente o recurso ao vivo no fim do cancelamento).
+- **Drivers:** DA-03.
+- **ADRs:** ADR-0003, ADR-0005, ADR-0006, ADR-0008.
+- **Dependências:** SPEC-018, SPEC-019, SPEC-020.
+- **Justificativa da posição:** estende a contratação (019) e o ciclo de vida (020) da assinatura; altera partes delas, indicadas na própria Spec.
+- **Questões em aberto relacionadas:** OPEN-26 (integração real).
 
 ---
 

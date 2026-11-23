@@ -239,3 +239,15 @@ O sistema deverá registrar eventos técnicos relevantes para diagnosticar falha
 **Critério de aceitação:** erros de aplicação e falhas de integração registram data e hora, nível, componente, identificador de correlação e resultado; logs não incluem senhas, tokens ou dados pessoais/financeiros desnecessários.
 
 **Verificação:** provocar uma falha controlada em cada integração e conferir os campos do log e a ausência de dados sensíveis.
+
+---
+
+## RNF21 — Processamento periódico das renovações
+
+**Tipo EARS: Ubiquitous**
+
+O sistema deverá processar renovações, carências e fins de período das assinaturas por uma tarefa periódica, sem cobrança, extensão de vigência ou efeito duplicados.
+
+**Critério de aceitação:** a tarefa roda a cada 1 minuto e logo após a inicialização; repetir a tarefa ou a confirmação de uma cobrança não cria outra cobrança nem estende a vigência duas vezes; uma falha em uma assinatura não impede o processamento das demais.
+
+**Verificação:** executar a tarefa várias vezes, inclusive em paralelo, sobre o mesmo período e conferir uma única movimentação de renovação e uma única extensão; provocar a falha de uma assinatura e conferir que as demais são processadas.
