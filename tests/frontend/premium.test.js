@@ -31,11 +31,11 @@ describe('API da contratação do Premium (SPEC-019)', () => {
 
   it('contrata enviando só a confirmação e a versão aceita da política, nunca valor ou recorrência', async () => {
     const fetcher = okFetcher({ subscription: {} })
-    await subscribePremium('opaque', '2026-11-23', { fetcher })
+    await subscribePremium('opaque', '2026-11-23.2', 'annual', { fetcher })
     const [url, options] = fetcher.mock.calls[0]
     expect(url).toBe('/account/premium/subscription')
     expect(options.method).toBe('POST')
-    expect(JSON.parse(options.body)).toEqual({ confirm: true, billingPolicyVersion: '2026-11-23' })
+    expect(JSON.parse(options.body)).toEqual({ confirm: true, billingPolicyVersion: '2026-11-23.2', billingCycle: 'annual' })
   })
 
   it('confere no retorno do checkout e decide na página simulada', async () => {
@@ -80,7 +80,7 @@ describe('Tela da contratação do Premium (SPEC-019)', () => {
     expect(stageMessage('pending')).toMatch(/só depois que o pagamento for confirmado/)
     expect(stageMessage('pending_unstarted')).toMatch(/não foi confirmada/)
     expect(stageMessage('refused')).toMatch(/continua Gratuito/)
-    expect(stageMessage('active', { endsAt: '2026-12-14T15:05:00.000Z' })).toBe('Seu Premium está ativo. Vigência atual até 14/12/2026.')
+    expect(stageMessage('active', { nextChargeAt: '2026-12-14T15:05:00.000Z' })).toBe('Seu Premium está ativo e será renovado automaticamente em 14/12/2026.')
     expect(checkResultMessage('active')).toMatch(/agora é Premium/)
     expect(checkResultMessage('refused')).toMatch(/continua Gratuito/)
     expect(checkResultMessage('pending')).toMatch(/não foi confirmada/)

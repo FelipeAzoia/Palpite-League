@@ -8,7 +8,15 @@ import {
   fetchSimulatedPayment,
   subscribePremium,
 } from './premium-api.js'
-import { checkResultMessage, premiumAdvantages, premiumStage, priceLabel, stageMessage } from './premium-view.js'
+import {
+  checkResultMessage,
+  cycleHighlight,
+  cycleName,
+  premiumAdvantages,
+  premiumStage,
+  priceLabel,
+  stageMessage,
+} from './premium-view.js'
 import SubscriptionManager from './SubscriptionManager.jsx'
 import BillingPolicyDialog from './BillingPolicyDialog.jsx'
 import { billingPolicyTitle, billingPolicyVersion } from './billing-policy.js'
@@ -81,6 +89,8 @@ export default function PremiumSection({ token, conditions, activePools = 0, onC
   // Aceite da Política de Cobrança e Cancelamento: obrigatório antes de contratar (SPEC-019, CA-22).
   const [policyAccepted, setPolicyAccepted] = useState(false)
   const [policyOpen, setPolicyOpen] = useState(false)
+  // Ciclo escolhido: mensal ou anual com desconto (SPEC-029).
+  const [cycle, setCycle] = useState('monthly')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -108,7 +118,7 @@ export default function PremiumSection({ token, conditions, activePools = 0, onC
   }
 
   const subscribe = () => run(async () => {
-    const { subscription: created } = await subscribePremium(token, billingPolicyVersion)
+    const { subscription: created } = await subscribePremium(token, billingPolicyVersion, cycle)
     setConfirming(false)
     setPolicyAccepted(false)
     onChanged()
@@ -139,7 +149,7 @@ export default function PremiumSection({ token, conditions, activePools = 0, onC
 
   // Depois de cancelada ou expirada, a pessoa pode contratar de novo (SPEC-019).
   const canOffer = stage === 'offer' || stage === 'refused' || stage === 'ended'
-  const hasSubscriptionDetails = ['active', 'cancellation_pending', 'ended'].includes(stage) && subscription?.startsAt
+  const hasSubscriptionDetails = ['active', 'cancellation_pending', 'non_renewing', 'past_due', 'ended'].includes(stage) && subscription?.startsAt
 
   return (
     <section className="premium-section" aria-labelledby="premium-title">
@@ -166,7 +176,19 @@ export default function PremiumSection({ token, conditions, activePools = 0, onC
 
       {canOffer && (
         <div className="premium-offer">
-          <p className="premium-price"><strong>{priceLabel(conditions)}</strong> <span>· {conditions.currency} · renovação mensal</span></p>
+          <div className="cycle-options" role="radiogroup" aria-label="Plano de cobrança">
+            {(conditions.cycles ?? []).map((option) => (
+              <label key={option.id} className={`cycle-option${cycle === option.id ? ' is-selected' : ''}`}>
+                <input type="radio" name="premium-cycle" value={option.id} checked={cycle === option.id} onChange={() => setCycle(option.id)} />
+                <span className="cycle-name">
+                  {cycleName(option.id)}
+                  {option.savingsCents > 0 && <span className="cycle-badge">2 meses grátis</span>}
+                </span>
+                <strong>{priceLabel(conditions, option.id)}</strong>
+                <small>{cycleHighlight(option) || 'Renovação automática todo mês'}</small>
+              </label>
+            ))}
+          </div>
           <ul className="feature-list">
             {premiumAdvantages(conditions.plan.features).map((feature) => (
               <li key={feature.id}><span>{feature.label}</span><strong>{feature.value}</strong></li>
@@ -178,7 +200,8 @@ export default function PremiumSection({ token, conditions, activePools = 0, onC
           {confirming && (
             <div className="premium-confirm" role="group" aria-label="Confirmar contratação">
               <p>
-                Você vai contratar o Premium por <strong>{priceLabel(conditions)}</strong>, com vigência de um mês.
+                Você vai contratar o Premium {cycleName(cycle).toLowerCase()} por <strong>{priceLabel(conditions, cycle)}</strong>,
+                com renovação automática {cycle === 'annual' ? 'a cada ano' : 'a cada mês'} até você cancelar.
                 Os recursos só são ativados depois da confirmação do pagamento de teste.
               </p>
               <label className="policy-accept">

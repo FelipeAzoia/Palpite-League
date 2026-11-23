@@ -100,7 +100,7 @@ export function createMercadoPagoTestPaymentsProvider({
     if (!subscriptionsProofApproved) throw new PaymentsProviderError('response_error')
   }
 
-  async function startSubscription({ operationKey, amountCents, currency, payer }) {
+  async function startSubscription({ operationKey, amountCents, currency, payer, context }) {
     requireSubscriptionsProof()
     if (typeof payer?.email !== 'string' || payer.email === '' || !backUrl) throw new PaymentsProviderError('response_error')
     const body = await request('POST', '/preapproval', {
@@ -112,7 +112,8 @@ export function createMercadoPagoTestPaymentsProvider({
         back_url: backUrl,
         status: 'pending',
         auto_recurring: {
-          frequency: 1,
+          // Ciclo mensal ou anual (SPEC-029): o provedor cobra sozinho a cada ciclo.
+          frequency: context?.billingCycle === 'annual' ? 12 : 1,
           frequency_type: 'months',
           transaction_amount: Number(`${Math.trunc(amountCents / 100)}.${String(amountCents % 100).padStart(2, '0')}`),
           currency_id: currency,
@@ -168,6 +169,32 @@ export function createMercadoPagoTestPaymentsProvider({
     return { providerId, status: body.status === 'cancelled' ? 'confirmed' : 'pending' }
   }
 
+  // SPEC-029 — cobrança recorrente da renovação. O Mercado Pago cobra o ciclo sozinho; o sistema só
+  // registra a expectativa e consulta os pagamentos autorizados da assinatura a partir do fim do
+  // período. Aprovado confirma; recusado ou cancelado (fora do reprocessamento) recusa; o resto fica pendente.
+  async function startSubscriptionRenewal({ context }) {
+    requireSubscriptionsProof()
+    const preapprovalId = preapprovalIdOf(context?.subscriptionProviderId, 'mp-sub-')
+    const periodEndsAt = Date.parse(context?.periodEndsAt ?? '')
+    if (!preapprovalId || !Number.isFinite(periodEndsAt)) throw new PaymentsProviderError('response_error')
+    return { providerId: `mp-renew-${Math.trunc(periodEndsAt / 1000)}-${preapprovalId}`, continuation: null }
+  }
+
+  async function consultSubscriptionRenewal({ providerId }) {
+    requireSubscriptionsProof()
+    const match = /^mp-renew-(\d+)-(.+)$/.exec(providerId ?? '')
+    if (!match) throw new PaymentsProviderError('invalid_response')
+    const periodEndsAt = Number(match[1]) * 1000
+    const body = await request('GET', `/authorized_payments/search?preapproval_id=${encodeURIComponent(match[2])}`)
+    if (!Array.isArray(body?.results)) throw new PaymentsProviderError('invalid_response')
+    const charges = body.results.filter((item) => Date.parse(item?.date_created ?? '') >= periodEndsAt - 24 * 60 * 60 * 1000)
+    let status = 'pending'
+    if (charges.some((item) => item?.payment?.status === 'approved')) status = 'confirmed'
+    else if (charges.length > 0 && charges.every((item) => item?.status === 'cancelled'
+      || (item?.payment?.status === 'rejected' && item?.status !== 'recycling'))) status = 'refused'
+    return { providerId, status }
+  }
+
   return {
     source: 'test_provider',
     startOperation,
@@ -176,5 +203,7 @@ export function createMercadoPagoTestPaymentsProvider({
     consultSubscription,
     startSubscriptionCancellation,
     consultSubscriptionCancellation,
+    startSubscriptionRenewal,
+    consultSubscriptionRenewal,
   }
 }

@@ -59,6 +59,20 @@ export function createSimulatedPaymentsProvider() {
     return { providerId: started.providerId, continuation: null }
   }
 
+  // SPEC-029: a cobrança recorrente da renovação. O provedor simulado cobra o ciclo sozinho; o
+  // resultado vem de setRenewalOutcome ('confirmed' por padrão, 'refused' ou 'pending').
+  let renewalOutcome = 'confirmed'
+  async function startSubscriptionRenewal(input) {
+    const started = await startOperation(input)
+    operations.get(input.operationKey).status = renewalOutcome
+    return { providerId: started.providerId, continuation: null }
+  }
+
+  function setRenewalOutcome(status) {
+    if (!['confirmed', 'refused', 'pending'].includes(status)) throw new TypeError('unsupported renewal outcome')
+    renewalOutcome = status
+  }
+
   async function consultOperation(reference) {
     calls.consult += 1
     const failure = takeFailure('consult')
@@ -91,6 +105,9 @@ export function createSimulatedPaymentsProvider() {
     consultSubscription: consultOperation,
     startSubscriptionCancellation,
     consultSubscriptionCancellation: consultOperation,
+    startSubscriptionRenewal,
+    consultSubscriptionRenewal: consultOperation,
+    setRenewalOutcome,
     confirm: (operationKey) => setStatus(operationKey, 'confirmed'),
     refuse: (operationKey) => setStatus(operationKey, 'refused'),
     failNext,

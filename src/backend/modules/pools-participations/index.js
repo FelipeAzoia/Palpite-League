@@ -78,10 +78,11 @@ export function createPoolsService(database, { auditStore, sportsCatalog, now = 
     return database.prepare("SELECT COUNT(*) AS count FROM pools WHERE creator_id = ? AND status = 'active'").get(userId).count
   }
 
-  // Com o cancelamento do Premium pendente, o limite de criação já é o do Gratuito: quem pediu o
-  // cancelamento com no máximo 1 bolão em andamento não abre outros antes de ele valer (SPEC-020, CA-20).
+  // Com o cancelamento do Premium pendente ou a renovação já cancelada, o limite de criação já é o do
+  // Gratuito: quem cancelou com no máximo 1 bolão em andamento não abre outros até o fim do período
+  // (SPEC-020 CA-20, SPEC-029 CA-10).
   function cancellationPending(userId) {
-    return Boolean(database.prepare("SELECT 1 FROM subscriptions WHERE user_id = ? AND status = 'cancellation_pending'").get(userId))
+    return Boolean(database.prepare("SELECT 1 FROM subscriptions WHERE user_id = ? AND status IN ('cancellation_pending', 'non_renewing')").get(userId))
   }
 
   function availabilityOf(user) {

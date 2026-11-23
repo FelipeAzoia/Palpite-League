@@ -3,7 +3,7 @@ import { AppError } from '../../shared/app-error.js'
 import { getPlan } from '../auth-users/index.js'
 import { formatCents } from './financial-core.js'
 import { paymentsProviderSources } from './payments-provider.js'
-import { createSubscriptionStore, premiumStatuses, subscriptionStatuses } from './subscription-store.js'
+import { billingCycles, createSubscriptionStore, premiumStatuses, subscriptionStatuses } from './subscription-store.js'
 
 // SPEC-019 — contratação do Premium e ativação dos recursos.
 // - a assinatura nasce pendente, na mesma transação da movimentação e da auditoria (INV-004);
@@ -26,16 +26,20 @@ const changeSchema = { amountCents: { type: 'integer' }, previousState: statusSc
 export const subscriptionAuditDetailSchemas = Object.freeze({
   [subscriptionActions.requested]: {
     amountCents: { type: 'integer' }, newState: statusSchema, origin: originSchema, billingPolicyVersion: { type: 'identifier' },
+    billingCycle: { type: 'enum', values: billingCycles },
   },
   [subscriptionActions.activated]: changeSchema,
   [subscriptionActions.refused]: changeSchema,
 })
 
 export const defaultPremiumPriceCents = 1990
+// Plano anual (SPEC-029, RB66): R$ 199,00, equivalente a 2 meses grátis em relação a doze mensalidades.
+export const defaultPremiumAnnualPriceCents = 19900
 export const premiumRecurrence = 'monthly'
-// Política de Cobrança e Cancelamento (SPEC-019, CA-22): a contratação exige o aceite da versão em vigor.
-// Ao mudar o texto da política no frontend, mude também esta versão.
-export const billingPolicyVersion = '2026-11-23'
+export { billingCycles }
+// Política de Cobrança e Cancelamento (SPEC-019 CA-22, SPEC-029 CA-13): a contratação exige o aceite da
+// versão em vigor. Ao mudar o texto da política no frontend, mude também esta versão.
+export const billingPolicyVersion = '2026-11-23.2'
 
 const systemActor = Object.freeze({ type: 'system' })
 
@@ -44,6 +48,21 @@ export function addCalendarMonth(isoDate) {
   const start = new Date(isoDate)
   const year = start.getUTCFullYear()
   const month = start.getUTCMonth() + 1
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(
+    year, month, Math.min(start.getUTCDate(), lastDay),
+    start.getUTCHours(), start.getUTCMinutes(), start.getUTCSeconds(), start.getUTCMilliseconds(),
+  )).toISOString()
+}
+
+// Um ciclo de cobrança em UTC: um mês ou doze meses de calendário (SPEC-029).
+// Mesmo dia no mês de destino; se ele não existe, o último dia desse mês (como no mensal, OPEN-86).
+export function addBillingCycle(isoDate, cycle) {
+  const months = cycle === 'annual' ? 12 : 1
+  const start = new Date(isoDate)
+  const total = start.getUTCMonth() + months
+  const year = start.getUTCFullYear() + Math.floor(total / 12)
+  const month = total % 12
   const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
   return new Date(Date.UTC(
     year, month, Math.min(start.getUTCDate(), lastDay),
@@ -69,9 +88,15 @@ export function createPremiumSubscriptionService(database, {
   paymentsProvider,
   now = Date.now,
   priceCents = defaultPremiumPriceCents,
+  annualPriceCents = defaultPremiumAnnualPriceCents,
 } = {}) {
   if (!auditStore || !financialCore || !paymentsProvider) throw new TypeError('auditStore, financialCore and paymentsProvider are required')
   if (!Number.isSafeInteger(priceCents) || priceCents <= 0) throw new RangeError('premium price must be a positive integer amount of cents')
+  // O anual sempre custa menos que doze mensalidades (SPEC-029, INV-002).
+  if (!Number.isSafeInteger(annualPriceCents) || annualPriceCents <= 0 || annualPriceCents >= priceCents * 12) {
+    throw new RangeError('annual premium price must be positive and cheaper than twelve monthly payments')
+  }
+  const cyclePrices = Object.freeze({ monthly: priceCents, annual: annualPriceCents })
   const nowIso = () => new Date(now()).toISOString()
 
   const readUser = (userId) => {
@@ -110,7 +135,7 @@ export function createPremiumSubscriptionService(database, {
         database.prepare(`
           UPDATE subscriptions SET status = 'active', starts_at = ?, ends_at = ?, updated_at = ?
           WHERE id = ? AND status = 'pending'
-        `).run(startsAt, addCalendarMonth(startsAt), startsAt, row.id)
+        `).run(startsAt, addBillingCycle(startsAt, row.recurrence), startsAt, row.id)
         database.prepare("UPDATE users SET plan = 'premium' WHERE id = ?").run(row.user_id)
       })
     },
@@ -136,6 +161,14 @@ export function createPremiumSubscriptionService(database, {
       amount: formatCents(priceCents),
       currency: 'BRL',
       recurrence: premiumRecurrence,
+      // Ciclos de cobrança (SPEC-029, CA-01): valor, mensal equivalente e economia frente a 12 mensalidades.
+      cycles: billingCycles.map((cycle) => ({
+        id: cycle,
+        priceCents: cyclePrices[cycle],
+        amount: formatCents(cyclePrices[cycle]),
+        monthlyEquivalentCents: cycle === 'annual' ? Math.floor(cyclePrices.annual / 12) : cyclePrices.monthly,
+        savingsCents: cycle === 'annual' ? cyclePrices.monthly * 12 - cyclePrices.annual : 0,
+      })),
       environment: 'test',
       origin: paymentsProvider.source,
       simulated: paymentsProvider.source === 'simulator',
@@ -158,7 +191,7 @@ export function createPremiumSubscriptionService(database, {
   function validateRequest(body) {
     const input = body !== null && typeof body === 'object' && !Array.isArray(body) ? body : {}
     // Valor, recorrência e qualquer outra condição pertencem ao backend (CA-16).
-    const fields = Object.fromEntries(Object.keys(input).filter((key) => key !== 'confirm' && key !== 'billingPolicyVersion')
+    const fields = Object.fromEntries(Object.keys(input).filter((key) => !['confirm', 'billingPolicyVersion', 'billingCycle'].includes(key))
       .map((key) => [key, 'As condições da contratação são definidas pelo sistema.']))
     if (Object.keys(fields).length > 0) throw new AppError(400, 'validation_error', 'Confira os campos informados.', fields)
     if (input.confirm !== true) {
@@ -170,10 +203,17 @@ export function createPremiumSubscriptionService(database, {
         billingPolicyVersion: 'Aceite a versão atual da política.',
       })
     }
+    // Ciclo escolhido (SPEC-029); sem ciclo, vale o mensal. O valor de cada ciclo é do backend.
+    const billingCycle = Object.hasOwn(input, 'billingCycle') ? input.billingCycle : 'monthly'
+    if (!billingCycles.includes(billingCycle)) {
+      throw new AppError(400, 'validation_error', 'Escolha o ciclo mensal ou anual.', { billingCycle: 'Use "monthly" ou "annual".' })
+    }
+    return billingCycle
   }
 
   async function subscribe(userId, body) {
-    validateRequest(body)
+    const billingCycle = validateRequest(body)
+    const amountCents = cyclePrices[billingCycle]
     const user = readUser(userId)
     let current = currentSubscription(userId)
     if (hasPremium(user, current)) throw alreadyPremium()
@@ -189,11 +229,12 @@ export function createPremiumSubscriptionService(database, {
     const origin = paymentsProvider.source
     const { movement } = await financialCore.startMovement({
       type: 'subscription',
-      amountCents: priceCents,
+      amountCents,
       userId,
       operation: { type: 'subscription', id },
     }, {
       payer: { email: user.email },
+      providerContext: { billingCycle },
       onCreate: (_movement, { database: transaction }) => {
         const at = nowIso()
         auditStore.runAuditedOperation({
@@ -201,13 +242,13 @@ export function createPremiumSubscriptionService(database, {
           action: subscriptionActions.requested,
           object: { type: 'subscription', id },
           origin,
-          details: { amountCents: priceCents, newState: 'pending', origin, billingPolicyVersion },
+          details: { amountCents, newState: 'pending', origin, billingPolicyVersion, billingCycle },
         }, () => {
           transaction.prepare(`
             INSERT INTO subscriptions (
               id, user_id, status, amount_cents, currency, recurrence, origin, billing_policy_version, created_at, updated_at
             ) VALUES (?, ?, 'pending', ?, 'BRL', ?, ?, ?, ?, ?)
-          `).run(id, userId, priceCents, premiumRecurrence, origin, billingPolicyVersion, at, at)
+          `).run(id, userId, amountCents, billingCycle, origin, billingPolicyVersion, at, at)
         })
       },
     })
