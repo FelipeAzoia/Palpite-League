@@ -1,6 +1,6 @@
 # Mapa de Specs — Palpite League
 
-- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
+- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
 - **Etapa:** Spec-Driven Development, decomposição do projeto em Specs (prompt principal).
 - **Escopo deste documento:** somente o índice ordenado de Specs, as análises que o sustentam e as questões em aberto. Nenhuma Spec individual, código, banco de dados, endpoint ou escolha tecnológica nova foi produzida.
 - **Fonte de verdade:** artefatos de `docs/` (visão, personas, RF, RB, RNF, modelo de domínio, casos de uso, drivers, ADRs, arquitetura consolidada e validação do Mercado Pago).
@@ -159,7 +159,7 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 - **ADRs:** ADR-0001, ADR-0004, ADR-0005.
 - **Dependências:** nenhuma.
 - **Justificativa da posição:** todas as Specs exigem módulos, persistência transacional, testes independentes de provedores e log técnico; a necessidade está demonstrada em ADR-0001, ADR-0004 e RNF19.
-- **Questões em aberto relacionadas:** resolvidas OPEN-03, OPEN-06, OPEN-35 e OPEN-39 a OPEN-44; em aberto OPEN-48 (confirmação da versão do Node.js).
+- **Questões em aberto relacionadas:** resolvidas OPEN-03, OPEN-06, OPEN-35, OPEN-39 a OPEN-44 e OPEN-48 (Node.js v24.16.0 confirmado em 05/11/2026).
 
 ### SPEC-002 — Trilha de auditoria (técnica)
 
@@ -616,7 +616,7 @@ Cada RNF aparece nas Specs em que é verificável (campo **RNF** de cada Spec). 
 
 Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita a origem da lacuna ou da inconsistência e as Specs afetadas.
 
-> **Situação em 23/10/2026:** OPEN-01 a OPEN-47 foram resolvidas pela proposta aprovada em `proposta-resolucao-questoes-em-aberto.md`; os textos abaixo permanecem para rastreabilidade e a decisão de cada uma está nesse documento. OPEN-01, OPEN-26, OPEN-27 e OPEN-29 têm a decisão aprovada, mas dependem de validações externas executadas pela equipe; até lá vale o simulador identificado. OPEN-49 a OPEN-87, criadas nas SPEC-003 a SPEC-019, e OPEN-88 a OPEN-166, criadas nas SPEC-020 a SPEC-028, foram resolvidas com a aprovação dessas Specs. As OPEN de conferência da baseline (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159) registram textos de requisitos e decisões que não estavam disponíveis na geração das Specs correspondentes. Em aberto: OPEN-48.
+> **Situação em 23/10/2026:** OPEN-01 a OPEN-47 foram resolvidas pela proposta aprovada em `proposta-resolucao-questoes-em-aberto.md`; os textos abaixo permanecem para rastreabilidade e a decisão de cada uma está nesse documento. OPEN-01, OPEN-26, OPEN-27 e OPEN-29 têm a decisão aprovada, mas dependem de validações externas executadas pela equipe; até lá vale o simulador identificado. OPEN-49 a OPEN-87, criadas nas SPEC-003 a SPEC-019, e OPEN-88 a OPEN-166, criadas nas SPEC-020 a SPEC-028, foram resolvidas com a aprovação dessas Specs. As OPEN de conferência da baseline (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159) registram textos de requisitos e decisões que não estavam disponíveis na geração das Specs correspondentes. OPEN-48 foi resolvida em 05/11/2026 com a confirmação do Node.js v24.16.0 pela equipe (ADR-0008). Em aberto: nenhuma.
 
 ### Integrações e dados esportivos
 
@@ -685,7 +685,7 @@ Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita
 - **OPEN-45 - decisão necessária:** definir os valores de ação e de resultado do registro de auditoria, quais tentativas falhas ou negadas são auditáveis e como representar o ator não identificado. Origem: SPEC-002, RNF04, arquitetura §4.3 e §7.7. Afeta: 002, 003 e Specs com operações auditáveis.
 - **OPEN-46 - decisão necessária:** definir a relação entre a operação auditada e seu registro quando a gravação do registro falha (desfazer ou manter e sinalizar) e se o registro de falhas sobrevive ao desfazimento. Origem: SPEC-002, RNF02, RNF04, RNF16. Afeta: 002 e Specs com operações auditáveis.
 - **OPEN-47 - decisão necessária:** definir o conteúdo do registro além dos campos obrigatórios (valores anterior e novo, correlação) e a relação com `Participacao.aceiteRegrasEm`, `Palpite.dataEnvio` e `MovimentacaoFinanceira`. Origem: SPEC-002, RNF10, RNF16. Afeta: 002, 009, 012, 018.
-- **OPEN-48 - confirmação necessária:** confirmar que a versão do Node.js instalada na máquina da equipe é 20.6 ou superior, requisito do carregamento nativo do `.env` (ADR-0008). Origem: SPEC-001, ADR-0008. Afeta: 001 e todas as Specs.
+- **OPEN-48 - confirmação necessária:** confirmar que a versão do Node.js instalada na máquina da equipe é 20.6 ou superior, requisito do carregamento nativo do `.env` (ADR-0008). Origem: SPEC-001, ADR-0008. Afeta: 001 e todas as Specs. **Resolvida em 05/11/2026:** a equipe confirmou o Node.js v24.16.0 (registrado na ADR-0008).
 - **OPEN-49 - decisão necessária:** definir o comportamento após o cadastro, as sessões simultâneas e a guarda do token no navegador. Origem: SPEC-003, ADR-0007. Afeta: 003 e Specs com telas autenticadas.
 - **OPEN-50 - decisão necessária:** definir a mensagem de falha de login e o tratamento de tentativas repetidas. Origem: SPEC-003, RNF01. Afeta: 003.
 - **OPEN-51 - decisão necessária:** definir os parâmetros do `scrypt`. Origem: SPEC-003, ADR-0007, RNF06. Afeta: 003, 004.
@@ -811,4 +811,4 @@ Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita
 
 ## 5. Próximo passo
 
-Mapa aprovado, questões em aberto resolvidas e as 28 Specs geradas e aprovadas (SPEC-001 a SPEC-028). Pendências: OPEN-48 (confirmação do Node.js 20.6 ou superior), as validações externas executadas pela equipe (OPEN-01, OPEN-26, OPEN-27 e OPEN-29) e a conferência da baseline registrada nas OPEN de conferência (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159). A implementação segue cada Spec aprovada, na ordem do índice, sem misturar a geração da Spec com a implementação; qualquer divergência entre código, Spec e baseline é registrada e decidida pela equipe humana.
+Mapa aprovado, questões em aberto resolvidas e as 28 Specs geradas e aprovadas (SPEC-001 a SPEC-028). Nenhuma questão em aberto: a OPEN-48 foi resolvida em 05/11/2026 (Node.js v24.16.0). Pendências: as validações externas executadas pela equipe (OPEN-01, OPEN-26, OPEN-27 e OPEN-29) e a conferência da baseline registrada nas OPEN de conferência (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159). A implementação segue cada Spec aprovada, na ordem do índice, sem misturar a geração da Spec com a implementação; qualquer divergência entre código, Spec e baseline é registrada e decidida pela equipe humana.

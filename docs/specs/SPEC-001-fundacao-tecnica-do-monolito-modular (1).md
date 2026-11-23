@@ -1,6 +1,6 @@
 # SPEC-001 — Fundação técnica do monólito modular
 
-- **Status:** revisada com as decisões aprovadas da proposta de resolução das questões em aberto; liberada para implementação, salvo OPEN-48.
+- **Status:** revisada com as decisões aprovadas da proposta de resolução das questões em aberto; liberada para implementação. OPEN-48 resolvida em 05/11/2026 (Node.js v24.16.0 confirmado pela equipe, ADR-0008).
 - **Tipo:** Spec técnica (necessidade demonstrada nos artefatos de arquitetura; ver seção 2).
 - **Baseline:** artefatos de `docs/` (incluindo ADR-0006, ADR-0007 e ADR-0008), `docs/specs/mapa-de-specs.md` e `docs/specs/proposta-resolucao-questoes-em-aberto.md`.
 - **Escopo deste documento:** somente a SPEC-001. Nenhum código, banco de dados de domínio ou endpoint de negócio.
@@ -66,7 +66,7 @@
 
 ### Pré-condições
 
-- Ambiente local com Node.js 20.6 ou superior (a versão instalada deve ser confirmada; OPEN-48) e dependências do projeto instaladas.
+- Ambiente local com Node.js 20.6 ou superior (a equipe confirmou o v24.16.0 em 05/11/2026; OPEN-48) e dependências do projeto instaladas.
 - Arquivo `.env` criado a partir de `.env.example`, sem nenhuma credencial de provedor externo.
 
 ### Fluxo principal: inicialização e verificação
@@ -231,7 +231,7 @@ Lista mínima; os testes não são implementados nesta etapa.
 
 ### Em aberto
 
-- **OPEN-48 - confirmação necessária:** confirmar que a versão do Node.js instalada na máquina da equipe é 20.6 ou superior, requisito do carregamento nativo do `.env` (ADR-0008). A implementação não deve começar sem essa confirmação.
+- **OPEN-48 - confirmação necessária:** confirmar que a versão do Node.js instalada na máquina da equipe é 20.6 ou superior, requisito do carregamento nativo do `.env` (ADR-0008). A implementação não deve começar sem essa confirmação. **Resolvida em 05/11/2026:** a equipe confirmou o Node.js v24.16.0 (ADR-0008).
 
 ## 14. Definition of Done da Spec
 
