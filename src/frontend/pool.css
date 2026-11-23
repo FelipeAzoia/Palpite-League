@@ -176,6 +176,11 @@
 .mrow-vs { color: #a9b3ab; font-size: 13px; }
 .score-box { display: inline-flex; align-items: center; gap: 6px; min-width: 64px; justify-content: center; padding: 4px 10px; border-radius: 4px; color: #f8faef; background: var(--forest); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .score-box i { color: #9fb7a6; font-style: normal; font-weight: 400; }
+.score-box-live { color: var(--live); background: #fbefe9; box-shadow: inset 0 0 0 1px #efcfc2; }
+.score-box-live i { color: #d39a85; }
+.mrow-live .mrow-side { flex-direction: column; align-items: flex-end; gap: 3px; }
+.live-caption { display: grid; color: var(--muted); font-size: 10px; line-height: 1.35; text-align: right; white-space: nowrap; }
+.live-caption span:first-child { color: #8a5a47; font-weight: 650; }
 .score-box-pick { color: var(--forest); background: #eef3e6; box-shadow: inset 0 0 0 1px #d3dfc4; }
 .score-box-pick i { color: #9bae94; }
 .pick-chip { padding: 4px 10px; border-radius: 4px; color: var(--forest); background: #eef3e6; box-shadow: inset 0 0 0 1px #d3dfc4; font-size: 11px; font-weight: 750; letter-spacing: .02em; }

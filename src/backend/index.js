@@ -1,6 +1,7 @@
 import {
   createApp,
   defaultFinancialReconciliationIntervalMs,
+  defaultLiveResultsIntervalMs,
   defaultMedalsIntervalMs,
   defaultResultsSyncIntervalMs,
   defaultScoringIntervalMs,
@@ -32,6 +33,11 @@ scheduler.register(
   'results-sync',
   Number(process.env.RESULTS_SYNC_INTERVAL_MS || defaultResultsSyncIntervalMs),
   app.locals.tasks.syncResults,
+)
+scheduler.register(
+  'live-results',
+  Number(process.env.LIVE_RESULTS_INTERVAL_MS || defaultLiveResultsIntervalMs),
+  app.locals.tasks.refreshLiveScores,
 )
 scheduler.register(
   'scoring',

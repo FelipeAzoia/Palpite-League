@@ -75,12 +75,16 @@ export function createApiFootballSportsProvider({
 } = {}) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError('Sports provider timeout must be positive')
 
-  async function requestFixtures(season) {
+  async function requestFixtures(season, fixtureId = null) {
     if (!apiKey) throw new SportsProviderError('response_error')
 
     const url = new URL('/fixtures', baseUrl)
-    url.searchParams.set('league', String(brasileiraoLeagueId))
-    url.searchParams.set('season', String(season))
+    if (fixtureId === null) {
+      url.searchParams.set('league', String(brasileiraoLeagueId))
+      url.searchParams.set('season', String(season))
+    } else {
+      url.searchParams.set('id', String(fixtureId))
+    }
 
     let response
     try {
@@ -111,6 +115,27 @@ export function createApiFootballSportsProvider({
     source: 'api-football',
     async fetchCatalog(season) {
       return parseResponse(await requestFixtures(season))
+    },
+    // Porta ao vivo (SPEC-021): uma partida por consulta, com o placar parcial em andamento. O
+    // instante da leitura é o da resposta; a validação do domínio decide se a leitura serve.
+    async fetchLiveScore(providerId) {
+      const body = await requestFixtures(null, providerId)
+      if (!body || !Array.isArray(body.response) || body.response.length !== 1) throw new SportsProviderError('invalid_response')
+      const [fixture] = body.response
+      let status
+      try {
+        status = mapStatus(fixture?.fixture?.status?.short)
+      } catch {
+        status = null
+      }
+      const scored = status === 'in_progress' || status === 'finished'
+      return {
+        id: fixture?.fixture?.id === undefined || fixture?.fixture?.id === null ? null : String(fixture.fixture.id),
+        status,
+        homeScore: scored ? fixture?.goals?.home ?? null : null,
+        awayScore: scored ? fixture?.goals?.away ?? null : null,
+        observedAt: new Date().toISOString(),
+      }
     },
     // Porta de resultados (SPEC-013). Status desconhecido vira null: o domínio decide se o item
     // é de partida acompanhada (rejeita a resposta) ou não (ignora), conforme a OPEN-75.
