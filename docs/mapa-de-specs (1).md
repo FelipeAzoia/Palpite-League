@@ -1,6 +1,6 @@
 # Mapa de Specs — Palpite League
 
-- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: acrescentada a SPEC-029 (renovação recorrente, plano anual e pagamento em atraso), aprovada pela equipe nesta data, totalizando 29 Specs; OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
+- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: acrescentada a SPEC-029 (renovação recorrente, plano anual e pagamento em atraso), aprovada pela equipe nesta data, totalizando 29 Specs; as 29 Specs estão implementadas e integradas ao `main` (situação na seção 5); OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
 - **Etapa:** Spec-Driven Development, decomposição do projeto em Specs (prompt principal).
 - **Escopo deste documento:** somente o índice ordenado de Specs, as análises que o sustentam e as questões em aberto. Nenhuma Spec individual, código, banco de dados, endpoint ou escolha tecnológica nova foi produzida.
 - **Fonte de verdade:** artefatos de `docs/` (visão, personas, RF, RB, RNF, modelo de domínio, casos de uso, drivers, ADRs, arquitetura consolidada e validação do Mercado Pago).
@@ -807,8 +807,65 @@ Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita
 
 ---
 
+## 5. Situação da implementação
+
+Atualizado em 23/11/2026. As 29 Specs estão implementadas e integradas ao `main`, cada uma com os critérios de aceitação cobertos por testes automatizados (suíte do backend com `node:test` e do frontend com Vitest, ESLint sem avisos e build do Vite, executados pela pipeline de CI). Nas questões em aberto de cada Spec, a implementação seguiu as propostas aprovadas na seção 13 da própria Spec.
+
+| ID | Nome | Integração ao `main` | Pendência externa |
+| --- | --- | --- | --- |
+| SPEC-001 | Fundação técnica do monólito modular | PR #25 e #26 | — |
+| SPEC-002 | Trilha de auditoria | PR #26 e #27 | — |
+| SPEC-003 | Cadastro e autenticação de usuário | PR #27 | — |
+| SPEC-004 | Recuperação de acesso | PR #28 | — |
+| SPEC-005 | Perfil do usuário e consulta do plano | PR #29 | — |
+| SPEC-006 | Consulta de times, rodadas e partidas | commit `ed97848` | Prova técnica da API-Football (OPEN-01); até lá, provedor simulado |
+| SPEC-007 | Criação, configuração e consulta das regras do bolão | PR #30 | — |
+| SPEC-008 | Convites para o bolão | PR #31 | — |
+| SPEC-009 | Solicitação de entrada, aceite das regras e entrada tardia | PR #33 | — |
+| SPEC-010 | Decisão administrativa de entrada | PR #34 | — |
+| SPEC-011 | Promoção a coadministrador | PR #35 | — |
+| SPEC-012 | Palpite dentro do prazo | PR #37 | — |
+| SPEC-013 | Sincronização de resultados oficiais | PR #38 | Prova técnica da API-Football (OPEN-01) |
+| SPEC-014 | Cálculo automático da pontuação | PR #39 | — |
+| SPEC-015 | Ranking, desempate e desempenho | PR #40 | — |
+| SPEC-016 | Melhor jogador da rodada e medalhas | PR #41 | — |
+| SPEC-017 | Saída voluntária do bolão | PR #42 | — |
+| SPEC-018 | Núcleo financeiro de teste | PR #43 | — |
+| SPEC-019 | Contratação do Premium | PR #44 | Smoke tests das Assinaturas no sandbox do Mercado Pago (OPEN-26) |
+| SPEC-020 | Consulta e cancelamento da assinatura | PR #46 | Smoke tests das Assinaturas (OPEN-26) |
+| SPEC-021 | Resultados ao vivo em bolões Premium | PR #49 | Prova técnica da API-Football (OPEN-01) |
+| SPEC-022 | Pagamento da taxa de entrada | PR #48 | Smoke tests do Checkout Pro no sandbox (OPEN-26) |
+| SPEC-023 | Solicitação e decisão de devolução | PR #50 | — |
+| SPEC-024 | Processamento da devolução | PR #52 | Validação do reembolso no sandbox (OPEN-27); o adaptador do Mercado Pago ainda não tem a operação de devolução |
+| SPEC-025 | Encerramento automático e vencedor | PR #53 | — |
+| SPEC-026 | Solicitação e processamento da premiação | PR #54 | Validação do repasse no sandbox (OPEN-29); a integração de premiação consta como não atendida |
+| SPEC-027 | Notificações de eventos | PR #55 | — |
+| SPEC-028 | Histórico do bolão | PR #56 | — |
+| SPEC-029 | Renovação recorrente, plano anual e pagamento em atraso | PR #47 | Smoke tests das Assinaturas (OPEN-26) |
+
+Enquanto as pendências externas não forem resolvidas, os provedores simulados ficam ativos e são sempre identificados como simulação, conforme ADR-0002 e ADR-0003.
+
+### 5.1 Ajustes em Specs anteriores feitos durante a implementação
+
+Mudanças de código que uma Spec precisou fazer em módulos de Specs anteriores, sem alterar o comportamento aprovado delas:
+
+- **SPEC-018 (núcleo financeiro), pelas SPEC-022, 024 e 026:**
+  - a falha do provedor ao iniciar a cobrança da taxa de entrada encerra a tentativa como recusada, sem cobrança (OPEN-111);
+  - devolução e repasse da premiação têm operações próprias na porta de pagamentos e nunca usam a operação genérica, que seria uma cobrança;
+  - o motivo da recusa informado pelo provedor (por exemplo, transação não reembolsável) e a resposta com valor divergente ficam registrados na movimentação;
+  - as ações automáticas registram o sistema como ator.
+- **SPEC-019 (página de pagamento simulado), pela SPEC-024:** a página passou a aceitar só cobranças (taxa de entrada e assinatura), para que quem recebe uma devolução ou premiação não possa confirmá-la.
+- **SPEC-017 (saída do bolão), pela SPEC-028:** a saída passou a registrar o instante (`left_at`), usado para limitar o histórico de quem saiu ao período em que participou; saídas anteriores foram preenchidas a partir da trilha de auditoria.
+- **SPEC-014 (pontuação), pela SPEC-025:** a correção de resultado de partida de bolão já encerrado é registrada no log técnico, sem alterar o resultado final congelado.
+
 ---
 
-## 5. Próximo passo
+## 6. Próximo passo
 
-Mapa aprovado, questões em aberto resolvidas e as 29 Specs geradas e aprovadas (SPEC-001 a SPEC-028 em outubro de 2026 e SPEC-029 em 23/11/2026). Nenhuma questão em aberto: a OPEN-48 foi resolvida em 05/11/2026 (Node.js v24.16.0). Pendências: as validações externas executadas pela equipe (OPEN-01, OPEN-26, OPEN-27 e OPEN-29) e a conferência da baseline registrada nas OPEN de conferência (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159). A implementação segue cada Spec aprovada, na ordem do índice, sem misturar a geração da Spec com a implementação; qualquer divergência entre código, Spec e baseline é registrada e decidida pela equipe humana.
+Mapa aprovado, questões em aberto resolvidas e as 29 Specs geradas, aprovadas e implementadas (SPEC-001 a SPEC-028 aprovadas em outubro de 2026 e SPEC-029 em 23/11/2026; implementação concluída em 23/11/2026). Nenhuma questão em aberto: a OPEN-48 foi resolvida em 05/11/2026 (Node.js v24.16.0). Pendências, todas da equipe:
+
+1. as validações externas (OPEN-01, OPEN-26, OPEN-27 e OPEN-29), que permitem trocar os provedores simulados pelos reais, conforme a seção 5;
+2. a conferência da baseline registrada nas OPEN de conferência (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159);
+3. os roteiros manuais de navegadores e larguras de tela (RNF13 e RNF14), executados somente após confirmação da equipe.
+
+Qualquer divergência entre código, Spec e baseline encontrada nessas etapas é registrada e decidida pela equipe humana.
