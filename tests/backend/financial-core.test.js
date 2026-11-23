@@ -17,12 +17,12 @@ import { expectCommonFormat, startOfTests, withHttpApp } from './support/app-har
 // SPEC-018 — núcleo financeiro de teste. Toda a suíte roda com o simulador ou com adaptadores de
 // teste, sem credenciais e sem rede externa (RNF18).
 
-function subscription(user, overrides = {}) {
+function payout(user, overrides = {}) {
   return {
-    type: 'subscription',
+    type: 'payout',
     amountCents: 2990,
     userId: user.id,
-    operation: { type: 'subscription', id: 'assinatura-1' },
+    operation: { type: 'pool', id: 'bolao-1' },
     ...overrides,
   }
 }
@@ -70,19 +70,19 @@ function createInMemoryTestProvider() {
 test('TC-01 e TC-15: iniciar registra movimentação pendente completa, com auditoria do usuário e origem simulador', async () => {
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
-    const { movement, created } = await context.app.locals.financial.startMovement(subscription(ana))
+    const { movement, created } = await context.app.locals.financial.startMovement(payout(ana))
 
     assert.equal(created, true)
     assert.match(movement.id, /^[0-9a-f-]{36}$/)
-    assert.equal(movement.type, 'subscription')
+    assert.equal(movement.type, 'payout')
     assert.equal(movement.amountCents, 2990)
     assert.equal(movement.currency, 'BRL')
     assert.equal(movement.status, 'pending')
     assert.equal(movement.userId, ana.id)
     assert.equal(movement.origin, 'simulator')
-    assert.deepEqual(movement.operation, { type: 'subscription', id: 'assinatura-1' })
-    assert.equal(movement.operationKey, 'subscription:assinatura-1:attempt-1')
-    assert.equal(movement.providerId, 'sim-subscription:assinatura-1:attempt-1')
+    assert.deepEqual(movement.operation, { type: 'pool', id: 'bolao-1' })
+    assert.equal(movement.operationKey, 'pool:bolao-1:attempt-1')
+    assert.equal(movement.providerId, 'sim-pool:bolao-1:attempt-1')
     assert.deepEqual(movement.continuation, { kind: 'simulated_checkout', simulated: true })
     assert.equal(movement.createdAt, new Date(startOfTests).toISOString())
 
@@ -91,7 +91,7 @@ test('TC-01 e TC-15: iniciar registra movimentação pendente completa, com audi
     assert.deepEqual(audit.actor, { type: 'user', id: ana.id })
     assert.equal(audit.result, 'success')
     assert.equal(audit.origin, 'simulator')
-    assert.deepEqual(audit.details, { movementType: 'subscription', amountCents: 2990, newState: 'pending', origin: 'simulator' })
+    assert.deepEqual(audit.details, { movementType: 'payout', amountCents: 2990, newState: 'pending', origin: 'simulator' })
   })
 })
 
@@ -147,8 +147,8 @@ test('TC-03: sem resposta do provedor a movimentação permanece pendente e o tr
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
     let effects = 0
-    core.registerHandler('subscription', { onConfirmed: () => { effects += 1 }, onRefused: () => { effects += 1 } })
-    const { movement } = await core.startMovement(subscription(ana))
+    core.registerHandler('payout', { onConfirmed: () => { effects += 1 }, onRefused: () => { effects += 1 } })
+    const { movement } = await core.startMovement(payout(ana))
 
     for (let index = 0; index < 3; index += 1) {
       assert.deepEqual(await context.app.locals.tasks.reconcilePayments(), { checked: 1, applied: 0, pending: 1 })
@@ -165,27 +165,27 @@ test('TC-04: nova tentativa só depois de uma recusa, com nova chave; pendente e
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
 
-    const pending = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'pendente' } }))
-    const pendingAgain = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'pendente' } }))
+    const pending = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'pendente' } }))
+    const pendingAgain = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'pendente' } }))
     assert.equal(pendingAgain.created, false)
     assert.equal(pendingAgain.movement.id, pending.movement.id)
 
-    const paid = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'paga' } }))
+    const paid = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'paga' } }))
     provider.confirm(paid.movement.operationKey)
     await core.checkMovement(paid.movement.id)
-    const paidAgain = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'paga' } }))
+    const paidAgain = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'paga' } }))
     assert.equal(paidAgain.created, false)
     assert.equal(paidAgain.movement.id, paid.movement.id)
     assert.equal(paidAgain.movement.status, 'confirmed')
 
-    const refused = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'recusada' } }))
+    const refused = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'recusada' } }))
     provider.refuse(refused.movement.operationKey)
     await core.checkMovement(refused.movement.id)
-    const retry = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'recusada' } }))
+    const retry = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'recusada' } }))
     assert.equal(retry.created, true)
     assert.notEqual(retry.movement.id, refused.movement.id)
     assert.equal(retry.movement.attemptNumber, 2)
-    assert.equal(retry.movement.operationKey, 'subscription:recusada:attempt-2')
+    assert.equal(retry.movement.operationKey, 'pool:recusada:attempt-2')
     assert.equal(retry.movement.status, 'pending')
     assert.equal(row(context.database, refused.movement.id).status, 'refused')
 
@@ -200,16 +200,16 @@ test('TC-05: solicitações e confirmações repetidas não duplicam movimentaç
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
     let effects = 0
-    core.registerHandler('subscription', { onConfirmed: () => { effects += 1 }, onRefused: () => {} })
+    core.registerHandler('payout', { onConfirmed: () => { effects += 1 }, onRefused: () => {} })
 
-    const first = await core.startMovement(subscription(ana))
-    const second = await core.startMovement(subscription(ana))
+    const first = await core.startMovement(payout(ana))
+    const second = await core.startMovement(payout(ana))
     assert.equal(second.movement.id, first.movement.id)
     assert.equal(count(context.database), 1)
     assert.equal(provider.calls.start, 1)
 
     // A mesma referência com outro valor não reaproveita nem cria nada.
-    await assert.rejects(core.startMovement(subscription(ana, { amountCents: 1 })), { status: 409, type: 'financial_reference_conflict' })
+    await assert.rejects(core.startMovement(payout(ana, { amountCents: 1 })), { status: 409, type: 'financial_reference_conflict' })
 
     for (let index = 0; index < 3; index += 1) {
       provider.confirm(first.movement.operationKey)
@@ -229,7 +229,7 @@ test('TC-06: tempo esgotado ao iniciar não repete a cobrança e consulta o esta
     const core = context.app.locals.financial
 
     provider.failNext('start', 'timeout', { afterRegistering: true })
-    const { movement } = await core.startMovement(subscription(ana))
+    const { movement } = await core.startMovement(payout(ana))
     assert.equal(movement.status, 'pending')
     assert.equal(movement.providerId, null)
     const failure = auditOf(context, movement.id).at(-1)
@@ -247,7 +247,7 @@ test('TC-06: tempo esgotado ao iniciar não repete a cobrança e consulta o esta
 
     // Pedir de novo consulta o estado da anterior e não cria outra.
     const consultsBefore = provider.calls.consult
-    const again = await core.startMovement(subscription(ana))
+    const again = await core.startMovement(payout(ana))
     assert.equal(again.created, false)
     assert.equal(again.movement.id, movement.id)
     assert.equal(provider.calls.consult, consultsBefore + 1)
@@ -266,7 +266,7 @@ test('TC-06: falhas de consulta deixam pendente, sem efeito, e são registradas 
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
-    const { movement } = await core.startMovement(subscription(ana))
+    const { movement } = await core.startMovement(payout(ana))
     provider.confirm(movement.operationKey)
     for (const code of ['timeout', 'response_error', 'invalid_response']) {
       provider.failNext('consult', code)
@@ -287,14 +287,14 @@ test('TC-07: falha do tratador ou da auditoria na confirmação desfaz tudo; a c
     const core = context.app.locals.financial
     context.database.exec('CREATE TABLE handler_effects (movement_id TEXT NOT NULL)')
     let failHandler = true
-    core.registerHandler('subscription', {
+    core.registerHandler('payout', {
       onConfirmed: (movement, { database }) => {
         database.prepare('INSERT INTO handler_effects (movement_id) VALUES (?)').run(movement.id)
         if (failHandler) throw new Error('falha simulada do tratador')
       },
       onRefused: () => {},
     })
-    const { movement } = await core.startMovement(subscription(ana))
+    const { movement } = await core.startMovement(payout(ana))
     provider.confirm(movement.operationKey)
 
     assert.equal((await context.app.locals.tasks.reconcilePayments()).applied, 0)
@@ -333,9 +333,9 @@ test('TC-07: falha do tratador ou da auditoria na confirmação desfaz tudo; a c
     const recordEffect = (movement, { database }) => {
       database.prepare('INSERT INTO handler_effects (movement_id) VALUES (?)').run(movement.id)
     }
-    core.registerHandler('subscription', { onConfirmed: recordEffect, onRefused: recordEffect })
-    const { movement: toConfirm } = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'c' } }))
-    const { movement: toRefuse } = await core.startMovement(subscription(ana, { operation: { type: 'subscription', id: 'r' } }))
+    core.registerHandler('payout', { onConfirmed: recordEffect, onRefused: recordEffect })
+    const { movement: toConfirm } = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'c' } }))
+    const { movement: toRefuse } = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'r' } }))
     simulator.confirm(toConfirm.operationKey)
     simulator.refuse(toRefuse.operationKey)
 
@@ -368,7 +368,7 @@ test('TC-07 e CA-18: falha da auditoria na criação não grava movimentação n
       },
     })
 
-    await assert.rejects(core.startMovement(subscription(ana)))
+    await assert.rejects(core.startMovement(payout(ana)))
     assert.equal(count(context.database), 0)
     assert.equal(simulator.calls.start, 0)
   })
@@ -382,7 +382,7 @@ test('TC-08: conferência roda logo após a inicialização e a cada 5 minutos, 
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
-    await core.startMovement(subscription(ana))
+    await core.startMovement(payout(ana))
 
     // Duas chamadas simultâneas compartilham a mesma execução.
     const first = core.reconcilePending()
@@ -417,7 +417,7 @@ test('TC-09: dois adaptadores de teste da porta são trocados sem alterar o núc
       const ana = await context.signUp('Ana')
       const provider = makeProvider()
       const core = coreFor(context, { paymentsProvider: provider })
-      const { movement } = await core.startMovement(subscription(ana))
+      const { movement } = await core.startMovement(payout(ana))
       assert.equal(movement.origin, provider.source)
       provider.confirm(movement.operationKey)
       assert.equal((await core.reconcilePending()).applied, 1)
@@ -433,7 +433,7 @@ test('TC-13: um provedor nunca aplica resposta a movimentações de outra origem
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
     const simulator = createSimulatedPaymentsProvider()
-    const simulated = await coreFor(context, { paymentsProvider: simulator }).startMovement(subscription(ana))
+    const simulated = await coreFor(context, { paymentsProvider: simulator }).startMovement(payout(ana))
     simulator.confirm(simulated.movement.operationKey)
 
     const testProvider = createInMemoryTestProvider()
@@ -496,10 +496,10 @@ test('TC-11 e TC-13: cada usuário vê só o próprio histórico, do mais recent
     const ana = await context.signUp('Ana')
     const bruno = await context.signUp('Bruno')
     const core = context.app.locals.financial
-    const { movement: older } = await core.startMovement(subscription(ana))
+    const { movement: older } = await core.startMovement(payout(ana))
     context.clock.current += 60 * 1000
     const { movement: newer } = await core.startMovement({ type: 'entry_fee', amountCents: 1000, userId: ana.id, operation: { type: 'participation', id: 'p-1' } })
-    await core.startMovement(subscription(bruno, { operation: { type: 'subscription', id: 'assinatura-bruno' } }))
+    await core.startMovement(payout(bruno, { operation: { type: 'pool', id: 'bolao-bruno' } }))
     provider.confirm(older.operationKey)
     await core.reconcilePending()
 
@@ -509,7 +509,7 @@ test('TC-11 e TC-13: cada usuário vê só o próprio histórico, do mais recent
     assert.deepEqual(anaHistory.json.movements.map(({ id }) => id), [newer.id, older.id])
     assert.deepEqual(anaHistory.json.movements[1], {
       id: older.id,
-      type: 'subscription',
+      type: 'payout',
       amountCents: 2990,
       amount: '29.90',
       currency: 'BRL',
@@ -533,20 +533,20 @@ test('TC-12: valores em centavos inteiros são exatos, em BRL, e valores não in
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
-    const { movement } = await core.startMovement(subscription(ana, { amountCents: 10 + 20 }))
+    const { movement } = await core.startMovement(payout(ana, { amountCents: 10 + 20 }))
     assert.equal(movement.amountCents, 30)
     assert.equal(formatCents(30), '0.30')
     assert.equal(formatCents(2990), '29.90')
     assert.equal(formatCents(100000005), '1000000.05')
 
     for (const amountCents of [0.1, 0.3, -10, 0, '30', Number.NaN]) {
-      await assert.rejects(core.startMovement(subscription(ana, { amountCents, operation: { type: 'subscription', id: `v-${amountCents}` } })), { status: 400 })
+      await assert.rejects(core.startMovement(payout(ana, { amountCents, operation: { type: 'pool', id: `v-${amountCents}` } })), { status: 400 })
     }
-    await assert.rejects(core.startMovement(subscription(ana, { currency: 'USD', operation: { type: 'subscription', id: 'usd' } })), { status: 400 })
+    await assert.rejects(core.startMovement(payout(ana, { currency: 'USD', operation: { type: 'pool', id: 'usd' } })), { status: 400 })
     assert.throws(() => context.database.prepare(`
       INSERT INTO financial_movements (id, operation_key, business_reference, attempt_number, type, amount_cents, currency,
         status, user_id, origin, operation_type, operation_id, created_at, updated_at)
-      VALUES ('x', 'k', 'b', 1, 'subscription', 0.3, 'BRL', 'pending', ?, 'simulator', 'subscription', 's', 'now', 'now')
+      VALUES ('x', 'k', 'b', 1, 'payout', 0.3, 'BRL', 'pending', ?, 'simulator', 'payout', 's', 'now', 'now')
     `).run(ana.id), /CHECK/)
   })
 })
@@ -557,7 +557,7 @@ test('TC-14: nenhuma chave aparece em respostas, registros técnicos ou auditori
   const provider = createMercadoPagoTestPaymentsProvider({ accessToken: token, fetcher: failingFetcher })
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
-    const { movement } = await context.app.locals.financial.startMovement(subscription(ana))
+    const { movement } = await context.app.locals.financial.startMovement(payout(ana))
     await context.app.locals.tasks.reconcilePayments()
     const history = await context.call('GET', '/account/financial-history', { token: ana.token })
 
@@ -601,7 +601,7 @@ test('adaptador Mercado Pago em teste: cliente HTTP com tempo limite, idempotên
   assert.equal(provider.source, 'test_provider')
 
   responses.push(json({ id: '123-abc', sandbox_init_point: 'https://sandbox.mercadopago.com.br/checkout?pref_id=123-abc' }))
-  const started = await provider.startOperation({ operationKey: 'subscription:s-1:attempt-1', type: 'subscription', amountCents: 2990, currency: 'BRL' })
+  const started = await provider.startOperation({ operationKey: 'pool:s-1:attempt-1', type: 'payout', amountCents: 2990, currency: 'BRL' })
   assert.deepEqual(started, {
     providerId: 'mp-pref-123-abc',
     continuation: { kind: 'checkout', url: 'https://sandbox.mercadopago.com.br/checkout?pref_id=123-abc' },
@@ -609,10 +609,10 @@ test('adaptador Mercado Pago em teste: cliente HTTP com tempo limite, idempotên
   const [create] = requests
   assert.equal(create.url, 'https://api.mercadopago.com/checkout/preferences')
   assert.equal(create.options.method, 'POST')
-  assert.equal(create.options.headers['x-idempotency-key'], 'subscription:s-1:attempt-1')
+  assert.equal(create.options.headers['x-idempotency-key'], 'pool:s-1:attempt-1')
   assert.ok(create.options.signal instanceof AbortSignal)
   const body = JSON.parse(create.options.body)
-  assert.equal(body.external_reference, 'subscription:s-1:attempt-1')
+  assert.equal(body.external_reference, 'pool:s-1:attempt-1')
   assert.equal(body.items[0].unit_price, 29.9)
   assert.equal(body.items[0].currency_id, 'BRL')
 
@@ -638,7 +638,7 @@ test('adaptador Mercado Pago em teste: cliente HTTP com tempo limite, idempotên
     await assert.rejects(provider.consultOperation({ operationKey: 'k' }), (error) => error instanceof PaymentsProviderError && error.code === code)
   }
   responses.push(json({ id: '1', sandbox_init_point: 'http://inseguro' }))
-  await assert.rejects(provider.startOperation({ operationKey: 'k', type: 'subscription', amountCents: 1, currency: 'BRL' }), { code: 'invalid_response' })
+  await assert.rejects(provider.startOperation({ operationKey: 'k', type: 'payout', amountCents: 1, currency: 'BRL' }), { code: 'invalid_response' })
 
   const withoutKey = createMercadoPagoTestPaymentsProvider({ fetcher })
   const before = requests.length

@@ -3,6 +3,8 @@ import { Check, LoaderCircle, Minus } from 'lucide-react'
 import { fetchAccountPlan, fetchAvailablePlans, isSessionRejected } from './account-api.js'
 import { describeFeatures, planStatusLabel, planTagline, usageSummary } from './plan-features.js'
 import { fetchCreationAvailability } from './pools-api.js'
+import { fetchPremiumConditions } from './premium-api.js'
+import PremiumSection from './PremiumSection.jsx'
 
 function FeatureValue({ feature }) {
   if (feature.enabled === true) return <span className="plan-yes"><Check size={16} aria-hidden="true" /><span className="sr-only">Sim</span></span>
@@ -10,10 +12,12 @@ function FeatureValue({ feature }) {
   return <span>{feature.value}</span>
 }
 
-// Aba "Meu plano" (SPEC-005): plano atual com o uso do limite e comparação dos planos, sem preço.
+// Aba "Meu plano" (SPEC-005): plano atual com o uso do limite e comparação dos planos; a contratação
+// do Premium (SPEC-019) fica logo abaixo da comparação.
 export default function PlanArea({ token, pending, onBack, onLogout, onSessionRejected }) {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
 
   const handleLoadError = useEffectEvent((error) => {
     if (isSessionRejected(error)) onSessionRejected()
@@ -22,15 +26,15 @@ export default function PlanArea({ token, pending, onBack, onLogout, onSessionRe
 
   useEffect(() => {
     let active = true
-    Promise.all([fetchAccountPlan(token), fetchAvailablePlans(token), fetchCreationAvailability(token)])
-      .then(([current, available, availability]) => {
-        if (active) setData({ current, plans: available.plans, availability })
+    Promise.all([fetchAccountPlan(token), fetchAvailablePlans(token), fetchCreationAvailability(token), fetchPremiumConditions(token)])
+      .then(([current, available, availability, premium]) => {
+        if (active) setData({ current, plans: available.plans, availability, premium })
       })
       .catch((error) => {
         if (active) handleLoadError(error)
       })
     return () => { active = false }
-  }, [token])
+  }, [token, reloadKey])
 
   const usage = data ? usageSummary(data.availability) : null
   const rows = data ? describeFeatures(data.plans[0].features).map(({ id, label }) => ({ id, label })) : []
@@ -99,8 +103,16 @@ export default function PlanArea({ token, pending, onBack, onLogout, onSessionRe
               </tbody>
             </table>
           </div>
-          <p className="fine-print">A contratação do Premium ainda não está disponível nesta versão do Palpite League.</p>
         </section>
+      )}
+
+      {data && (
+        <PremiumSection
+          token={token}
+          conditions={data.premium}
+          onChanged={() => setReloadKey((key) => key + 1)}
+          onSessionRejected={onSessionRejected}
+        />
       )}
 
       <div className="mode-switch">

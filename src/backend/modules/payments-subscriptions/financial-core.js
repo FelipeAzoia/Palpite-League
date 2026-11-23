@@ -208,7 +208,10 @@ export function createFinancialCoreService(database, {
 
   // Cria a movimentação pendente e sua auditoria numa única transação. Devolve a existente quando a
   // última tentativa da mesma referência ainda está pendente ou já foi confirmada (A1, E3).
-  function createOrReuse(request) {
+  // onCreate, quando informado, roda dentro dessa mesma transação com a movimentação recém-criada:
+  // é onde a Spec proprietária grava o próprio registro (por exemplo, a assinatura) e sua auditoria,
+  // de modo que tudo persista junto ou nada persista (SPEC-019 INV-004).
+  function createOrReuse(request, onCreate) {
     const latest = latestAttempt(request.businessReference)
     if (latest && !sameRequest(latest, request)) {
       throw new AppError(409, 'financial_reference_conflict', 'Já existe outra operação financeira com esta referência.')
@@ -244,21 +247,39 @@ export function createFinancialCoreService(database, {
         request.userId, provider.source, request.operationType, request.operationId, request.originalMovementId,
         at, at,
       )
+      if (onCreate) {
+        const outcome = onCreate(toMovement(findById(id)), { database })
+        if (typeof outcome?.then === 'function') throw new TypeError('onCreate must be synchronous')
+      }
     })
     return { row: findById(id), created: true }
   }
 
+  // Operações da porta por tipo: as Specs proprietárias estendem a porta genérica (OPEN-85); a
+  // assinatura usa startSubscription/consultSubscription quando o adaptador as oferece (SPEC-019).
+  function startOperationFor(type) {
+    if (type === 'subscription' && typeof provider.startSubscription === 'function') return provider.startSubscription
+    return provider.startOperation
+  }
+
+  function consultOperationFor(type) {
+    if (type === 'subscription' && typeof provider.consultSubscription === 'function') return provider.consultSubscription
+    return provider.consultOperation
+  }
+
   // Inicia a operação no provedor depois da transação. Uma falha deixa a movimentação pendente,
   // sem repetição automática; a conferência seguinte consulta o estado pela chave (E1, CA-07).
-  async function startAtProvider(row) {
+  // Os dados do pagador vão só para o provedor: não são gravados nem auditados (INV-011).
+  async function startAtProvider(row, payer) {
     let result
     try {
-      result = await provider.startOperation({
+      result = await startOperationFor(row.type).call(provider, {
         operationKey: row.operation_key,
         type: row.type,
         amountCents: row.amount_cents,
         currency: row.currency,
         userId: row.user_id,
+        ...(payer ? { payer } : {}),
       })
       if (!result || typeof result.providerId !== 'string' || !identifierPattern.test(result.providerId)
         || (result.continuation != null && (typeof result.continuation !== 'object' || Array.isArray(result.continuation)))) {
@@ -280,11 +301,12 @@ export function createFinancialCoreService(database, {
     return findById(row.id)
   }
 
-  async function startMovement(input) {
+  async function startMovement(input, { onCreate, payer } = {}) {
+    if (onCreate !== undefined && typeof onCreate !== 'function') throw new TypeError('onCreate must be a function')
     const request = validateStart(input)
-    const { row, created } = createOrReuse(request)
+    const { row, created } = createOrReuse(request, onCreate)
     if (created) {
-      const started = await startAtProvider(row)
+      const started = await startAtProvider(row, payer)
       return { movement: toMovement(started), created: true }
     }
     // Repetição de uma operação ainda pendente: consulta o estado antes de qualquer outra coisa,
@@ -355,7 +377,7 @@ export function createFinancialCoreService(database, {
     let status
     let providerId
     try {
-      const result = await provider.consultOperation({ operationKey: row.operation_key, providerId: row.provider_id })
+      const result = await consultOperationFor(row.type).call(provider, { operationKey: row.operation_key, providerId: row.provider_id })
       status = result?.status
       providerId = result?.providerId ?? row.provider_id ?? null
       if (!movementStatuses.includes(status) || (providerId !== null && (typeof providerId !== 'string' || !identifierPattern.test(providerId)))) {

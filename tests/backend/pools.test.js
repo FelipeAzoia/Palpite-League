@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 import test from 'node:test'
 import { createApp } from '../../src/backend/app.js'
@@ -73,10 +74,17 @@ function poolBody(matchIds, overrides = {}) {
   }
 }
 
+// Desde a SPEC-019 o banco só aceita o Premium com uma assinatura ativa; o teste a cria diretamente.
 function setPlan(database, email, plan) {
-  database.pragma('ignore_check_constraints = ON')
-  database.prepare('UPDATE users SET plan = ? WHERE normalized_email = ?').run(plan, email)
-  database.pragma('ignore_check_constraints = OFF')
+  const { id } = database.prepare('SELECT id FROM users WHERE normalized_email = ?').get(email)
+  const hasActive = database.prepare("SELECT 1 FROM subscriptions WHERE user_id = ? AND status = 'active'").get(id)
+  if (plan === 'premium' && !hasActive) {
+    database.prepare(`
+      INSERT INTO subscriptions (id, user_id, status, amount_cents, currency, recurrence, origin, starts_at, ends_at, created_at, updated_at)
+      VALUES (?, ?, 'active', 1990, 'BRL', 'monthly', 'simulator', ?, ?, ?, ?)
+    `).run(randomUUID(), id, '2026-11-01T00:00:00.000Z', '2026-12-01T00:00:00.000Z', '2026-11-01T00:00:00.000Z', '2026-11-01T00:00:00.000Z')
+  }
+  database.prepare('UPDATE users SET plan = ? WHERE id = ?').run(plan, id)
 }
 
 function counts(database) {

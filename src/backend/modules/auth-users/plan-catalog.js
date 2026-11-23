@@ -33,7 +33,8 @@ export function simultaneousPoolLimit(planId) {
 }
 
 export function planStatus(planId) {
-	// O plano Gratuito tem status "ativo" (OPEN-56). O estado do Premium virá da assinatura (SPEC-019 e SPEC-020).
-	if (planId === 'free') return 'active'
-	throw new Error(`O status do plano ${String(planId)} depende da assinatura`)
+	// O plano Gratuito tem status "ativo" (OPEN-56). O Premium só existe com assinatura ativa
+	// (SPEC-019, garantido no banco); cancelamento e expiração são da SPEC-020.
+	getPlan(planId)
+	return 'active'
 }

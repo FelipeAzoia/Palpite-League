@@ -17,6 +17,8 @@ export function createMercadoPagoTestPaymentsProvider({
   timeoutMs = 10000,
   fetcher = fetch,
   baseUrl = apiBaseUrl,
+  backUrl = '',
+  subscriptionsProofApproved = false,
 } = {}) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError('payments provider timeout must be positive')
   if (accessToken !== undefined && accessToken !== '' && !String(accessToken).startsWith('TEST-')) {
@@ -92,5 +94,51 @@ export function createMercadoPagoTestPaymentsProvider({
     return { providerId: providerId ?? null, status }
   }
 
-  return { source: 'test_provider', startOperation, consultOperation }
+  // SPEC-019 — Assinaturas do Mercado Pago em teste, sem plano associado (OPEN-87). Só é usada depois
+  // dos smoke tests do sandbox aprovados pela equipe (OPEN-26); até lá a chamada falha sem rede.
+  function requireSubscriptionsProof() {
+    if (!subscriptionsProofApproved) throw new PaymentsProviderError('response_error')
+  }
+
+  async function startSubscription({ operationKey, amountCents, currency, payer }) {
+    requireSubscriptionsProof()
+    if (typeof payer?.email !== 'string' || payer.email === '' || !backUrl) throw new PaymentsProviderError('response_error')
+    const body = await request('POST', '/preapproval', {
+      idempotencyKey: operationKey,
+      body: {
+        reason: 'Palpite League Premium (ambiente de teste)',
+        external_reference: operationKey,
+        payer_email: payer.email,
+        back_url: backUrl,
+        status: 'pending',
+        auto_recurring: {
+          frequency: 1,
+          frequency_type: 'months',
+          transaction_amount: Number(`${Math.trunc(amountCents / 100)}.${String(amountCents % 100).padStart(2, '0')}`),
+          currency_id: currency,
+        },
+      },
+    })
+    const checkoutUrl = body?.init_point
+    if (typeof body?.id !== 'string' || body.id === '' || typeof checkoutUrl !== 'string' || !checkoutUrl.startsWith('https://')) {
+      throw new PaymentsProviderError('invalid_response')
+    }
+    return { providerId: `mp-sub-${body.id}`, continuation: { kind: 'checkout', url: checkoutUrl } }
+  }
+
+  // Autorizada é a confirmação verificável; cancelada é a recusa; o resto permanece pendente.
+  async function consultSubscription({ operationKey, providerId }) {
+    requireSubscriptionsProof()
+    const body = await request('GET', `/preapproval/search?external_reference=${encodeURIComponent(operationKey)}`)
+    if (!Array.isArray(body?.results)) throw new PaymentsProviderError('invalid_response')
+    const statuses = body.results.map((item) => item?.status)
+    if (statuses.some((status) => typeof status !== 'string')) throw new PaymentsProviderError('invalid_response')
+
+    let status = 'pending'
+    if (statuses.includes('authorized')) status = 'confirmed'
+    else if (statuses.length > 0 && statuses.every((item) => item === 'cancelled')) status = 'refused'
+    return { providerId: providerId ?? null, status }
+  }
+
+  return { source: 'test_provider', startOperation, consultOperation, startSubscription, consultSubscription }
 }
