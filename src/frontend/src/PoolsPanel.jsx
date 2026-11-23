@@ -82,11 +82,26 @@ function limitMessage(availability) {
   const noun = availability.limit === 1 ? 'bolão ativo' : 'bolões ativos'
   const base = `Você tem ${availability.activePools} de ${availability.limit} ${noun} do plano ${availability.plan.name}.`
   return availability.plan.id === 'free'
-    ? `${base} Encerre um bolão ativo para criar outro ou conheça o plano Premium, que permite até 10 bolões simultâneos.`
+    ? `${base} Para criar outro, encerre um bolão ativo ou passe para o Premium.`
     : `${base} Encerre um bolão ativo para criar outro.`
 }
 
-function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
+// Quem esbarra no limite do Gratuito vê a oferta do Premium e vai direto para a página de planos.
+function UpgradeOffer({ onUpgrade }) {
+  return (
+    <div className="upgrade-offer">
+      <div>
+        <strong>Crie até 10 bolões ao mesmo tempo</strong>
+        <p>No Premium você administra até 10 bolões simultâneos, com resultados ao vivo nos bolões que criar.</p>
+      </div>
+      <button className="small-button small-button-solid" type="button" onClick={onUpgrade}>
+        Conhecer o Premium <ArrowRight size={14} aria-hidden="true" />
+      </button>
+    </div>
+  )
+}
+
+function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) {
   const [availability, setAvailability] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [values, setValues] = useState(() => ({
@@ -102,6 +117,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
   const [fieldErrors, setFieldErrors] = useState({})
   const [message, setMessage] = useState('')
   const [guidance, setGuidance] = useState('')
+  const [limitOnFree, setLimitOnFree] = useState(false)
   const [saving, setSaving] = useState(false)
   const handle = useGuardedRequest(onSessionRejected)
 
@@ -159,7 +175,10 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
       }
       setMessage(requestError.message)
       setFieldErrors(requestError.fields ?? {})
-      if (requestError.type === 'pool_limit_reached') setGuidance(requestError.details?.guidance ?? '')
+      if (requestError.type === 'pool_limit_reached') {
+        setGuidance(requestError.details?.guidance ?? '')
+        setLimitOnFree(requestError.details?.plan?.id === 'free')
+      }
     } finally {
       setSaving(false)
     }
@@ -180,7 +199,10 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
       {!availability && !loadError && <p className="form-copy" role="status">Verificando seu plano...</p>}
 
       {availability && !availability.canCreate && (
-        <p className="catalog-notice" role="status">{limitMessage(availability)}</p>
+        <>
+          <p className="catalog-notice" role="status">{limitMessage(availability)}</p>
+          {availability.plan.id === 'free' && <UpgradeOffer onUpgrade={onUpgrade} />}
+        </>
       )}
 
       {availability?.canCreate && (
@@ -236,6 +258,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
 
           {message && <p className="form-message" role="alert">{message}</p>}
           {guidance && <p className="catalog-notice" role="status">{guidance}</p>}
+          {guidance && limitOnFree && <UpgradeOffer onUpgrade={onUpgrade} />}
 
           <button className="primary-button" type="submit" disabled={saving}>
             <span>{saving ? 'Criando...' : 'Criar bolão'}</span>
@@ -251,23 +274,25 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack }) {
   )
 }
 
-export default function PoolsPanel({ token, onSessionRejected }) {
-  const [view, setView] = useState({ name: 'list' })
+// initialPoolId abre direto um bolão (vindo da página inicial); onUpgrade leva à página de planos.
+export default function PoolsPanel({ token, initialPoolId = null, onUpgrade, onSessionRejected }) {
+  const [view, setView] = useState(() => (initialPoolId ? { name: 'pool', poolId: initialPoolId } : { name: 'list' }))
 
   // A chave muda a cada página interna (lista, criação, um bolão) e reinicia a transição;
   // trocar de aba dentro do bolão não remonta o cabeçalho.
   return (
     <div className="page-enter" key={view.poolId ? `pool-${view.poolId}` : view.name}>
-      <PoolsPage view={view} setView={setView} token={token} onSessionRejected={onSessionRejected} />
+      <PoolsPage view={view} setView={setView} token={token} onUpgrade={onUpgrade} onSessionRejected={onSessionRejected} />
     </div>
   )
 }
 
-function PoolsPage({ view, setView, token, onSessionRejected }) {
+function PoolsPage({ view, setView, token, onUpgrade, onSessionRejected }) {
   if (view.name === 'create') {
     return (
       <PoolCreate
         token={token}
+        onUpgrade={onUpgrade}
         onSessionRejected={onSessionRejected}
         onBack={() => setView({ name: 'list' })}
         onCreated={(result) => {

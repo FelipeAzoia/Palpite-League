@@ -520,6 +520,15 @@ export function createApp(database, {
     }
   })
 
+  // Página inicial: pontos e colocação do próprio usuário em cada bolão (somente leitura).
+  app.get('/account/pools-summary', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(ranking.getMySummary(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
   app.get('/pools/:poolId/performance', authenticateRequest, (request, response, next) => {
     try {
       response.json(ranking.getMyPerformance(request.authenticatedUser.id, request.params.poolId))

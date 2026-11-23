@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useState } from 'react'
-import { Check, LoaderCircle, Minus } from 'lucide-react'
+import { ArrowLeft, Check, LoaderCircle, Minus } from 'lucide-react'
 import { fetchAccountPlan, fetchAvailablePlans, isSessionRejected } from './account-api.js'
 import { describeFeatures, planStatusLabel, planTagline, usageSummary } from './plan-features.js'
 import { fetchCreationAvailability } from './pools-api.js'
@@ -12,9 +12,9 @@ function FeatureValue({ feature }) {
   return <span>{feature.value}</span>
 }
 
-// Aba "Meu plano" (SPEC-005): plano atual com o uso do limite e comparação dos planos; a contratação
-// do Premium (SPEC-019) fica logo abaixo da comparação.
-export default function PlanArea({ token, pending, onBack, onLogout, onSessionRejected }) {
+// Página de planos (SPEC-005), aberta pelo Perfil ou pela criação de bolão: plano atual com o uso do
+// limite e comparação dos planos; a contratação do Premium (SPEC-019) fica logo abaixo.
+export default function PlanArea({ token, onBack, onSessionRejected }) {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -42,6 +42,9 @@ export default function PlanArea({ token, pending, onBack, onLogout, onSessionRe
   return (
     <div className="plan-page">
       <div>
+        <button className="back-link" type="button" onClick={onBack}>
+          <ArrowLeft size={14} aria-hidden="true" /> Voltar ao perfil
+        </button>
         <h2 id="auth-title">Meu plano</h2>
         <p className="toolbar-note">O que sua conta permite hoje e o que muda entre os planos.</p>
       </div>
@@ -114,11 +117,6 @@ export default function PlanArea({ token, pending, onBack, onLogout, onSessionRe
           onSessionRejected={onSessionRejected}
         />
       )}
-
-      <div className="mode-switch">
-        <button type="button" onClick={onBack}>Voltar ao início</button>
-        <button type="button" onClick={onLogout} disabled={pending}>Sair da conta</button>
-      </div>
     </div>
   )
 }

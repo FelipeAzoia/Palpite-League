@@ -168,9 +168,37 @@ export function createRankingService(database) {
     return database.prepare('SELECT tiebreaker FROM pools WHERE id = ?').get(poolId)?.tiebreaker
   }
 
+  // Resumo da página inicial: pontos e colocação do próprio usuário em cada bolão em que tem
+  // participação confirmada, com a mesma classificação da consulta do ranking (CA-15). Só os dados
+  // do próprio usuário saem daqui; nenhum dado de outro participante além da contagem (INV-011).
+  function getMySummary(userId) {
+    const memberships = database.prepare(`
+      SELECT p.id AS pool_id, p.name, p.status, p.tiebreaker, part.id AS participation_id
+      FROM pool_participations part JOIN pools p ON p.id = part.pool_id
+      WHERE part.user_id = ? AND part.status = 'confirmed'
+      ORDER BY p.created_at DESC, p.id
+    `).all(userId)
+
+    return {
+      pools: memberships.map((row) => {
+        const { ranking } = computeRanking(row.pool_id, row.tiebreaker)
+        const mine = ranking.find((participant) => participant.id === row.participation_id)
+        return {
+          poolId: row.pool_id,
+          name: row.name,
+          status: row.status,
+          totalPoints: mine?.totalPoints ?? 0,
+          position: mine?.position ?? null,
+          participants: ranking.length,
+        }
+      }),
+    }
+  }
+
   return {
     getRanking,
     getMyPerformance,
+    getMySummary,
     computeRanking: (poolId) => computeRanking(poolId, poolTiebreaker(poolId)),
     roundPoints,
     poolRounds,

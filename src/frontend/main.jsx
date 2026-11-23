@@ -11,8 +11,9 @@ import './styles.css'
 import './pool.css'
 
 const tokenKey = 'palpite-league-session'
-// Account tabs that keep the original two-column layout with the large slogan.
-const compactAreas = ['home', 'profile']
+// Account tabs that keep the original two-column layout with the large slogan. The home page now
+// shows the pools summary table, so it uses the wide layout.
+const compactAreas = ['profile']
 const initialRecoveryToken = typeof window === 'undefined'
   ? null
   : consumeRecoveryToken(window.location, window.history)
@@ -304,7 +305,7 @@ function App() {
         </section>
       </section>
 
-      <footer className="auth-footer"><span>PALPITE LEAGUE</span><span>Uma rodada de cada vez.</span></footer>
+      <footer className="auth-footer"><span>PALPITE LEAGUE</span></footer>
     </main>
   )
 }
