@@ -15,6 +15,8 @@ import {
   createParticipationExitService,
   createParticipationRequestsService,
   createPoolsService,
+  createPoolClosingService,
+  closingAuditDetailSchemas,
   createRefundRequestsService,
   refundAuditDetailSchemas,
   decisionAuditDetailSchemas,
@@ -59,6 +61,7 @@ export const auditDetailSchemas = Object.freeze({
   ...entryFeeAuditDetailSchemas,
   ...refundAuditDetailSchemas,
   ...refundProcessingAuditDetailSchemas,
+  ...closingAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
@@ -67,6 +70,8 @@ export const defaultResultsSyncIntervalMs = 10 * 60 * 1000
 export const defaultLiveResultsIntervalMs = 60 * 1000
 // Intervalo padrão do início do processamento das devoluções aprovadas (SPEC-024, OPEN-126): 1 minuto.
 export const defaultRefundProcessingIntervalMs = 60 * 1000
+// Intervalo padrão do encerramento automático dos bolões (SPEC-025, OPEN-135): 1 minuto.
+export const defaultPoolClosingIntervalMs = 60 * 1000
 // Intervalo padrão da pontuação (SPEC-014, OPEN-76): 1 minuto.
 export const defaultScoringIntervalMs = 60 * 1000
 // Intervalo padrão das medalhas (SPEC-016, OPEN-81): 1 minuto.
@@ -242,6 +247,8 @@ export function createApp(database, {
   const medals = createMedalsService(database, { ranking, logger, now })
   app.locals.medals = medals
   app.locals.tasks.reconcileMedals = () => medals.reconcileMedals()
+  const poolClosing = createPoolClosingService(database, { auditStore, ranking, logger, now })
+  app.locals.tasks.closePools = () => poolClosing.closeDuePools()
   app.locals.results = resultsSync
   app.locals.financial = financialCore
   const authenticateRequest = createAuthenticationMiddleware(authService)
@@ -679,6 +686,16 @@ export function createApp(database, {
   app.get('/pools/:poolId/live', authenticateRequest, (request, response, next) => {
     try {
       response.json(liveResults.getPoolLive(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-025 — resultado final do bolão encerrado, somente leitura. Não existe operação para
+  // encerrar o bolão nem para alterar o resultado: o encerramento é só da tarefa agendada.
+  app.get('/pools/:poolId/final-result', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(poolClosing.getFinalResult(request.authenticatedUser.id, request.params.poolId))
     } catch (error) {
       next(error)
     }

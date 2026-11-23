@@ -49,6 +49,13 @@ export function createScoringService(database, { logger = createLogger() } = {})
         return 0
       }
       const official = { home: current.home_score, away: current.away_score }
+      // Correção de resultado de partida de bolão já encerrado: os pontos desse bolão não mudam e o
+      // resultado final continua congelado; o fato vai ao log técnico (SPEC-025, A4, OPEN-138).
+      if (current.scored_version > 0 && database.prepare(`
+        SELECT 1 FROM pool_matches pm JOIN pools p ON p.id = pm.pool_id AND p.status = 'ended' WHERE pm.match_id = ?
+      `).get(match.id)) {
+        logger.warn('scoring', 'correction_after_pool_ended')
+      }
       const predictions = database.prepare(`
         SELECT pr.id, pr.participation_id, pr.type, pr.predicted_outcome, pr.home_goals, pr.away_goals
         FROM predictions pr

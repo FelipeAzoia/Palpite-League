@@ -9,6 +9,7 @@ export { createParticipationRequestsService, participationAuditDetailSchemas } f
 export { createParticipationDecisionsService, decisionAuditDetailSchemas } from './participation-decisions.js'
 export { createParticipantManagementService, participantAuditDetailSchemas } from './participant-management.js'
 export { createParticipationExitService, exitAuditDetailSchemas } from './participation-exit.js'
+export { closingActions, closingAuditDetailSchemas, createPoolClosingService, periodEndMs } from './pool-closing.js'
 export { createRefundRequestsService, refundActions, refundAuditDetailSchemas, refundProcessingState } from './refund-requests.js'
 
 export const prizeModels = Object.freeze(['winner_takes_all'])

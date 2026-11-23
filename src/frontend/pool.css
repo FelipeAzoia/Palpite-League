@@ -388,3 +388,13 @@
 
 /* ——— Devoluções (SPEC-023) ——— */
 .refunds-block { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--rule); }
+
+/* ——— Resultado final (SPEC-025) ——— */
+.final-result { display: grid; gap: 14px; }
+.final-result-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid #d9e3b4; border-radius: 6px; background: #f6f9ea; }
+.final-result-head > svg { flex: none; margin-top: 2px; color: #7a8f1f; }
+.final-result-head .block-title { margin: 0; }
+.final-winners { margin: 6px 0 0; color: var(--forest); font-family: Georgia, serif; font-size: 20px; line-height: 1.25; }
+.final-winners-none { color: #5d6c62; font-size: 16px; }
+.final-result-head .fine-print-top { margin: 6px 0 0; }
+.winner-tag { margin-left: 6px; padding: 1px 6px; border-radius: 3px; color: #5d4a12; background: #f6e7b0; font-size: 9px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; vertical-align: 1px; }
