@@ -1,6 +1,6 @@
 # Mapa de Specs — Palpite League
 
-- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
+- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: acrescentada a SPEC-029 (renovação recorrente, plano anual e pagamento em atraso), aprovada pela equipe nesta data, totalizando 29 Specs; OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
 - **Etapa:** Spec-Driven Development, decomposição do projeto em Specs (prompt principal).
 - **Escopo deste documento:** somente o índice ordenado de Specs, as análises que o sustentam e as questões em aberto. Nenhuma Spec individual, código, banco de dados, endpoint ou escolha tecnológica nova foi produzida.
 - **Fonte de verdade:** artefatos de `docs/` (visão, personas, RF, RB, RNF, modelo de domínio, casos de uso, drivers, ADRs, arquitetura consolidada e validação do Mercado Pago).
@@ -159,7 +159,7 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 - **ADRs:** ADR-0001, ADR-0004, ADR-0005.
 - **Dependências:** nenhuma.
 - **Justificativa da posição:** todas as Specs exigem módulos, persistência transacional, testes independentes de provedores e log técnico; a necessidade está demonstrada em ADR-0001, ADR-0004 e RNF19.
-- **Questões em aberto relacionadas:** resolvidas OPEN-03, OPEN-06, OPEN-35 e OPEN-39 a OPEN-44; em aberto OPEN-48 (confirmação da versão do Node.js).
+- **Questões em aberto relacionadas:** resolvidas OPEN-03, OPEN-06, OPEN-35, OPEN-39 a OPEN-44 e OPEN-48 (Node.js v24.16.0 confirmado em 05/11/2026).
 
 ### SPEC-002 — Trilha de auditoria (técnica)
 
@@ -595,20 +595,20 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 | RF03 | 004 | RF13 | 009 | RF23 | 013 (+006) | RF33 | 023 |
 | RF04 | 005 | RF14 | 010 | RF24 | 021 | RF34 | 023, 024 |
 | RF05 | 005 | RF15 | 009 | RF25 | 013 | RF35 | 025 |
-| RF06 | 019 | RF16 | 009 | RF26 | 014 | RF36 | 025 |
-| RF07 | 020 | RF17 | 011 | RF27 | 015 | RF37 | 026 |
-| RF08 | 020 | RF18 | 007 (+006) | RF28 | 016 | RF38 | 007 |
+| RF06 | 019, 029 | RF16 | 009 | RF26 | 014 | RF36 | 025 |
+| RF07 | 020, 029 | RF17 | 011 | RF27 | 015 | RF37 | 026 |
+| RF08 | 020, 029 | RF18 | 007 (+006) | RF28 | 016 | RF38 | 007 |
 | RF09 | 007 | RF19 | 023 | RF29 | 016 | RF39 | 027 |
 | RF10 | 007 | RF20 | 012 | RF30 | 022 | RF40 | 028 |
-| RF41 | 018 (+019, 022) | RF42 | 015 | | | | |
+| RF41 | 018 (+019, 022) | RF42 | 015 | RF43 | 029 | RF44 | 029 |
 
 ### 3.2 Regras de negócio
 
-RB01 → 003, 005, 019 · RB02 → 005, 007 · RB03 → 005, 007, 019 · RB04 → 019 · RB05 → 005, 007, 009 · RB06 → 005, 007, 021 · RB07 → 013, 021 · RB08 → 007, 022 · RB09 → 019, 020 · RB10, RB11, RB12 → 020 (RB12 também 007) · RB13, RB14, RB15 → 007 · RB16 → 011 · RB17 → 008, 009 · RB18 → 010 · RB19, RB20 → 009 · RB21 → 009, 012 · RB22 → 022 · RB23 → 007, 022 · RB24 → 006, 007 · RB25–RB28 → 012 · RB29 → 006, 013 · RB30 → 013 · RB31 → 021 · RB32 → 013, 021 · RB33–RB37 → 014 · RB38 → 015 · RB39–RB41 → 016 · RB42, RB43 → 015, 025 · RB44 → 017 · RB45 → 017, 023 · RB46, RB47 → 023 (RB47 também 024) · RB48 → 017 · RB49, RB50 → 025 · RB51 → 007, 026 · RB52 → 026 · RB53, RB54 → 018 (+024, 026) · RB55 → 019 · RB56 → 020 · RB57 → 007 · RB58 → 007, 021 · RB59 → 010, 011, 023 · RB60 → 013 · RB61 → 009 · RB62 → 022 · RB63 → 025, 026 · RB64 → 007, 028 · RB65 → 002, 009.
+RB01 → 003, 005, 019 · RB02 → 005, 007 · RB03 → 005, 007, 019 · RB04 → 019, 029 · RB05 → 005, 007, 009 · RB06 → 005, 007, 021 · RB07 → 013, 021 · RB08 → 007, 022 · RB09 → 019, 020 · RB10, RB11, RB12 → 020 (RB12 também 007) · RB13, RB14, RB15 → 007 · RB16 → 011 · RB17 → 008, 009 · RB18 → 010 · RB19, RB20 → 009 · RB21 → 009, 012 · RB22 → 022 · RB23 → 007, 022 · RB24 → 006, 007 · RB25–RB28 → 012 · RB29 → 006, 013 · RB30 → 013 · RB31 → 021 · RB32 → 013, 021 · RB33–RB37 → 014 · RB38 → 015 · RB39–RB41 → 016 · RB42, RB43 → 015, 025 · RB44 → 017 · RB45 → 017, 023 · RB46, RB47 → 023 (RB47 também 024) · RB48 → 017 · RB49, RB50 → 025 · RB51 → 007, 026 · RB52 → 026 · RB53, RB54 → 018 (+024, 026) · RB55 → 019 · RB56 → 020 · RB57 → 007 · RB58 → 007, 021 · RB59 → 010, 011, 023 · RB60 → 013 · RB61 → 009 · RB62 → 022 · RB63 → 025, 026 · RB64 → 007, 028 · RB65 → 002, 009 · RB66, RB67, RB68 → 029.
 
 ### 3.3 Requisitos não funcionais
 
-Cada RNF aparece nas Specs em que é verificável (campo **RNF** de cada Spec). RNF08 e RNF17 concentram-se nas Specs 006, 013, 014 e 021. RNF13 e RNF14 aplicam-se aos fluxos de cadastro/autenticação, entrada em bolão, palpite e ranking (Specs 003, 009, 012, 015, 022, 028). Nenhum RNF virou Spec independente.
+Cada RNF aparece nas Specs em que é verificável (campo **RNF** de cada Spec). RNF08 e RNF17 concentram-se nas Specs 006, 013, 014 e 021. RNF13 e RNF14 aplicam-se aos fluxos de cadastro/autenticação, entrada em bolão, palpite e ranking (Specs 003, 009, 012, 015, 022, 028). RNF21 (processamento periódico das renovações) concentra-se na Spec 029. Nenhum RNF virou Spec independente.
 
 ---
 
@@ -616,7 +616,7 @@ Cada RNF aparece nas Specs em que é verificável (campo **RNF** de cada Spec). 
 
 Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita a origem da lacuna ou da inconsistência e as Specs afetadas.
 
-> **Situação em 23/10/2026:** OPEN-01 a OPEN-47 foram resolvidas pela proposta aprovada em `proposta-resolucao-questoes-em-aberto.md`; os textos abaixo permanecem para rastreabilidade e a decisão de cada uma está nesse documento. OPEN-01, OPEN-26, OPEN-27 e OPEN-29 têm a decisão aprovada, mas dependem de validações externas executadas pela equipe; até lá vale o simulador identificado. OPEN-49 a OPEN-87, criadas nas SPEC-003 a SPEC-019, e OPEN-88 a OPEN-166, criadas nas SPEC-020 a SPEC-028, foram resolvidas com a aprovação dessas Specs. As OPEN de conferência da baseline (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159) registram textos de requisitos e decisões que não estavam disponíveis na geração das Specs correspondentes. Em aberto: OPEN-48.
+> **Situação em 23/10/2026:** OPEN-01 a OPEN-47 foram resolvidas pela proposta aprovada em `proposta-resolucao-questoes-em-aberto.md`; os textos abaixo permanecem para rastreabilidade e a decisão de cada uma está nesse documento. OPEN-01, OPEN-26, OPEN-27 e OPEN-29 têm a decisão aprovada, mas dependem de validações externas executadas pela equipe; até lá vale o simulador identificado. OPEN-49 a OPEN-87, criadas nas SPEC-003 a SPEC-019, e OPEN-88 a OPEN-166, criadas nas SPEC-020 a SPEC-028, foram resolvidas com a aprovação dessas Specs. As OPEN de conferência da baseline (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159) registram textos de requisitos e decisões que não estavam disponíveis na geração das Specs correspondentes. OPEN-48 foi resolvida em 05/11/2026 com a confirmação do Node.js v24.16.0 pela equipe (ADR-0008). A SPEC-029 não criou novas OPEN: suas decisões de negócio foram tomadas diretamente pela equipe em 23/11/2026 e estão na seção 13 da própria Spec. Em aberto: nenhuma.
 
 ### Integrações e dados esportivos
 
@@ -685,7 +685,7 @@ Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita
 - **OPEN-45 - decisão necessária:** definir os valores de ação e de resultado do registro de auditoria, quais tentativas falhas ou negadas são auditáveis e como representar o ator não identificado. Origem: SPEC-002, RNF04, arquitetura §4.3 e §7.7. Afeta: 002, 003 e Specs com operações auditáveis.
 - **OPEN-46 - decisão necessária:** definir a relação entre a operação auditada e seu registro quando a gravação do registro falha (desfazer ou manter e sinalizar) e se o registro de falhas sobrevive ao desfazimento. Origem: SPEC-002, RNF02, RNF04, RNF16. Afeta: 002 e Specs com operações auditáveis.
 - **OPEN-47 - decisão necessária:** definir o conteúdo do registro além dos campos obrigatórios (valores anterior e novo, correlação) e a relação com `Participacao.aceiteRegrasEm`, `Palpite.dataEnvio` e `MovimentacaoFinanceira`. Origem: SPEC-002, RNF10, RNF16. Afeta: 002, 009, 012, 018.
-- **OPEN-48 - confirmação necessária:** confirmar que a versão do Node.js instalada na máquina da equipe é 20.6 ou superior, requisito do carregamento nativo do `.env` (ADR-0008). Origem: SPEC-001, ADR-0008. Afeta: 001 e todas as Specs.
+- **OPEN-48 - confirmação necessária:** confirmar que a versão do Node.js instalada na máquina da equipe é 20.6 ou superior, requisito do carregamento nativo do `.env` (ADR-0008). Origem: SPEC-001, ADR-0008. Afeta: 001 e todas as Specs. **Resolvida em 05/11/2026:** a equipe confirmou o Node.js v24.16.0 (registrado na ADR-0008).
 - **OPEN-49 - decisão necessária:** definir o comportamento após o cadastro, as sessões simultâneas e a guarda do token no navegador. Origem: SPEC-003, ADR-0007. Afeta: 003 e Specs com telas autenticadas.
 - **OPEN-50 - decisão necessária:** definir a mensagem de falha de login e o tratamento de tentativas repetidas. Origem: SPEC-003, RNF01. Afeta: 003.
 - **OPEN-51 - decisão necessária:** definir os parâmetros do `scrypt`. Origem: SPEC-003, ADR-0007, RNF06. Afeta: 003, 004.
@@ -811,4 +811,4 @@ Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita
 
 ## 5. Próximo passo
 
-Mapa aprovado, questões em aberto resolvidas e as 28 Specs geradas e aprovadas (SPEC-001 a SPEC-028). Pendências: OPEN-48 (confirmação do Node.js 20.6 ou superior), as validações externas executadas pela equipe (OPEN-01, OPEN-26, OPEN-27 e OPEN-29) e a conferência da baseline registrada nas OPEN de conferência (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159). A implementação segue cada Spec aprovada, na ordem do índice, sem misturar a geração da Spec com a implementação; qualquer divergência entre código, Spec e baseline é registrada e decidida pela equipe humana.
+Mapa aprovado, questões em aberto resolvidas e as 29 Specs geradas e aprovadas (SPEC-001 a SPEC-028 em outubro de 2026 e SPEC-029 em 23/11/2026). Nenhuma questão em aberto: a OPEN-48 foi resolvida em 05/11/2026 (Node.js v24.16.0). Pendências: as validações externas executadas pela equipe (OPEN-01, OPEN-26, OPEN-27 e OPEN-29) e a conferência da baseline registrada nas OPEN de conferência (OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159). A implementação segue cada Spec aprovada, na ordem do índice, sem misturar a geração da Spec com a implementação; qualquer divergência entre código, Spec e baseline é registrada e decidida pela equipe humana.
