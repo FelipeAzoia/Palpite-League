@@ -1,7 +1,15 @@
 import { formatBrl } from './financial-view.js'
+import { describeFeatures } from './plan-features.js'
 
 // SPEC-019 — apresentação da contratação do Premium. A interface só mostra o que o backend decide:
 // ela não ativa recursos nem define valor ou recorrência (INV-012).
+
+// No cartão do Premium só entra o que muda em relação ao Gratuito: o limite de bolões que o usuário
+// cria e administra (RB02, RB03) e os resultados ao vivo (RB06). A participação em bolões de outros
+// é sem limite nos dois planos (RB05) e aparece só na comparação.
+export function premiumAdvantages(features) {
+  return describeFeatures(features).filter(({ id }) => id !== 'participation')
+}
 
 export function recurrenceLabel(recurrence) {
   return recurrence === 'monthly' ? 'por mês' : ''

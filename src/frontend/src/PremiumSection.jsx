@@ -2,14 +2,13 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { ExternalLink, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { formatBrl, testEnvironmentNotice } from './financial-view.js'
-import { describeFeatures } from './plan-features.js'
 import {
   checkPremiumSubscription,
   decideSimulatedPayment,
   fetchSimulatedPayment,
   subscribePremium,
 } from './premium-api.js'
-import { checkResultMessage, premiumStage, priceLabel, stageMessage } from './premium-view.js'
+import { checkResultMessage, premiumAdvantages, premiumStage, priceLabel, stageMessage } from './premium-view.js'
 
 // Página de pagamento simulado (SPEC-019, OPEN-86): faz o papel do checkout quando o simulador está
 // ativo. Aprovar ou recusar só decide do lado do "provedor"; quem ativa é a conferência do backend.
@@ -149,7 +148,7 @@ export default function PremiumSection({ token, conditions, onChanged, onSession
         <div className="premium-offer">
           <p className="premium-price"><strong>{priceLabel(conditions)}</strong> <span>· {conditions.currency} · renovação mensal</span></p>
           <ul className="feature-list">
-            {describeFeatures(conditions.plan.features).map((feature) => (
+            {premiumAdvantages(conditions.plan.features).map((feature) => (
               <li key={feature.id}><span>{feature.label}</span><strong>{feature.value}</strong></li>
             ))}
           </ul>

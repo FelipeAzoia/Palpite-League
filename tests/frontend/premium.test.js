@@ -6,7 +6,15 @@ import {
   fetchSimulatedPayment,
   subscribePremium,
 } from '../../src/frontend/src/premium-api.js'
-import { checkResultMessage, formatDay, premiumStage, priceLabel, recurrenceLabel, stageMessage } from '../../src/frontend/src/premium-view.js'
+import {
+  checkResultMessage,
+  formatDay,
+  premiumAdvantages,
+  premiumStage,
+  priceLabel,
+  recurrenceLabel,
+  stageMessage,
+} from '../../src/frontend/src/premium-view.js'
 
 function okFetcher(payload = {}) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => payload })
@@ -52,6 +60,12 @@ describe('Tela da contratação do Premium (SPEC-019)', () => {
     expect(priceLabel(conditions())).toBe('R$ 19,90 por mês')
     expect(priceLabel(conditions({ priceCents: 2500 }))).toBe('R$ 25,00 por mês')
     expect(recurrenceLabel('monthly')).toBe('por mês')
+  })
+
+  it('o cartão do Premium lista só o que muda em relação ao Gratuito', () => {
+    const advantages = premiumAdvantages({ simultaneousPools: 10, unlimitedParticipation: true, liveResultsInCreatedPools: true })
+    expect(advantages.map(({ id }) => id)).toEqual(['pools', 'live'])
+    expect(advantages[0].value).toBe('Até 10')
   })
 
   it('escolhe a etapa a partir da situação da contratação', () => {
