@@ -20,7 +20,9 @@ Usuários com plano Premium poderão criar até 10 bolões simultaneamente.
 
 ## RB04 — Assinatura Premium
 
-O plano Premium será disponibilizado mediante assinatura paga, com cobrança recorrente conforme as condições comerciais definidas pela plataforma.
+O plano Premium será disponibilizado mediante assinatura paga, com cobrança única no momento da contratação e vigência de um mês, conforme as condições comerciais definidas pela plataforma. Não há renovação nem cobrança automática: ao fim da vigência a assinatura expira e, para continuar no Premium, o usuário contrata novamente.
+
+> **Alterada em 23/11/2026 (decisão da equipe):** a versão anterior previa cobrança recorrente. Para evitar retrabalho, a renovação automática e o tratamento de inadimplência ficaram fora do escopo; o comportamento já implementado (SPEC-019 e SPEC-020, OPEN-90) passa a ser a regra. Se a recorrência voltar a ser necessária, exigirá uma nova Spec.
 
 ---
 

@@ -17,7 +17,7 @@
 ## 2. Rastreabilidade
 
 - **RF:** RF06 (contratação do Premium), com o registro da movimentação conforme RF31.
-- **RB:** RB04 (assinatura paga e recorrente), RB55 (ativação depende da confirmação do pagamento), RB01 e RB03 (planos e limite do Premium) e RB09 (recursos Premium enquanto a assinatura está ativa).
+- **RB:** RB04 (assinatura paga, com cobrança única na contratação e vigência de um mês, sem renovação automática; redação alterada em 23/11/2026), RB55 (ativação depende da confirmação do pagamento), RB01 e RB03 (planos e limite do Premium) e RB09 (recursos Premium enquanto a assinatura está ativa).
 - **RNF:**
   - RNF09 — falha antes da confirmação não deixa efeito parcial; repetir a confirmação não duplica.
   - RNF10 e RNF15 — histórico financeiro e somente ambiente de teste ou simulador identificado.
