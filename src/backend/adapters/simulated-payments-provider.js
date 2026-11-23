@@ -11,6 +11,7 @@ import { PaymentsProviderError } from '../modules/payments-subscriptions/payment
 //                                   ('timeout', 'response_error', 'invalid_response'); com
 //                                   { afterRegistering: true }, o start registra a operação antes
 //                                   de falhar, como um tempo esgotado depois de o provedor receber;
+//   setRefundOutcome(outcome)     — resultado da próxima devolução (SPEC-024);
 //   calls                         — quantas vezes cada operação da porta foi chamada.
 
 export function createSimulatedPaymentsProvider() {
@@ -73,6 +74,51 @@ export function createSimulatedPaymentsProvider() {
     renewalOutcome = status
   }
 
+  // SPEC-024: a devolução na transação original. O simulador resolve sozinho, sem página para o
+  // pagador; o resultado vem de setRefundOutcome: 'confirmed' (padrão), 'refused', 'not_refundable'
+  // (transação original não admite devolução), 'pending' ou 'amount_mismatch' (o provedor informa
+  // outro valor). A devolução só vale para a aplicação depois da conferência.
+  let refundOutcome = 'confirmed'
+  const refundOutcomes = ['confirmed', 'refused', 'not_refundable', 'pending', 'amount_mismatch']
+  async function startRefund(input) {
+    if (!input?.original?.operationKey) throw new PaymentsProviderError('invalid_response')
+    const started = await startOperation(input)
+    const operation = operations.get(input.operationKey)
+    operation.original = input.original
+    operation.refundAmountCents = input.amountCents
+    if (refundOutcome === 'refused' || refundOutcome === 'not_refundable') {
+      operation.status = 'refused'
+      operation.refusalReason = refundOutcome === 'not_refundable' ? 'not_refundable' : 'provider_refused'
+    } else if (refundOutcome === 'amount_mismatch') {
+      operation.status = 'confirmed'
+      operation.reportedAmountCents = input.amountCents + 1
+    } else {
+      operation.status = refundOutcome
+    }
+    return { providerId: started.providerId, continuation: null }
+  }
+
+  async function consultRefund(reference) {
+    const result = await consultOperation(reference)
+    const operation = find(reference)
+    return {
+      ...result,
+      ...(operation.refusalReason && result.status === 'refused' ? { refusalReason: operation.refusalReason } : {}),
+      ...(operation.refundAmountCents !== undefined
+        ? { amountCents: operation.reportedAmountCents ?? operation.refundAmountCents }
+        : {}),
+    }
+  }
+
+  function setRefundOutcome(outcome) {
+    if (!refundOutcomes.includes(outcome)) throw new TypeError('unsupported refund outcome')
+    refundOutcome = outcome
+  }
+
+  function refundOf(operationKey) {
+    return operations.get(operationKey)?.original ?? null
+  }
+
   async function consultOperation(reference) {
     calls.consult += 1
     const failure = takeFailure('consult')
@@ -108,6 +154,10 @@ export function createSimulatedPaymentsProvider() {
     startSubscriptionRenewal,
     consultSubscriptionRenewal: consultOperation,
     setRenewalOutcome,
+    startRefund,
+    consultRefund,
+    setRefundOutcome,
+    refundOf,
     confirm: (operationKey) => setStatus(operationKey, 'confirmed'),
     refuse: (operationKey) => setStatus(operationKey, 'refused'),
     failNext,

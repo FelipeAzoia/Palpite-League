@@ -47,9 +47,25 @@ function alreadyDecided() {
   return new AppError(409, 'refund_already_decided', 'Este pedido de devolução já foi decidido.')
 }
 
-// Situação apresentada ao solicitante: aprovada aguarda processamento até a SPEC-024 (OPEN-121).
-function displayStatus(status) {
-  return status === 'approved' ? 'awaiting_processing' : status
+// Processamento da devolução (SPEC-024, OPEN-131): estado derivado das movimentações de devolução
+// do pedido aprovado — aguardando processamento, em processamento, concluída ou recusada.
+export function refundProcessingState(database, requestId) {
+  const movement = database.prepare(`
+    SELECT status, origin, refusal_reason, inconsistency, attempt_number, updated_at FROM financial_movements
+    WHERE type = 'refund' AND operation_type = 'refund_request' AND operation_id = ?
+    ORDER BY attempt_number DESC LIMIT 1
+  `).get(requestId)
+  if (!movement) return { state: 'awaiting_processing', attempts: 0, simulated: false, refusalReason: null, inconsistent: false, updatedAt: null }
+  const state = { pending: 'processing', confirmed: 'completed', refused: 'refused' }[movement.status]
+  return {
+    state,
+    attempts: movement.attempt_number,
+    // Simulação sempre identificada, inclusive quando concluída (INV-010).
+    simulated: movement.origin === 'simulator',
+    refusalReason: movement.refusal_reason ?? null,
+    inconsistent: movement.inconsistency !== null && movement.status === 'pending',
+    updatedAt: movement.updated_at,
+  }
 }
 
 export function createRefundRequestsService(database, { auditStore, now = Date.now }) {
@@ -98,10 +114,12 @@ export function createRefundRequestsService(database, { auditStore, now = Date.n
 
   function requestView(request) {
     if (!request) return null
+    const processing = request.status === 'approved' ? refundProcessingState(database, request.id) : null
     return {
       id: request.id,
       status: request.status,
-      displayStatus: displayStatus(request.status),
+      displayStatus: processing ? processing.state : request.status,
+      processing,
       amountCents: request.amount_cents,
       amount: formatCents(request.amount_cents),
       currency: request.currency,

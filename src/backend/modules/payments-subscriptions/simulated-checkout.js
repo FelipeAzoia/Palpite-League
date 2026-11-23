@@ -18,7 +18,12 @@ export function createSimulatedCheckoutService(database, simulator) {
 
   function ownPendingMovement(userId, movementId) {
     const row = typeof movementId === 'string'
-      ? database.prepare("SELECT * FROM financial_movements WHERE id = ? AND user_id = ? AND origin = 'simulator'").get(movementId, userId)
+      // Só cobranças passam pela página do pagador; devoluções e repasses são decididos pelo
+      // provedor, nunca por quem recebe o valor (SPEC-024).
+      ? database.prepare(`
+        SELECT * FROM financial_movements
+        WHERE id = ? AND user_id = ? AND origin = 'simulator' AND type IN ('entry_fee', 'subscription')
+      `).get(movementId, userId)
       : undefined
     if (!row) throw notFound()
     return row
