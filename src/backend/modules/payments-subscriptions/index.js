@@ -10,6 +10,16 @@ export {
   operationOriginTypes,
 } from './financial-core.js'
 export {
+  addCalendarMonth,
+  createPremiumSubscriptionService,
+  defaultPremiumPriceCents,
+  premiumRecurrence,
+  subscriptionActions,
+  subscriptionAuditDetailSchemas,
+  subscriptionStatuses,
+} from './premium-subscription.js'
+export { createSimulatedCheckoutService } from './simulated-checkout.js'
+export {
   assertPaymentsProvider,
   PaymentsProviderError,
   paymentsProviderFailureCodes,

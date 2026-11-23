@@ -109,6 +109,37 @@ test('migrações numeradas são ordenadas, atômicas e aplicadas uma única vez
   }
 })
 
+test('migração reconstrói tabela referenciada, confere chaves estrangeiras e as mantém ligadas depois', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'palpite-migration-rebuild-'))
+  const database = createDatabase(':memory:')
+
+  try {
+    fs.writeFileSync(path.join(directory, '001-base.sql'), `
+      CREATE TABLE parents (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind = 'a'));
+      CREATE TABLE children (id TEXT PRIMARY KEY, parent_id TEXT NOT NULL REFERENCES parents (id));
+      INSERT INTO parents VALUES ('p', 'a'); INSERT INTO children VALUES ('c', 'p');`)
+    fs.writeFileSync(path.join(directory, '002-rebuild.sql'), `
+      CREATE TABLE parents_rebuilt (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('a', 'b')));
+      INSERT INTO parents_rebuilt SELECT * FROM parents;
+      DROP TABLE parents;
+      ALTER TABLE parents_rebuilt RENAME TO parents;`)
+    runMigrations(database, directory)
+    assert.equal(database.pragma('foreign_keys', { simple: true }), 1)
+    database.prepare("UPDATE parents SET kind = 'b'").run()
+    assert.throws(() => database.prepare("INSERT INTO children VALUES ('x', 'inexistente')").run(), /FOREIGN KEY/)
+
+    // Uma migração que deixa referência órfã é desfeita por inteiro.
+    fs.writeFileSync(path.join(directory, '003-orphan.sql'), "CREATE TABLE marker (id INTEGER); INSERT INTO children VALUES ('o', 'inexistente');")
+    assert.throws(() => runMigrations(database, directory), /Migration failed/)
+    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE name = 'marker'").get().count, 0)
+    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM children WHERE id = 'o'").get().count, 0)
+    assert.equal(database.pragma('foreign_keys', { simple: true }), 1)
+  } finally {
+    database.close()
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})
+
 test('migração com falha reverte suas alterações e registra somente resultado seguro', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'palpite-migration-failure-'))
   const database = createDatabase(':memory:')

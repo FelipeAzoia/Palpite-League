@@ -24,7 +24,11 @@ import {
 } from './modules/predictions-scoring/index.js'
 import {
   createFinancialCoreService,
+  createPremiumSubscriptionService,
+  createSimulatedCheckoutService,
+  defaultPremiumPriceCents,
   financialAuditDetailSchemas,
+  subscriptionAuditDetailSchemas,
 } from './modules/payments-subscriptions/index.js'
 
 // Esquemas dos detalhes de auditoria permitidos por ação (SPEC-002), reunidos de cada módulo.
@@ -36,6 +40,7 @@ export const auditDetailSchemas = Object.freeze({
   ...predictionAuditDetailSchemas,
   ...resultsAuditDetailSchemas,
   ...financialAuditDetailSchemas,
+  ...subscriptionAuditDetailSchemas,
 })
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
@@ -104,6 +109,9 @@ function configuredPaymentsProvider() {
     return createMercadoPagoTestPaymentsProvider({
       accessToken: process.env.MERCADO_PAGO_TEST_ACCESS_TOKEN || '',
       timeoutMs: Number(process.env.PAYMENTS_PROVIDER_TIMEOUT_MS || 10000),
+      backUrl: process.env.APP_BASE_URL || '',
+      // Assinaturas do Mercado Pago só depois dos smoke tests aprovados pela equipe (OPEN-26, SPEC-019).
+      subscriptionsProofApproved: process.env.MERCADO_PAGO_SUBSCRIPTIONS_PROOF_APPROVED === 'true',
     })
   }
   throw new Error('Unsupported payments provider')
@@ -116,6 +124,7 @@ export function createApp(database, {
   interfaceBaseUrl,
   sportsProvider = configuredSportsProvider(now),
   paymentsProvider = configuredPaymentsProvider(),
+  premiumPriceCents = Number(process.env.PREMIUM_TEST_PRICE_CENTS || defaultPremiumPriceCents),
   sportsSeason = Number(process.env.SPORTS_SEASON || 2026),
   sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
 } = {}) {
@@ -134,6 +143,17 @@ export function createApp(database, {
     logger,
     now,
   })
+  const premiumSubscriptions = createPremiumSubscriptionService(database, {
+    auditStore,
+    financialCore,
+    paymentsProvider,
+    now,
+    priceCents: premiumPriceCents,
+  })
+  // A página de pagamento simulado só existe com o simulador ativo (SPEC-019, INV-008).
+  const simulatedCheckout = paymentsProvider.source === 'simulator'
+    ? createSimulatedCheckoutService(database, paymentsProvider)
+    : null
   const sportsCatalogService = createSportsCatalogService(database, sportsProvider, {
     logger,
     now,
@@ -274,6 +294,59 @@ export function createApp(database, {
       next(error)
     }
   })
+
+  // SPEC-019 — contratação do Premium. Condições, valor e recorrência vêm sempre do backend.
+  app.get('/account/premium', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(premiumSubscriptions.getConditions(request.authenticatedUser.id))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.post('/account/premium/subscription', authenticateRequest, async (request, response, next) => {
+    try {
+      const { created, subscription } = await premiumSubscriptions.subscribe(request.authenticatedUser.id, request.body)
+      response.status(created ? 201 : 200).json({ subscription })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/account/premium/subscription', authenticateRequest, (request, response, next) => {
+    try {
+      response.json({ subscription: premiumSubscriptions.getSubscription(request.authenticatedUser.id) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Retorno do checkout: confere a operação na hora, além da tarefa periódica da SPEC-018.
+  app.post('/account/premium/subscription/check', authenticateRequest, async (request, response, next) => {
+    try {
+      response.json({ subscription: await premiumSubscriptions.checkSubscription(request.authenticatedUser.id) })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  if (simulatedCheckout) {
+    app.get('/payments/simulated-checkout/:movementId', authenticateRequest, (request, response, next) => {
+      try {
+        response.json({ payment: simulatedCheckout.getPayment(request.authenticatedUser.id, request.params.movementId) })
+      } catch (error) {
+        next(error)
+      }
+    })
+
+    app.post('/payments/simulated-checkout/:movementId/decision', authenticateRequest, (request, response, next) => {
+      try {
+        response.json(simulatedCheckout.decide(request.authenticatedUser.id, request.params.movementId, request.body))
+      } catch (error) {
+        next(error)
+      }
+    })
+  }
 
   app.get('/catalog/rounds', authenticateRequest, async (_request, response, next) => {
     try {

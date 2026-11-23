@@ -4,7 +4,8 @@ import { PaymentsProviderError } from '../modules/payments-subscriptions/payment
 // Determinístico e sempre identificado como simulador. Nenhum dinheiro real é movimentado.
 // Controles para testes e demonstração:
 //   confirm(key) / refuse(key)   — a próxima consulta devolve confirmada ou recusada;
-//                                   chamar de novo simula uma notificação repetida;
+//                                   chamar de novo simula uma notificação repetida; é também o
+//                                   que a página de pagamento simulado aciona (SPEC-019);
 //   (sem controle)               — a operação fica pendente (atraso);
 //   failNext(stage, code, opts)  — a próxima chamada de 'start' ou 'consult' falha com o código
 //                                   ('timeout', 'response_error', 'invalid_response'); com
@@ -58,10 +59,13 @@ export function createSimulatedPaymentsProvider() {
     return { providerId: operation.providerId, status: operation.status }
   }
 
+  // A decisão vale também para uma operação cujo início não chegou a responder: o simulador faz o
+  // papel do provedor, que passa a conhecê-la quando o pagador decide na página simulada.
   function setStatus(operationKey, status) {
-    const operation = operations.get(operationKey)
-    if (!operation) throw new Error(`unknown simulated operation: ${operationKey}`)
+    if (typeof operationKey !== 'string' || operationKey === '') throw new TypeError('operationKey is required')
+    const operation = operations.get(operationKey) ?? { operationKey, providerId: `sim-${operationKey}` }
     operation.status = status
+    operations.set(operationKey, operation)
   }
 
   function failNext(stage, code, { afterRegistering = false } = {}) {
@@ -73,6 +77,9 @@ export function createSimulatedPaymentsProvider() {
     source: 'simulator',
     startOperation,
     consultOperation,
+    // Extensão de assinatura (SPEC-019): no simulador, o mesmo fluxo da operação genérica.
+    startSubscription: startOperation,
+    consultSubscription: consultOperation,
     confirm: (operationKey) => setStatus(operationKey, 'confirmed'),
     refuse: (operationKey) => setStatus(operationKey, 'refused'),
     failNext,

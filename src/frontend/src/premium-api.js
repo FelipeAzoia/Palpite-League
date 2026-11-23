@@ -1,0 +1,28 @@
+import { requestAuth } from './auth-api.js'
+
+// SPEC-019 — contratação do Premium. Valor e recorrência nunca saem do cliente: a contratação envia
+// somente a confirmação explícita.
+
+export function fetchPremiumConditions(token, options = {}) {
+  return requestAuth('/account/premium', { token, ...options })
+}
+
+export function subscribePremium(token, options = {}) {
+  return requestAuth('/account/premium/subscription', { method: 'POST', body: { confirm: true }, token, ...options })
+}
+
+// Retorno do checkout: o backend consulta o provedor e aplica o resultado.
+export function checkPremiumSubscription(token, options = {}) {
+  return requestAuth('/account/premium/subscription/check', { method: 'POST', token, ...options })
+}
+
+// Página de pagamento simulado: só existe com o simulador ativo.
+export function fetchSimulatedPayment(token, movementId, options = {}) {
+  return requestAuth(`/payments/simulated-checkout/${encodeURIComponent(movementId)}`, { token, ...options })
+}
+
+export function decideSimulatedPayment(token, movementId, decision, options = {}) {
+  return requestAuth(`/payments/simulated-checkout/${encodeURIComponent(movementId)}/decision`, {
+    method: 'POST', body: { decision }, token, ...options,
+  })
+}
