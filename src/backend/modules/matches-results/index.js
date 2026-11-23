@@ -6,6 +6,7 @@ import { SportsProviderError } from './sports-provider.js'
 
 export const moduleName = 'matches-results'
 export { createResultsSyncService, resultsAuditDetailSchemas } from './results-sync.js'
+export { createLiveResultsService, validateLiveReading } from './live-results.js'
 
 const matchStatuses = new Set(['scheduled', 'in_progress', 'finished', 'postponed', 'cancelled'])
 const reschedulableStatuses = new Set(['scheduled', 'postponed', 'cancelled'])

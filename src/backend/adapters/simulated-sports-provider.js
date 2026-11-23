@@ -84,6 +84,29 @@ function simulatedResults(catalog, nowMs) {
   }
 }
 
+// Leitura ao vivo simulada (SPEC-021): antes do início, agendada; durante as duas horas de jogo,
+// em andamento com o placar parcial crescendo até o final; depois, encerrada com o placar final.
+function simulatedLiveScore(catalog, providerId, nowMs) {
+  const match = catalog.matches.find(({ id }) => id === providerId)
+  if (!match) throw new SportsProviderError('invalid_response')
+  const observedAt = new Date(nowMs).toISOString()
+  const startsAtMs = match.startsAt ? Date.parse(match.startsAt) : NaN
+  if (['postponed', 'cancelled'].includes(match.status) || !Number.isFinite(startsAtMs) || nowMs < startsAtMs) {
+    return { id: match.id, status: match.status, homeScore: null, awayScore: null, observedAt }
+  }
+  const final = simulatedScore(match.id)
+  const elapsed = nowMs - startsAtMs
+  if (elapsed >= simulatedMatchDurationMs) return { id: match.id, status: 'finished', ...final, observedAt }
+  const progress = elapsed / simulatedMatchDurationMs
+  return {
+    id: match.id,
+    status: 'in_progress',
+    homeScore: Math.floor(final.homeScore * progress),
+    awayScore: Math.floor(final.awayScore * progress),
+    observedAt,
+  }
+}
+
 export function createSimulatedSportsProvider({
   catalog = null,
   failure = null,
@@ -97,6 +120,13 @@ export function createSimulatedSportsProvider({
   let currentResultsFailure = resultsFailure
   let calls = 0
   let resultCalls = 0
+  // Cenários ao vivo controlados pelos testes: leitura fixa por partida, falha geral ou por
+  // partida, e atraso artificial da resposta.
+  const liveReadings = new Map()
+  const liveFailures = new Map()
+  let liveFailure = null
+  let liveDelayMs = 0
+  const liveCalls = []
 
   return {
     source: 'simulated',
@@ -111,6 +141,30 @@ export function createSimulatedSportsProvider({
       if (currentResultsFailure) throw currentResultsFailure
       if (currentResults) return structuredClone(currentResults)
       return simulatedResults(currentCatalog ?? createFixtures(season), now())
+    },
+    // Porta ao vivo (SPEC-021): status e placar parcial de uma partida, pelo id do fornecedor.
+    async fetchLiveScore(providerId) {
+      liveCalls.push(providerId)
+      if (liveDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, liveDelayMs))
+      if (liveFailures.has(providerId)) throw liveFailures.get(providerId)
+      if (liveFailure) throw liveFailure
+      if (liveReadings.has(providerId)) return structuredClone(liveReadings.get(providerId))
+      return simulatedLiveScore(currentCatalog ?? createFixtures(2026), providerId, now())
+    },
+    setLiveReading(providerId, reading) {
+      if (reading === null) liveReadings.delete(providerId)
+      else liveReadings.set(providerId, reading)
+    },
+    setLiveFailure(nextFailure, providerId = null) {
+      if (providerId === null) liveFailure = nextFailure
+      else if (nextFailure === null) liveFailures.delete(providerId)
+      else liveFailures.set(providerId, nextFailure)
+    },
+    setLiveDelay(ms) {
+      liveDelayMs = ms
+    },
+    getLiveCalls() {
+      return [...liveCalls]
     },
     setCatalog(nextCatalog) {
       currentCatalog = nextCatalog

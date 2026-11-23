@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto'
 import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore } from './modules/notifications-audit/index.js'
-import { createResultsSyncService, createSportsCatalogService, resultsAuditDetailSchemas } from './modules/matches-results/index.js'
+import {
+  createLiveResultsService,
+  createResultsSyncService,
+  createSportsCatalogService,
+  resultsAuditDetailSchemas,
+} from './modules/matches-results/index.js'
 import {
   createInvitesService,
   createParticipantManagementService,
@@ -52,6 +57,8 @@ export const auditDetailSchemas = Object.freeze({
 
 // Intervalo padrão da sincronização de resultados (SPEC-013, ADR-0006): 10 minutos.
 export const defaultResultsSyncIntervalMs = 10 * 60 * 1000
+// Intervalo padrão da atualização ao vivo (SPEC-021, OPEN-99): 1 minuto.
+export const defaultLiveResultsIntervalMs = 60 * 1000
 // Intervalo padrão da pontuação (SPEC-014, OPEN-76): 1 minuto.
 export const defaultScoringIntervalMs = 60 * 1000
 // Intervalo padrão das medalhas (SPEC-016, OPEN-81): 1 minuto.
@@ -97,6 +104,12 @@ function configuredSportsProvider(now) {
       return {
         source: 'api-football',
         async fetchCatalog() {
+          throw new SportsProviderError('proof_pending')
+        },
+        async fetchResults() {
+          throw new SportsProviderError('proof_pending')
+        },
+        async fetchLiveScore() {
           throw new SportsProviderError('proof_pending')
         },
       }
@@ -202,10 +215,12 @@ export function createApp(database, {
   const participationExit = createParticipationExitService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const predictions = createPredictionsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const resultsSync = createResultsSyncService(database, sportsProvider, { auditStore, logger, now, season: sportsSeason })
+  const liveResults = createLiveResultsService(database, sportsProvider, { logger, now })
   // Tarefas periódicas expostas ao agendador do processo (index.js) e aos testes (SPEC-013).
   const scoring = createScoringService(database, { logger })
   app.locals.tasks = {
     syncResults: () => resultsSync.syncResults(),
+    refreshLiveScores: () => liveResults.refreshLiveScores(),
     scorePredictions: () => scoring.scorePendingMatches(),
     reconcilePayments: () => financialCore.reconcilePending(),
     processSubscriptions: () => subscriptionLifecycle.processSubscriptions(),
@@ -576,6 +591,16 @@ export function createApp(database, {
   app.post('/pools/:poolId/entry-fee/payment/check', authenticateRequest, async (request, response, next) => {
     try {
       response.json(await entryFeePayments.checkPayment(request.authenticatedUser.id, request.params.poolId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-021 — dados ao vivo do bolão, somente leitura e rotulados como não oficiais. Só
+  // participante confirmado; bolão sem o recurso recebe a indicação de indisponível.
+  app.get('/pools/:poolId/live', authenticateRequest, (request, response, next) => {
+    try {
+      response.json(liveResults.getPoolLive(request.authenticatedUser.id, request.params.poolId))
     } catch (error) {
       next(error)
     }
