@@ -67,6 +67,9 @@ function isValidDetailValue(value, schema) {
 				&& new Date(value).toISOString() === value
 		case 'enum':
 			return typeof value === 'string' && schema.values.includes(value)
+		case 'identifier':
+			// Identificadores técnicos (por exemplo, o do provedor de pagamentos), nunca texto livre.
+			return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(value)
 		default:
 			return false
 	}
@@ -134,7 +137,7 @@ export function createAuditStore(database, { logger = createLogger(), detailSche
 					throw new TypeError(`enum values required for ${actionName}.${field}`)
 				}
 				validatedSchema[field] = { type: 'enum', values: [...definition.values] }
-			} else if (['score', 'integer', 'number', 'boolean', 'timestamp'].includes(definition.type)) {
+			} else if (['score', 'integer', 'number', 'boolean', 'timestamp', 'identifier'].includes(definition.type)) {
 				validatedSchema[field] = { type: definition.type }
 			} else {
 				throw new TypeError(`unsupported detail type for ${actionName}.${field}`)

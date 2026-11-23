@@ -157,21 +157,24 @@ a { color: inherit; text-decoration: none; }
   font-size: 12px;
   line-height: 1.45;
 }
-.financial-list { display: grid; gap: 8px; }
+.financial-list { display: grid; gap: 8px; margin: 0 0 18px; padding: 0; list-style: none; }
 .financial-movement {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px 16px;
+  min-width: 0;
   padding: 12px;
   border: 1px solid #ccd7cd;
   border-radius: 6px;
   background: #fff;
   font-size: 12px;
 }
-.financial-movement > div { display: grid; gap: 4px; }
-.financial-movement span { color: var(--muted); }
+.financial-movement > div { display: grid; gap: 4px; min-width: 0; }
+.financial-movement time, .financial-movement span { color: var(--muted); }
 .financial-movement-value { text-align: right; }
+.financial-origin { flex-basis: 100%; font-size: 11px; font-weight: 700; letter-spacing: .3px; }
+.financial-origin--simulated { color: #6b5317; }
 .financial-state { font-weight: 700; }
 .financial-state--confirmed { color: #2f6443; }
 .financial-state--refused { color: #9a4b41; }

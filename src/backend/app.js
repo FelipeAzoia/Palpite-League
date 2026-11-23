@@ -95,11 +95,16 @@ function configuredSportsProvider(now) {
   throw new Error('Unsupported sports catalog source')
 }
 
+// Provedor de pagamentos por configuração (SPEC-018): o simulador é o padrão; o Mercado Pago só em
+// ambiente de teste, com a chave fora do repositório.
 function configuredPaymentsProvider() {
-  const source = process.env.PAYMENTS_PROVIDER || process.env.PAYMENT_PROVIDER || 'simulator'
-  if (source === 'simulator' || source === 'simulated') return createSimulatedPaymentsProvider()
-  if (source === 'mercado-pago-test' || source === 'test_provider') {
-    return createMercadoPagoTestPaymentsProvider()
+  const source = process.env.PAYMENTS_PROVIDER || 'simulator'
+  if (source === 'simulator') return createSimulatedPaymentsProvider()
+  if (source === 'mercado-pago-test') {
+    return createMercadoPagoTestPaymentsProvider({
+      accessToken: process.env.MERCADO_PAGO_TEST_ACCESS_TOKEN || '',
+      timeoutMs: Number(process.env.PAYMENTS_PROVIDER_TIMEOUT_MS || 10000),
+    })
   }
   throw new Error('Unsupported payments provider')
 }
@@ -125,7 +130,7 @@ export function createApp(database, {
   const profileService = createProfileService(database)
   const financialCore = createFinancialCoreService(database, {
     auditStore,
-    paymentProvider: paymentsProvider,
+    paymentsProvider,
     logger,
     now,
   })
@@ -260,18 +265,11 @@ export function createApp(database, {
     }
   })
 
-  // SPEC-018 — histórico financeiro próprio. Nenhum filtro ou visão administrativa.
+  // SPEC-018 — histórico financeiro próprio (RF41): só as movimentações da sessão, sem filtros.
+  // Toda movimentação é de teste; a resposta diz isso explicitamente (INV-016).
   app.get('/account/financial-history', authenticateRequest, (request, response, next) => {
     try {
-      response.json({ movements: financialCore.getHistory(request.authenticatedUser.id) })
-    } catch (error) {
-      next(error)
-    }
-  })
-
-  app.get('/account/financial-movements', authenticateRequest, (request, response, next) => {
-    try {
-      response.json({ movements: financialCore.getHistory(request.authenticatedUser.id) })
+      response.json({ environment: 'test', movements: financialCore.getHistory(request.authenticatedUser.id) })
     } catch (error) {
       next(error)
     }

@@ -44,7 +44,7 @@ scheduler.register(
 )
 scheduler.register(
   'financial-reconciliation',
-  Number(process.env.FINANCIAL_RECONCILIATION_INTERVAL_MS || process.env.PAYMENTS_RECONCILIATION_INTERVAL_MS || defaultFinancialReconciliationIntervalMs),
+  Number(process.env.FINANCIAL_RECONCILIATION_INTERVAL_MS || defaultFinancialReconciliationIntervalMs),
   app.locals.tasks.reconcilePayments,
 )
 

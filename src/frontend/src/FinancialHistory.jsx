@@ -1,21 +1,18 @@
 import { useEffect, useEffectEvent, useState } from 'react'
-import { ArrowRight, LoaderCircle } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { fetchFinancialHistory, isSessionRejected } from './account-api.js'
+import {
+  formatBrl,
+  formatMovementDate,
+  movementStatusLabel,
+  movementTypeLabel,
+  originBadge,
+  testEnvironmentNotice,
+} from './financial-view.js'
 
-const labels = {
-  entry_fee: 'Taxa de entrada',
-  subscription: 'Assinatura',
-  refund: 'Devolução',
-  payout: 'Premiação',
-}
-
-const states = {
-  pending: 'Pendente',
-  confirmed: 'Confirmada',
-  refused: 'Recusada',
-}
-
-export default function FinancialHistory({ token, onBack, onLogout, onSessionRejected, pending = false }) {
+// SPEC-018 — histórico financeiro próprio (RF41), do mais recente para o mais antigo, sem filtros,
+// com o aviso permanente de ambiente de teste e o selo de origem em cada movimentação.
+export default function FinancialHistory({ token, pending = false, onBack, onLogout, onSessionRejected }) {
   const [movements, setMovements] = useState(null)
   const [loadError, setLoadError] = useState('')
   const rejectSession = useEffectEvent(() => onSessionRejected())
@@ -33,42 +30,41 @@ export default function FinancialHistory({ token, onBack, onLogout, onSessionRej
 
   return (
     <section className="financial-history" aria-labelledby="financial-history-title">
-      <p className="eyebrow">AMBIENTE DE TESTE</p>
+      <p className="eyebrow">FINANCEIRO</p>
       <h2 id="financial-history-title">Histórico financeiro</h2>
-      <p className="test-environment-warning" role="status">
-        Operações de teste sem movimentação de dinheiro real. Movimentações simuladas nunca são comprovantes de pagamento.
-      </p>
+      <p className="test-environment-warning" role="note">{testEnvironmentNotice}</p>
 
       {loadError && <p className="form-message" role="alert">{loadError}</p>}
-      {!movements && !loadError && <p className="form-copy" role="status"><LoaderCircle size={17} className="spin" /> Carregando histórico...</p>}
-      {movements?.length === 0 && <p className="form-copy">Você ainda não possui movimentações financeiras.</p>}
+      {!movements && !loadError && (
+        <p className="form-copy" role="status"><LoaderCircle size={17} className="spin" /> Carregando histórico...</p>
+      )}
+      {movements?.length === 0 && <p className="form-copy">Você ainda não tem movimentações financeiras.</p>}
 
       {movements?.length > 0 && (
-        <div className="financial-list">
+        <ul className="financial-list">
           {movements.map((movement) => (
-            <article className="financial-movement" key={movement.id}>
-              <div>
-                <strong>{labels[movement.type] ?? movement.type}</strong>
-                <span>{new Date(movement.createdAt).toLocaleString('pt-BR')}</span>
+            <li className="financial-movement" key={movement.id}>
+              <div className="financial-movement-main">
+                <strong>{movementTypeLabel(movement.type)}</strong>
+                <time dateTime={movement.createdAt}>{formatMovementDate(movement.createdAt)}</time>
               </div>
               <div className="financial-movement-value">
-                <strong>R$ {movement.amount}</strong>
+                <strong>{formatBrl(movement.amountCents)}</strong>
                 <span className={`financial-state financial-state--${movement.status}`}>
-                  {movement.origin === 'simulator' ? 'Simulada · ' : 'Teste · '}
-                  {states[movement.status] ?? movement.status}
+                  {movementStatusLabel(movement.status)}
                 </span>
               </div>
-            </article>
+              <span className={`financial-origin${movement.origin === 'simulator' ? ' financial-origin--simulated' : ''}`}>
+                {originBadge(movement)}
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       <div className="mode-switch">
         <button type="button" onClick={onBack}>Voltar ao início</button>
-        <button type="button" onClick={onLogout} disabled={pending}>
-          <span>{pending ? 'Saindo...' : 'Sair da conta'}</span>
-          <ArrowRight size={16} />
-        </button>
+        <button type="button" onClick={onLogout} disabled={pending}>Sair da conta</button>
       </div>
     </section>
   )
