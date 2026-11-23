@@ -1,10 +1,10 @@
 # SPEC-027 — Notificações de eventos
 
-- **Status:** aprovada em 31/10/2026. As questões OPEN-151 a OPEN-158 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13.
+- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-151 a OPEN-158 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13.
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF39, dos casos de uso UC02, UC03, UC05 e UC07 (de onde vêm os eventos), das SPEC-010, 013, 016, 019, 020 e 026 e a redação final da decisão aprovada para OPEN-32 e o critério de RNF06 não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs, das Specs aprovadas nesta conversa e dos registros de OPEN-XX. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-151).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF39, UC02, UC03, UC05 e UC07, SPEC-010, SPEC-013, SPEC-016, SPEC-019, SPEC-020, SPEC-026 e RNF06. Não foi encontrada divergência residual com a baseline.
 
 ---
 
@@ -148,7 +148,7 @@
 | RNF | Como é verificado |
 | --- | --- |
 | RNF01 | Teste de que nenhuma notificação é acessível sem autenticação nem por outro usuário. |
-| RNF06 | Verificação conforme o critério definido no RNF, a conferir (OPEN-151); em particular, teste de que a lista paginada responde dentro do critério e de que a notificação aparece no ciclo seguinte ao evento. |
+| RNF06 | Teste de que a lista paginada responde dentro do critério local de até 3 segundos para pelo menos 95% das consultas sob 5 usuários simultâneos e de que a notificação aparece no ciclo seguinte ao evento. |
 | RNF11 | Teste de que cada usuário vê apenas as próprias notificações e de que o conteúdo não expõe dados que ele não poderia ver. |
 
 ## 11. Critérios de aceitação
@@ -198,7 +198,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-151 - confirmação necessária:** conferir esta Spec contra o texto integral de RF39, dos casos de uso UC02, UC03, UC05 e UC07, das SPEC-010, 013, 016, 019, 020 e 026 aprovadas, da decisão aprovada de OPEN-32 e do critério de RNF06, que não estavam disponíveis na geração. *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-151 - conferência concluída em 23/11/2026:** conferida contra RF39, UC02, UC03, UC05 e UC07, SPEC-010, SPEC-013, SPEC-016, SPEC-019, SPEC-020 e SPEC-026 e RNF06. Resultado: compatibilidade confirmada; notificações são internas, idempotentes e não alteram os dados de origem.
 - **OPEN-152 - decisão necessária:** definir canal, tipos e conteúdo (OPEN-32). *Proposta:* canal único dentro da aplicação; tipos entrada aprovada, resultado atualizado, rodada encerrada, medalha concedida, assinatura alterada e premiação concluída; texto padronizado em português com referência ao objeto, sem valores financeiros nem dados de provedor, e com indicação de simulação quando houver.
 - **OPEN-153 - decisão necessária:** definir eventos e destinatários, e o que fica de fora da lista do RF39. *Proposta:* destinatários conforme a tabela da seção 5.2; ficam fora de escopo pagamento da taxa, devolução, rejeição de entrada, saída, encerramento do bolão e vencedor, convites e cancelamento pendente.
 - **OPEN-154 - decisão necessária:** definir se cada atualização de resultado gera notificação (OPEN-32). *Proposta:* uma notificação por resultado oficial registrado e outra por correção, apenas para participantes confirmados com palpite na partida; atualizações ao vivo nunca notificam.

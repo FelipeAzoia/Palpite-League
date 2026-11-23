@@ -4,7 +4,7 @@
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF34, RF31, RB47, RB53, RB54, do UC06 (passos 4 a 6 e exceções A4, A5 e A6), da SPEC-018 e a redação final das decisões aprovadas para OPEN-22, OPEN-27, OPEN-28 e OPEN-36 não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs, da SPEC-023 aprovada e dos registros de OPEN-XX. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-125).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF34, RF31, RB47, RB53, RB54, UC06 (passos 4 a 6 e exceções A4 a A6), SPEC-018 e SPEC-023. RNF11 é aplicável por extensão ao acesso ao estado. Não foi encontrada divergência residual com a baseline.
 
 ---
 
@@ -22,7 +22,7 @@
 | RF | RF34 (início do processo de devolução financeira), RF31 |
 | RB | RB47, RB53, RB54; contexto: RB45 e RB46 (devolução só após autorização e confirmação do provedor) |
 | RNF | RNF02, RNF04, RNF09, RNF10, RNF15, RNF16; por extensão: RNF11 (acesso ao estado da devolução, ver OPEN-125) |
-| Caso de uso | UC06: fluxo de devolução, passos 4 a 6, e exceções A4, A5 e A6 (recusa, pendência e indisponibilidade, conforme o objetivo; mapeamento exato a conferir, OPEN-125) |
+| Caso de uso | UC06: fluxo de devolução, passos 4 a 6, e exceções A4, A5 e A6 (recusa, pendência e indisponibilidade) |
 | Entidades | SolicitacaoDevolucao, MovimentacaoFinanceira (a Carteira é reservada, OPEN-22) |
 | Drivers | DA-03 |
 | ADRs | ADR-0003. Estruturais herdadas da fundação: ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0008 |
@@ -200,7 +200,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-125 - confirmação necessária:** conferir esta Spec contra o texto integral de RF34, RF31, RB47, RB53, RB54, UC06 (passos 4 a 6 e A4 a A6), a SPEC-023 aprovada, a SPEC-018 e as decisões aprovadas de OPEN-22, OPEN-27, OPEN-28 e OPEN-36, que não estavam disponíveis na geração. Confirmar também se RF34 exige ação explícita da administração para iniciar a devolução, além da aprovação, e a inclusão de RNF11 por extensão, que o mapa não lista para esta Spec. *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-125 - conferência concluída em 23/11/2026:** conferida contra RF34, RF31, RB47, RB53, RB54, UC06 (passos 4 a 6 e A4 a A6), SPEC-023 e SPEC-018. RF34 exige autorização administrativa; após ela, a tarefa inicia o processamento sem nova aprovação. RNF11 é aplicável por extensão ao estado da devolução.
 - **OPEN-126 - decisão necessária:** definir o gatilho e a frequência do início do processamento. *Proposta:* a aprovação na SPEC-023 é a ordem de início; uma tarefa do agendador (ADR-0006), a cada 1 minuto como em OPEN-76 e OPEN-81, processa só pedidos aprovados sem nenhuma tentativa; depois da primeira tentativa, só a conferência de pendentes age. O processamento independe de o bolão estar ativo ou encerrado.
 - **OPEN-127 - decisão necessária:** definir o fluxo técnico com o núcleo financeiro e o provedor (referência de negócio, tratador de devolução, conferência no retorno e periódica, prazo máximo de pendência) e o contrato de persistência. *Proposta:* reutilizar a porta de pagamentos, o tratador por tipo e a conferência da SPEC-018 (OPEN-84, OPEN-85, OPEN-36); prazo de pendência configurável fora do código e, ao vencer, resolvido só após consulta ao provedor, nunca por suposição.
 - **OPEN-128 - decisão necessária:** definir o tratamento da compatibilidade do reembolso com o Checkout Pro (OPEN-27) e a identificação do simulador. *Proposta:* até a validação no sandbox pela equipe, vale o simulador identificado, e uma devolução simulada "concluída" é exibida como simulação; o adaptador real só entra após o teste aprovado; transação original não reembolsável resulta em recusa com motivo.

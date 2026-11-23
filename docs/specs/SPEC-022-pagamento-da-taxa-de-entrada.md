@@ -4,7 +4,7 @@
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF30, RB08, RB22, RB23, RB62, do UC03 (passos 7 a 9 e exceções A6, A7 e A8), da SPEC-010 e da SPEC-018 e a redação final das decisões aprovadas para OPEN-09, OPEN-15, OPEN-17, OPEN-26, OPEN-36 e OPEN-38 não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs e dos registros de OPEN-XX. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-107).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF30 e RF31, RB08, RB22, RB23, RB62, UC03 (passos 7 a 9 e exceções A6 a A8), SPEC-010, SPEC-018 e RNF13/RNF14. Não foi encontrada divergência residual com a baseline.
 
 ---
 
@@ -22,7 +22,7 @@
 | RF | RF30, com registro conforme RF31 |
 | RB | RB08, RB22, RB23, RB62; contexto: RB18 (aprovação administrativa), RB53 e RB54 (registro das movimentações) |
 | RNF | RNF01, RNF02, RNF04, RNF09, RNF10, RNF13, RNF14, RNF15, RNF16 |
-| Caso de uso | UC03: passos 7 a 9 e exceções A6, A7 e A8 (pagamento recusado, pendente e provedor indisponível, conforme o objetivo; mapeamento exato a conferir, OPEN-107) |
+| Caso de uso | UC03: passos 7 a 9 e exceções A6, A7 e A8 (pagamento recusado, pendente e provedor indisponível) |
 | Entidades | Participacao (pagamento confirmado), MovimentacaoFinanceira, Bolao (taxa de entrada) |
 | Drivers | DA-03 |
 | ADRs | ADR-0003, ADR-0004. Estruturais herdadas da fundação: ADR-0001, ADR-0005, ADR-0006, ADR-0008 |
@@ -143,7 +143,7 @@
 | RNF04 | Teste de datas e registros em UTC. |
 | RNF09 | Teste de confirmação repetida e de conferência sem duplicidade de cobrança ou de efeitos. |
 | RNF10 | Teste de que cada tentativa gera registro consultável, vinculado a usuário, bolão e operação. |
-| RNF13 e RNF14 | Aplicados ao fluxo de entrada em bolão (mapa, seção 3.3); verificação conforme o critério definido em cada RNF, a conferir (OPEN-107). |
+| RNF13 e RNF14 | Aplicados ao fluxo de entrada em bolão: executáveis nos navegadores e larguras definidos pelos RNFs, sem bloquear convite, aprovação, cobrança ou consulta da participação. |
 | RNF15 | Revisão e teste de ausência de dinheiro real, credenciais de produção e segredos em registros e respostas. |
 | RNF16 | Teste de auditoria de iniciar, confirmar, recusar e pagamento tardio. |
 
@@ -197,7 +197,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-107 - confirmação necessária:** conferir esta Spec contra o texto integral de RF30, RB08, RB22, RB23, RB62, UC03 (passos 7 a 9 e A6 a A8), a SPEC-010 aprovada (OPEN-68 e OPEN-69), a SPEC-018 e as decisões aprovadas de OPEN-09, OPEN-15, OPEN-17, OPEN-26, OPEN-36 e OPEN-38, e os critérios de RNF13 e RNF14, que não estavam disponíveis na geração. *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-107 - conferência concluída em 23/11/2026:** conferida contra RF30, RF31, RB08, RB22, RB23, RB62, UC03 (passos 7 a 9 e A6 a A8), SPEC-010, SPEC-018 e RNF13/RNF14. Resultado: baselines compatíveis; a participação continua não confirmada enquanto o pagamento está pendente ou recusado.
 - **OPEN-108 - decisão necessária:** definir quem inicia a cobrança, onde e como a jornada aparece. *Proposta:* o titular inicia pela ação "pagar taxa" na participação aprovada (a aprovação não gera cobrança sozinha); o Checkout Pro só após os smoke tests (OPEN-26) e, até lá, página de pagamento simulado identificada (padrão de OPEN-86).
 - **OPEN-109 - decisão necessária:** definir o fluxo técnico com o núcleo financeiro e o provedor (referência de negócio, tratador de taxa de entrada, conferência no retorno e conferência periódica de pendentes, prazo máximo de pendência, contrato de persistência). *Proposta:* reutilizar a porta de pagamentos, o tratador por tipo e a conferência da SPEC-018 (OPEN-84, OPEN-85, OPEN-36); valor em centavos inteiros em BRL; prazo de pendência configurável fora do código e, ao vencer, resolvido após consulta ao provedor, nunca por suposição.
 - **OPEN-110 - decisão necessária:** definir se e como o criador do bolão paga a taxa (OPEN-38, RB08, RB13). *Proposta:* seguir a decisão aprovada de OPEN-38; esta Spec trata qualquer titular de participação aprovada e não confirmada com pagamento exigido do mesmo modo.

@@ -1,10 +1,10 @@
 # SPEC-025 — Encerramento automático e determinação do vencedor
 
-- **Status:** aprovada em 31/10/2026. As questões OPEN-134 a OPEN-141 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13. Em particular, a OPEN-136 foi aprovada mantendo a SPEC-023 como está (pedidos de devolução pendentes não podem mais ser decididos após o encerramento).
+- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-134 a OPEN-141 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13. Em particular, a OPEN-136 foi aprovada mantendo a SPEC-023 como está (pedidos de devolução pendentes não podem mais ser decididos após o encerramento).
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF35, RF36, RB42, RB43, RB49, RB50, RB63, do UC07 (passos 1 a 3 e exceções A1 e A2), das SPEC-015, 017, 022 e 024 e a redação final das decisões aprovadas para OPEN-02, OPEN-03, OPEN-04, OPEN-09, OPEN-11, OPEN-13, OPEN-14 e OPEN-21 não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs, das Specs aprovadas nesta conversa e dos registros de OPEN-XX. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-134).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF35, RF36, RB42, RB43, RB49, RB50, RB63, UC07 (passos 1 a 3 e exceções A1 e A2), SPEC-015, SPEC-017 e SPEC-022. A SPEC-024 não é dependência do encerramento; devoluções confirmadas são consideradas posteriormente pela SPEC-026.
 
 ---
 
@@ -22,7 +22,7 @@
 | RF | RF35, RF36 |
 | RB | RB42, RB43, RB49, RB50, RB63; contexto: RB29, RB30 e RB60 (resultado oficial só pela API), RB22 e RB62 (confirmação por pagamento), RB44 e RB48 (saída), RB51 (premiação definida na criação) |
 | RNF | RNF02, RNF03, RNF04, RNF18; por extensão: RNF16 (auditoria do encerramento, ver OPEN-141) |
-| Caso de uso | UC07: passos 1 a 3 e exceções A1 e A2 (mapeamento exato a conferir, OPEN-134) |
+| Caso de uso | UC07: passos 1 a 3 e exceções A1 e A2 |
 | Entidades | Bolao, Participacao, Palpite |
 | Drivers | DA-01 |
 | ADRs | ADR-0005, ADR-0001. Estruturais herdadas da fundação: ADR-0004, ADR-0006 (agendador), ADR-0008 |
@@ -52,7 +52,7 @@
 - **SPEC-015:** regra de classificação e de desempate, reutilizada para a classificação final.
 - **SPEC-017:** participantes que saíram ficam fora da classificação e da premiação.
 - **SPEC-022:** participação confirmada por pagamento, necessária à elegibilidade (RB63).
-- **SPEC-024:** devoluções que podem afetar o montante da premiação; a dependência é uma proposta a validar (mapa, OPEN-134).
+- **Fronteira com SPEC-024:** devoluções concluídas não são processadas aqui e podem afetar o montante apenas na SPEC-026; não há dependência funcional desta Spec para processar devoluções.
 - **Transitivas:** SPEC-001, 002, 003, 006, 007, 010, 012, 013, 014, 016, 018 e o agendador (ADR-0006).
 - **Decisões:** ADR-0005 (invariantes no backend) e ADR-0001 (monólito modular).
 
@@ -135,7 +135,7 @@
 | RNF | Como é verificado |
 | --- | --- |
 | RNF02 | Teste de atomicidade: falha entre classificar, registrar vencedores e mudar o estado desfaz tudo. |
-| RNF03 | Aplicado ao cálculo da classificação final, como nas SPEC-015, 016 e 017; verificação conforme o critério definido no RNF, a conferir (OPEN-134). |
+| RNF03 | Consultas relacionadas após o encerramento devem mostrar a mesma classificação persistida; pontuação e ranking devem continuar correspondendo aos resultados oficiais e às regras de pontuação vigentes. |
 | RNF04 | Teste de datas, período final e instante de encerramento em UTC. |
 | RNF18 | Execução de toda a suíte com adaptador simulado e instante de referência controlado, sem credenciais externas. |
 | RNF16 (extensão) | Teste de auditoria do encerramento e do registro de vencedores, com o sistema como ator (OPEN-141). |
@@ -191,7 +191,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-134 - confirmação necessária:** conferir esta Spec contra o texto integral de RF35, RF36, RB42, RB43, RB49, RB50, RB63, UC07 (passos 1 a 3 e A1, A2), as SPEC-015, 017, 022 e 024 aprovadas, as decisões aprovadas de OPEN-02, OPEN-03, OPEN-04, OPEN-09, OPEN-11, OPEN-13, OPEN-14 e OPEN-21 e o critério de RNF03, que não estavam disponíveis na geração. Validar também se a dependência de SPEC-024 se mantém (o mapa a trata como proposta) e a inclusão de RNF16 por extensão. *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-134 - conferência concluída em 23/11/2026:** conferida contra RF35, RF36, RB42, RB43, RB49, RB50, RB63, UC07 (passos 1 a 3 e A1/A2), SPEC-015, SPEC-017 e SPEC-022 e o RNF03. A SPEC-024 não é dependência do encerramento; devoluções são tratadas pela SPEC-026. RNF16 é aplicável por extensão à auditoria do encerramento.
 - **OPEN-135 - decisão necessária:** definir a condição e o momento do encerramento (OPEN-03, OPEN-11, OPEN-02). *Proposta:* tarefa própria do agendador (ADR-0006), a cada 1 minuto; o período termina ao fim do dia da data final, em UTC; o bolão encerra quando o período terminou e toda partida selecionada tem resultado oficial já pontuado ou estado terminal sem resultado (por exemplo cancelada); partida adiada ou suspensa mantém o bolão ativo, sem prazo máximo e sem encerramento manual.
 - **OPEN-136 - decisão necessária:** definir o tratamento de pedidos de devolução pendentes e de pagamentos em andamento no encerramento. Há uma possível inconsistência com a SPEC-023 aprovada, que impede decidir pedidos de bolão encerrado: pedidos ainda pendentes ficariam sem decisão possível. *Proposta:* manter a SPEC-023 como está; os pedidos pendentes permanecem pendentes, visíveis ao solicitante com aviso de que não podem mais ser decididos; devoluções já aprovadas continuam sendo processadas pela SPEC-024; pagamentos pendentes seguem a SPEC-022 (INV-011). Se a equipe preferir permitir decisão após o encerramento, a baseline e a SPEC-023 precisam ser alteradas por decisão humana.
 - **OPEN-137 - decisão necessária:** definir elegibilidade e vencedores (RB63, OPEN-14, OPEN-21, OPEN-78). *Proposta:* a classificação final contém só participações confirmadas que não saíram; vencedores são os elegíveis na primeira posição, com co-vencedores em empate residual; sem elegível, ou com maior pontuação zero, o resultado registra ausência de vencedor (alinhado à regra de medalhas só com pontuação positiva, OPEN-80).

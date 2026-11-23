@@ -4,7 +4,7 @@
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF19, RF33, RF34, RB45, RB46, RB47, RB59, do UC06 (fluxo de devolução, passos 1 a 3, e exceções A2 e A3), das SPEC-017 e SPEC-018 e a redação final das decisões aprovadas para OPEN-08, OPEN-09, OPEN-22, OPEN-28 e OPEN-30 não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs e dos registros de OPEN-XX. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-116).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF19, RF33, RF34, RB45 a RB47 e RB59, UC06 (passos 1 a 3 e exceções A2 e A3), SPEC-017 e SPEC-018. Não foi encontrada divergência residual com a baseline.
 
 ---
 
@@ -22,7 +22,7 @@
 | RF | RF19, RF33, RF34 (registro da autorização ou rejeição) |
 | RB | RB45, RB46, RB47, RB59; contexto: RB48 (sem remoção unilateral), RB44 e RB63 (efeitos da saída), RB53 e RB54 (registro das movimentações) |
 | RNF | RNF02, RNF04, RNF11, RNF12, RNF16 |
-| Caso de uso | UC06: fluxo de devolução, passos 1 a 3, e exceções A2 e A3 (mapeamento exato a conferir, OPEN-116) |
+| Caso de uso | UC06: fluxo de devolução, passos 1 a 3, e exceções A2 e A3 |
 | Entidades | SolicitacaoDevolucao, Participacao, MovimentacaoFinanceira (somente leitura da movimentação de origem) |
 | Drivers | DA-03, DA-04 |
 | ADRs | ADR-0003, ADR-0005. Estruturais herdadas da fundação: ADR-0001, ADR-0004, ADR-0008 |
@@ -195,7 +195,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-116 - confirmação necessária:** conferir esta Spec contra o texto integral de RF19, RF33, RF34, RB45, RB46, RB47, RB59, UC06 (passos 1 a 3 e A2, A3), as SPEC-017 (OPEN-82, OPEN-83) e SPEC-018 aprovadas e as decisões aprovadas de OPEN-08, OPEN-09, OPEN-22, OPEN-28 e OPEN-30, que não estavam disponíveis na geração. *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-116 - conferência concluída em 23/11/2026:** conferida contra RF19, RF33, RF34, RB45 a RB47, RB59, UC06 (passos 1 a 3 e A2/A3), SPEC-017 e SPEC-018. Resultado: baselines compatíveis; a saída não cria devolução e a devolução exige autorização antes do processamento.
 - **OPEN-117 - decisão necessária:** definir elegibilidade, valor elegível e prazo (OPEN-28, RB47). *Proposta:* só quem saiu, com taxa de entrada confirmada; valor elegível igual ao da movimentação confirmada (integral); pedido permitido apenas enquanto o bolão não estiver encerrado, por poder afetar o montante da premiação (OPEN-13); as "regras previamente estabelecidas" e o prazo seguem a decisão aprovada de OPEN-28, se mais restritivas.
 - **OPEN-118 - decisão necessária:** definir o ciclo do pedido. *Proposta:* estados pendente, aprovada e rejeitada; um pedido por participação; rejeição definitiva; sem cancelamento do pedido pelo solicitante nesta Spec.
 - **OPEN-119 - decisão necessária:** definir autorização e conflito de interesse (OPEN-08, OPEN-30, RB59). *Proposta:* decidem administrador e coadministrador do bolão; o decisor nunca é o solicitante; membro sem permissão recebe 403 e não membro recebe 404 (OPEN-65); sem decisor elegível, o pedido permanece pendente.

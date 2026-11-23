@@ -1,10 +1,10 @@
 # SPEC-028 — Histórico do bolão
 
-- **Status:** aprovada em 31/10/2026. As questões OPEN-159 a OPEN-166 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13.
+- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-159 a OPEN-166 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13.
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF40, RB64, do UC05 (passo 8), das SPEC-012, 013, 014 e 015 e a redação final das decisões aprovadas para OPEN-18, OPEN-34, OPEN-78 e OPEN-79, além dos critérios de RNF03, RNF06, RNF07, RNF13 e RNF14, não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs, das Specs aprovadas nesta conversa e dos registros de OPEN-XX. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-159).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF40, RB64, UC05 (passo 8), SPEC-012, SPEC-013, SPEC-014, SPEC-015 e RNF01, RNF03, RNF06, RNF07, RNF11, RNF13 e RNF14. Não foi encontrada divergência residual com a baseline.
 
 ---
 
@@ -20,8 +20,8 @@
 | Tipo | Itens |
 | --- | --- |
 | RF | RF40 |
-| RB | RB64 (texto a conferir, OPEN-159); contexto: RB29, RB30 e RB31 (resultado oficial só pela API e dado parcial nunca é oficial), RB44 (efeitos da saída) |
-| RNF | RNF03, RNF06, RNF07, RNF11, RNF13, RNF14; por extensão: RNF01 (acesso restrito a quem participa, ver OPEN-159) |
+| RB | RB64 (regras associadas ao bolão durante todo o ciclo); contexto: RB29, RB30 e RB31 (resultado oficial só pela API e dado parcial nunca é oficial), RB44 (efeitos da saída) |
+| RNF | RNF03, RNF06, RNF07, RNF11, RNF13, RNF14; por extensão: RNF01 (acesso restrito a quem participa) |
 | Caso de uso | UC05, passo 8 (disponibilização dos resultados processados) |
 | Entidades | Participacao, Palpite, Partida, Rodada, Bolao |
 | Drivers | DA-01, DA-04 |
@@ -126,10 +126,10 @@
 
 | RNF | Como é verificado |
 | --- | --- |
-| RNF03 | Teste de consistência: pontos por partida, por rodada e acumulado coincidem com os da SPEC-014 e da SPEC-015; critério exato a conferir (OPEN-159). |
-| RNF06 e RNF07 | Verificação conforme os critérios definidos nos RNFs, a conferir (OPEN-159); em particular, teste de resposta da consulta paginada com volume realista de rodadas e partidas. |
+| RNF03 | Teste de consistência: pontos por partida, por rodada e acumulado coincidem com os da SPEC-014 e da SPEC-015; após cada operação confirmada, consultas relacionadas apresentam o mesmo estado persistido. |
+| RNF06 e RNF07 | Teste da consulta paginada dentro de 3 segundos para pelo menos 95% das consultas sob 5 usuários simultâneos e com o conjunto acadêmico de 20 usuários, 5 bolões ativos e 1.000 palpites. |
 | RNF11 | Teste de que só participantes veem o histórico e de que nenhum palpite alheio é exposto. |
-| RNF13 e RNF14 | Aplicados ao fluxo de ranking e histórico (mapa, seção 3.3); verificação conforme os critérios definidos nos RNFs, a conferir (OPEN-159). |
+| RNF13 e RNF14 | Aplicados ao fluxo de histórico nos navegadores e larguras definidos pelos RNFs: desktop Chrome, Firefox e Edge, Chrome Android, Safari iOS, em 360 px, 768 px e 1366 px. |
 | RNF01 (extensão) | Teste de acesso negado sem autenticação e sem vínculo. |
 
 ## 11. Critérios de aceitação
@@ -177,7 +177,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-159 - confirmação necessária:** conferir esta Spec contra o texto integral de RF40, RB64, UC05 (passo 8), as SPEC-012, 013, 014 e 015 aprovadas, as decisões aprovadas de OPEN-18, OPEN-34, OPEN-78 e OPEN-79 e os critérios de RNF03, RNF06, RNF07, RNF13 e RNF14, que não estavam disponíveis na geração. Confirmar também a inclusão de RNF01 por extensão. *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-159 - conferência concluída em 23/11/2026:** conferida contra RF40, RB64, UC05 (passo 8), SPEC-012, SPEC-013, SPEC-014 e SPEC-015 e os RNF03, RNF06, RNF07, RNF11, RNF13 e RNF14. RNF01 é aplicável por extensão ao acesso ao histórico.
 - **OPEN-160 - decisão necessária:** definir o conteúdo e o período do histórico. *Proposta:* partidas selecionadas do bolão, agrupadas por rodada, cujo início ocorreu entre a confirmação da participação e a saída ou o encerramento; partidas iniciadas antes da confirmação não são listadas; cada partida mostra status, resultado oficial, palpite próprio e pontos; cada rodada mostra pontos, acumulado e posição; o resumo mostra posição e pontuação total.
 - **OPEN-161 - decisão necessária:** definir a origem e a consistência dos dados. *Proposta:* tudo é derivado dos dados persistidos, sem cópias nem snapshots; a posição ao final de cada rodada é calculada cumulativamente pelas regras da SPEC-015 (OPEN-78, OPEN-79); correções de resultado são refletidas no valor atual, e a posição histórica pode mudar retroativamente enquanto o bolão estiver ativo; em bolão encerrado vale o resultado final congelado (OPEN-138).
 - **OPEN-162 - decisão necessária:** definir quem acessa. *Proposta:* participante confirmado acessa; quem saiu acessa em somente leitura apenas o período em que participou; participação aprovada e não confirmada não acessa; não membro recebe a mesma resposta de bolão inexistente (OPEN-65); a administração não tem visão do histórico de outros participantes.

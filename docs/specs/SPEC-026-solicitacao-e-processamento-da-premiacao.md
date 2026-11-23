@@ -1,10 +1,10 @@
 # SPEC-026 — Solicitação e processamento da premiação
 
-- **Status:** aprovada em 31/10/2026. As questões OPEN-142 a OPEN-150 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13.
+- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-142 a OPEN-150 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13.
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF37, RF31, RB51, RB52, RB53, RB63, do UC07 (passos 4 a 8 e exceções A3 a A7), das SPEC-018, 024 e 025 e a redação final das decisões aprovadas para OPEN-13, OPEN-22, OPEN-29 e OPEN-36 não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs, das Specs aprovadas nesta conversa e dos registros de OPEN-XX. Em especial, o modelo de premiação definido na criação do bolão (OPEN-13) não foi consultado: o cálculo da parte segue o que a baseline aprovada definir, e o que for proposto aqui só vale na ausência dessa definição. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-142).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF37, RF31, RB51, RB52, RB53, RB63, UC07 (passos 4 a 8 e exceções A3 a A7), SPEC-018, SPEC-024 e SPEC-025. RNF02, além dos RNFs já listados, é aplicável à movimentação e ao estado da premiação na mesma transação.
 
 ---
 
@@ -21,8 +21,8 @@
 | --- | --- |
 | RF | RF37, com registro conforme RF31 |
 | RB | RB51, RB52, RB53, RB63; contexto: RB54 (vínculo da movimentação a usuário e operação), RB43 e RB23 (regras imutáveis do bolão) |
-| RNF | RNF04, RNF09, RNF10, RNF15, RNF16; por extensão: RNF11 (acesso restrito, ver OPEN-142) |
-| Caso de uso | UC07: passos 4 a 8 e exceções A3 a A7 (mapeamento exato a conferir, OPEN-142) |
+| RNF | RNF02, RNF04, RNF09, RNF10, RNF15, RNF16; por extensão: RNF11 (acesso restrito) |
+| Caso de uso | UC07: passos 4 a 8 e exceções A3 a A7 |
 | Entidades | Bolao, Participacao, MovimentacaoFinanceira (a Carteira é reservada, OPEN-22) |
 | Drivers | DA-03 |
 | ADRs | ADR-0003, ADR-0004. Estruturais herdadas da fundação: ADR-0001, ADR-0005, ADR-0006, ADR-0008 |
@@ -152,6 +152,7 @@
 
 | RNF | Como é verificado |
 | --- | --- |
+| RNF02 | Teste de atomicidade entre a movimentação de premiação e a atualização do estado exibido; falha não deixa parte da operação persistida. |
 | RNF04 | Teste de datas e registros em UTC. |
 | RNF09 | Teste de confirmação repetida e de conferência sem duplicidade de premiação ou de efeitos. |
 | RNF10 | Teste de que cada tentativa gera registro consultável, vinculado a usuário, bolão e operação. |
@@ -212,7 +213,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-142 - confirmação necessária:** conferir esta Spec contra o texto integral de RF37, RF31, RB51, RB52, RB53, RB63, UC07 (passos 4 a 8 e A3 a A7), as SPEC-018, 024 e 025 aprovadas e as decisões aprovadas de OPEN-13, OPEN-22, OPEN-29 e OPEN-36, que não estavam disponíveis na geração. Confirmar também a inclusão de RNF11 por extensão e que o mapa não lista RNF02 para esta Spec, embora a transação única do resultado seja exigida (INV-012). *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-142 - conferência concluída em 23/11/2026:** conferida contra RF37, RF31, RB51, RB52, RB53, RB63, UC07 (passos 4 a 8 e A3 a A7), SPEC-018, SPEC-024 e SPEC-025. RNF11 é aplicável por extensão e RNF02 também é aplicável à atomicidade da solicitação/processamento da premiação (INV-012).
 - **OPEN-143 - decisão necessária:** definir elegibilidade e prazo da solicitação. *Proposta:* a elegibilidade vem do resultado final congelado da SPEC-025; se a SPEC-017 permitir a saída depois do encerramento, a saída não retira o direito do vencedor já registrado (consistente com OPEN-138); não há prazo para solicitar; só o próprio vencedor solicita, sem aprovação administrativa.
 - **OPEN-144 - decisão necessária:** definir o cálculo da parte (OPEN-13): origem do montante, divisão entre co-vencedores, arredondamento, moeda e efeito de saídas e devoluções. *Proposta:* seguir a decisão aprovada de OPEN-13 e o modelo gravado na criação (SPEC-007); na ausência de regra mais específica, valor em centavos inteiros em BRL, divisão igual entre co-vencedores, arredondamento para baixo em cada parte com o resto de centavos atribuído em ordem estável da classificação final, montante fixado uma única vez, na primeira solicitação, e, se a origem depender das taxas, desconsiderando as devoluções confirmadas, com solicitação bloqueada enquanto houver devolução aprovada em processamento.
 - **OPEN-145 - decisão necessária:** definir o fluxo técnico com o núcleo financeiro e o provedor (referência de negócio, tratador de premiação, conferência no retorno e periódica, prazo máximo de pendência) e o contrato de persistência. *Proposta:* reutilizar a porta de pagamentos, o tratador por tipo e a conferência da SPEC-018 (OPEN-84, OPEN-85, OPEN-36); prazo de pendência configurável fora do código e, ao vencer, resolvido só após consulta ao provedor.

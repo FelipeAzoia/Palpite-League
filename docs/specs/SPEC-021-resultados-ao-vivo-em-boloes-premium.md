@@ -4,7 +4,7 @@
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
-> **Nota de rastreabilidade:** ao gerar esta Spec, o texto integral de RF24, RB06, RB07, RB31, RB32, RB58, do UC05 (passo 3 e exceção A3), da SPEC-013 e a redação final das decisões aprovadas para OPEN-01, OPEN-02, OPEN-03, OPEN-24 e OPEN-25 não estavam disponíveis. O conteúdo abaixo foi derivado do mapa de Specs. Tudo que depende desses textos está marcado como OPEN-XX, com proposta, para conferência (ver OPEN-97).
+> **Nota de rastreabilidade:** esta Spec foi conferida contra RF24, RB06, RB07, RB31, RB32, RB58, UC05 (passo 3 e exceção A3), SPEC-013, RNF01, RNF08, RNF18 e RNF20. Não foi encontrada divergência residual com a baseline.
 
 ---
 
@@ -178,7 +178,7 @@ Não implementar nesta etapa.
 
 > Cada item traz uma **proposta para aprovação**, no mesmo padrão das Specs anteriores. Se a baseline já decidir algo diferente, a baseline prevalece.
 
-- **OPEN-97 - confirmação necessária:** conferir esta Spec contra o texto integral de RF24, RB06, RB07, RB31, RB32, RB58, UC05 (passo 3 e A3), a SPEC-013 aprovada (OPEN-74 e OPEN-75) e as decisões aprovadas de OPEN-01, OPEN-02, OPEN-03, OPEN-24 e OPEN-25, que não estavam disponíveis na geração. Confirmar também a inclusão de RNF01 por extensão, que o mapa não lista para esta Spec. *Proposta:* ajustar os critérios afetados após a conferência.
+- **OPEN-97 - conferência concluída em 23/11/2026:** conferida contra RF24, RB06, RB07, RB31, RB32, RB58, UC05 (passo 3 e A3), SPEC-013 e as decisões aprovadas. RNF01 é aplicável por extensão ao acesso de participantes. Resultado: baselines compatíveis; nenhum ajuste de requisito restante.
 - **OPEN-98 - decisão necessária:** definir o que é apresentado ao vivo (OPEN-25). *Proposta:* status da partida, placar parcial e instante da última atualização; sem minuto de jogo e sem eventos ou lances.
 - **OPEN-99 - decisão necessária:** definir frequência, janela e cotas. *Proposta:* tarefa própria do agendador (ADR-0006) com intervalo configurável, padrão de 1 minuto, ativa somente para partidas em andamento de bolões ativos com o recurso, uma consulta por partida por ciclo e sem repetição imediata em caso de falha; o intervalo final respeita as cotas definidas após a prova técnica (OPEN-01).
 - **OPEN-100 - decisão necessária:** definir a fronteira com a SPEC-013, a extensão do contrato do adaptador e do simulador para dados parciais, e a persistência do dado ao vivo separado do oficial. *Proposta:* mesma porta do adaptador da SPEC-006 e SPEC-013, estendida com consulta de status e placar parcial; o simulador reproduz cenários de partida em andamento, falha e atraso; dado ao vivo armazenado à parte, com instante da leitura.
