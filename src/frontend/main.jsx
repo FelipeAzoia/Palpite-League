@@ -11,9 +11,9 @@ import './styles.css'
 import './pool.css'
 
 const tokenKey = 'palpite-league-session'
-// Account tabs that keep the original two-column layout with the large slogan. The home page now
-// shows the pools summary table, so it uses the wide layout.
-const compactAreas = ['profile']
+// Account tabs that keep the original two-column layout with the large slogan; on the home page the
+// right-hand card shows the pools summary.
+const compactAreas = ['home', 'profile']
 const initialRecoveryToken = typeof window === 'undefined'
   ? null
   : consumeRecoveryToken(window.location, window.history)

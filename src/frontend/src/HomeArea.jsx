@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useState } from 'react'
-import { ChevronLeft, ChevronRight, LoaderCircle, LogOut } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { fetchPoolsSummary, paginate, pointsLabel, poolStatusLabel, positionLabel } from './home-summary.js'
 
@@ -8,9 +8,9 @@ const views = [
   ['position', 'Colocação'],
 ]
 
-// Página inicial: saudação e o desempenho do usuário em cada bolão, 5 por página, alternando entre
-// pontos e colocação. Clicar num bolão abre o bolão.
-export default function HomeArea({ token, user, pending, onLogout, onOpenPool, onBrowsePools, onSessionRejected }) {
+// Página inicial (cartão da direita, ao lado do slogan): saudação e o desempenho do usuário em cada
+// bolão, 5 por página, alternando entre pontos e colocação. Clicar num bolão abre o bolão.
+export default function HomeArea({ token, user, onOpenPool, onBrowsePools, onSessionRejected }) {
   const [pools, setPools] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [view, setView] = useState('points')
@@ -33,14 +33,9 @@ export default function HomeArea({ token, user, pending, onLogout, onOpenPool, o
   return (
     <div className="home-page">
       <div className="home-head">
-        <div>
-          <p className="eyebrow">INÍCIO</p>
-          <h2 id="auth-title">Olá, {user?.name}.</h2>
-          <p className="toolbar-note">Veja como você está em cada bolão.</p>
-        </div>
-        <button className="small-button" type="button" onClick={onLogout} disabled={pending}>
-          <LogOut size={14} aria-hidden="true" /> {pending ? 'Saindo...' : 'Sair da conta'}
-        </button>
+        <p className="eyebrow">INÍCIO</p>
+        <h2 id="auth-title">Olá, {user?.name}.</h2>
+        <p className="toolbar-note">Veja como você está em cada bolão.</p>
       </div>
 
       <section className="home-summary" aria-labelledby="home-summary-title">

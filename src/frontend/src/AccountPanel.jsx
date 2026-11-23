@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useState } from 'react'
-import { ArrowRight, LoaderCircle } from 'lucide-react'
+import { ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
 import { fetchProfile, isSessionRejected, updateProfileName } from './account-api.js'
 import MatchCatalog from './MatchCatalog.jsx'
 import PlanArea from './PlanArea.jsx'
@@ -19,7 +19,7 @@ const areas = [
 // A página de planos não tem aba própria: ela é aberta pelo Perfil e pela criação de bolão.
 const navAreaOf = (area) => (area === 'plan' ? 'profile' : area)
 
-function ProfileArea({ token, user, onOpenPlans, onSessionRejected, onUserChange }) {
+function ProfileArea({ token, user, pending, onOpenPlans, onLogout, onSessionRejected, onUserChange }) {
   const [profile, setProfile] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [name, setName] = useState('')
@@ -119,6 +119,11 @@ function ProfileArea({ token, user, onOpenPlans, onSessionRejected, onUserChange
         </>
       )}
 
+      <div className="profile-logout">
+        <button className="small-button" type="button" onClick={onLogout} disabled={pending}>
+          <LogOut size={14} aria-hidden="true" /> {pending ? 'Saindo...' : 'Sair da conta'}
+        </button>
+      </div>
     </>
   )
 }
@@ -154,8 +159,6 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
         <HomeArea
           token={token}
           user={user}
-          pending={pending}
-          onLogout={onLogout}
           onOpenPool={openPool}
           onBrowsePools={() => openPool(null)}
           onSessionRejected={onSessionRejected}
@@ -166,7 +169,9 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
         <ProfileArea
           token={token}
           user={user}
+          pending={pending}
           onOpenPlans={() => setArea('plan')}
+          onLogout={onLogout}
           onSessionRejected={onSessionRejected}
           onUserChange={onUserChange}
         />
