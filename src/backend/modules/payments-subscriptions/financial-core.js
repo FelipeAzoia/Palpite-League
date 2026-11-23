@@ -278,6 +278,9 @@ export function createFinancialCoreService(database, {
     // A devolução usa a transação original e nunca cai na operação genérica, que seria uma cobrança
     // (SPEC-024, INV-003); sem as operações próprias, a devolução fica pendente.
     refund: { start: 'startRefund', consult: 'consultRefund', required: true },
+    // O repasse da premiação também nunca cai na operação genérica (SPEC-026); sem as operações
+    // próprias no adaptador, ele fica pendente.
+    payout: { start: 'startPayout', consult: 'consultPayout', required: true },
     subscription: { start: 'startSubscription', consult: 'consultSubscription', required: false },
     subscription_cancellation: { start: 'startSubscriptionCancellation', consult: 'consultSubscriptionCancellation', required: true },
     // A renovação é cobrada pelo provedor (SPEC-029); sem as operações próprias não há cobrança.

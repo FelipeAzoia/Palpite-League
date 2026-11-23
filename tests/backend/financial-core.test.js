@@ -17,9 +17,11 @@ import { expectCommonFormat, startOfTests, withHttpApp } from './support/app-har
 // SPEC-018 — núcleo financeiro de teste. Toda a suíte roda com o simulador ou com adaptadores de
 // teste, sem credenciais e sem rede externa (RNF18).
 
+// Cobrança genérica de exemplo: a taxa de entrada usa a operação genérica da porta. O repasse da
+// premiação (SPEC-026) e a devolução (SPEC-024) têm operações próprias e não servem de exemplo aqui.
 function payout(user, overrides = {}) {
   return {
-    type: 'payout',
+    type: 'entry_fee',
     amountCents: 2990,
     userId: user.id,
     operation: { type: 'pool', id: 'bolao-1' },
@@ -74,7 +76,7 @@ test('TC-01 e TC-15: iniciar registra movimentação pendente completa, com audi
 
     assert.equal(created, true)
     assert.match(movement.id, /^[0-9a-f-]{36}$/)
-    assert.equal(movement.type, 'payout')
+    assert.equal(movement.type, 'entry_fee')
     assert.equal(movement.amountCents, 2990)
     assert.equal(movement.currency, 'BRL')
     assert.equal(movement.status, 'pending')
@@ -91,7 +93,7 @@ test('TC-01 e TC-15: iniciar registra movimentação pendente completa, com audi
     assert.deepEqual(audit.actor, { type: 'user', id: ana.id })
     assert.equal(audit.result, 'success')
     assert.equal(audit.origin, 'simulator')
-    assert.deepEqual(audit.details, { movementType: 'payout', amountCents: 2990, newState: 'pending', origin: 'simulator' })
+    assert.deepEqual(audit.details, { movementType: 'entry_fee', amountCents: 2990, newState: 'pending', origin: 'simulator' })
   })
 })
 
@@ -147,7 +149,7 @@ test('TC-03: sem resposta do provedor a movimentação permanece pendente e o tr
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
     let effects = 0
-    core.registerHandler('payout', { onConfirmed: () => { effects += 1 }, onRefused: () => { effects += 1 } })
+    core.registerHandler('entry_fee', { onConfirmed: () => { effects += 1 }, onRefused: () => { effects += 1 } })
     const { movement } = await core.startMovement(payout(ana))
 
     for (let index = 0; index < 3; index += 1) {
@@ -163,7 +165,7 @@ test('TC-04: nova tentativa só depois de uma recusa, com nova chave; pendente e
   const provider = createSimulatedPaymentsProvider()
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
-    const core = context.app.locals.financial
+    const core = coreFor(context, { paymentsProvider: provider })
 
     const pending = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'pendente' } }))
     const pendingAgain = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'pendente' } }))
@@ -200,7 +202,7 @@ test('TC-05: solicitações e confirmações repetidas não duplicam movimentaç
     const ana = await context.signUp('Ana')
     const core = context.app.locals.financial
     let effects = 0
-    core.registerHandler('payout', { onConfirmed: () => { effects += 1 }, onRefused: () => {} })
+    core.registerHandler('entry_fee', { onConfirmed: () => { effects += 1 }, onRefused: () => {} })
 
     const first = await core.startMovement(payout(ana))
     const second = await core.startMovement(payout(ana))
@@ -226,7 +228,7 @@ test('TC-06: tempo esgotado ao iniciar não repete a cobrança e consulta o esta
   const provider = createSimulatedPaymentsProvider()
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
-    const core = context.app.locals.financial
+    const core = coreFor(context, { paymentsProvider: provider })
 
     provider.failNext('start', 'timeout', { afterRegistering: true })
     const { movement } = await core.startMovement(payout(ana))
@@ -240,8 +242,8 @@ test('TC-06: tempo esgotado ao iniciar não repete a cobrança e consulta o esta
 
     // O tempo passa e a conferência roda: nenhuma nova cobrança, só consultas.
     context.clock.current += 10 * 60 * 1000
-    await context.app.locals.tasks.reconcilePayments()
-    await context.app.locals.tasks.reconcilePayments()
+    await core.reconcilePending()
+    await core.reconcilePending()
     assert.equal(provider.calls.start, 1)
     assert.equal(provider.calls.consult, 2)
 
@@ -255,7 +257,7 @@ test('TC-06: tempo esgotado ao iniciar não repete a cobrança e consulta o esta
 
     // O provedor havia recebido a operação: a conferência a confirma pela chave.
     provider.confirm(movement.operationKey)
-    assert.equal((await context.app.locals.tasks.reconcilePayments()).applied, 1)
+    assert.equal((await core.reconcilePending()).applied, 1)
     assert.equal(row(context.database, movement.id).status, 'confirmed')
     assert.equal(row(context.database, movement.id).provider_id, `sim-${movement.operationKey}`)
   }, { paymentsProvider: provider })
@@ -265,7 +267,7 @@ test('TC-06: falhas de consulta deixam pendente, sem efeito, e são registradas 
   const provider = createSimulatedPaymentsProvider()
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
-    const core = context.app.locals.financial
+    const core = coreFor(context, { paymentsProvider: provider })
     const { movement } = await core.startMovement(payout(ana))
     provider.confirm(movement.operationKey)
     for (const code of ['timeout', 'response_error', 'invalid_response']) {
@@ -287,7 +289,7 @@ test('TC-07: falha do tratador ou da auditoria na confirmação desfaz tudo; a c
     const core = context.app.locals.financial
     context.database.exec('CREATE TABLE handler_effects (movement_id TEXT NOT NULL)')
     let failHandler = true
-    core.registerHandler('payout', {
+    core.registerHandler('entry_fee', {
       onConfirmed: (movement, { database }) => {
         database.prepare('INSERT INTO handler_effects (movement_id) VALUES (?)').run(movement.id)
         if (failHandler) throw new Error('falha simulada do tratador')
@@ -333,7 +335,7 @@ test('TC-07: falha do tratador ou da auditoria na confirmação desfaz tudo; a c
     const recordEffect = (movement, { database }) => {
       database.prepare('INSERT INTO handler_effects (movement_id) VALUES (?)').run(movement.id)
     }
-    core.registerHandler('payout', { onConfirmed: recordEffect, onRefused: recordEffect })
+    core.registerHandler('entry_fee', { onConfirmed: recordEffect, onRefused: recordEffect })
     const { movement: toConfirm } = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'c' } }))
     const { movement: toRefuse } = await core.startMovement(payout(ana, { operation: { type: 'pool', id: 'r' } }))
     simulator.confirm(toConfirm.operationKey)
@@ -497,7 +499,7 @@ test('TC-11 e TC-13: cada usuário vê só o próprio histórico, do mais recent
   await withHttpApp(async (context) => {
     const ana = await context.signUp('Ana')
     const bruno = await context.signUp('Bruno')
-    const core = context.app.locals.financial
+    const core = coreFor(context, { paymentsProvider: provider })
     const { movement: older } = await core.startMovement(payout(ana))
     context.clock.current += 60 * 1000
     const { movement: newer } = await core.startMovement({ type: 'entry_fee', amountCents: 1000, userId: ana.id, operation: { type: 'participation', id: 'p-1' } })
@@ -511,7 +513,7 @@ test('TC-11 e TC-13: cada usuário vê só o próprio histórico, do mais recent
     assert.deepEqual(anaHistory.json.movements.map(({ id }) => id), [newer.id, older.id])
     assert.deepEqual(anaHistory.json.movements[1], {
       id: older.id,
-      type: 'payout',
+      type: 'entry_fee',
       amountCents: 2990,
       amount: '29.90',
       currency: 'BRL',

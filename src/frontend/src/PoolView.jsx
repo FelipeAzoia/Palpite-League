@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import EntryFeeSection from './EntryFeeSection.jsx'
 import FinalResultSection from './FinalResultSection.jsx'
+import PrizeSection from './PrizeSection.jsx'
 import { canManageInvites } from './invites-view.js'
 import InvitesSection from './InvitesSection.jsx'
 import LeaveSection from './LeaveSection.jsx'
@@ -126,7 +127,10 @@ function OverviewTab({ summary, onTab, leave }) {
     <div className="tab-body tab-split">
       <div className="stack">
         {pool.status === 'ended' && ranking && (
-          <FinalResultSection token={leave.token} poolId={leave.poolId} onSessionRejected={leave.onSessionRejected} />
+          <>
+            <FinalResultSection token={leave.token} poolId={leave.poolId} onSessionRejected={leave.onSessionRejected} />
+            <PrizeSection token={leave.token} poolId={leave.poolId} onSessionRejected={leave.onSessionRejected} />
+          </>
         )}
         {pool.status !== 'ended' && <section aria-labelledby="overview-standings">
           <div className="block-head">
