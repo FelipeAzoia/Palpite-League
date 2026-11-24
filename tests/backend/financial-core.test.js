@@ -649,3 +649,13 @@ test('adaptador Mercado Pago em teste: cliente HTTP com tempo limite, idempotên
   await assert.rejects(withoutKey.consultOperation({ operationKey: 'k' }), { code: 'response_error' })
   assert.equal(requests.length, before)
 })
+
+test('RNF15: só aceita credenciais de teste — TEST- sempre; APP_USR- apenas com confirmação explícita', () => {
+  const fetcher = async () => { throw new Error('sem rede') }
+  assert.doesNotThrow(() => createMercadoPagoTestPaymentsProvider({ accessToken: 'TEST-abc', fetcher }))
+  assert.doesNotThrow(() => createMercadoPagoTestPaymentsProvider({ accessToken: '', fetcher }))
+  assert.throws(() => createMercadoPagoTestPaymentsProvider({ accessToken: 'APP_USR-abc', fetcher }), /Only Mercado Pago test credentials are allowed/)
+  assert.throws(() => createMercadoPagoTestPaymentsProvider({ accessToken: 'APP_USR-abc', fetcher, testCredentialsConfirmed: 'true' }), /Only Mercado Pago test credentials/)
+  assert.doesNotThrow(() => createMercadoPagoTestPaymentsProvider({ accessToken: 'APP_USR-abc', fetcher, testCredentialsConfirmed: true }))
+  assert.throws(() => createMercadoPagoTestPaymentsProvider({ accessToken: 'outro-formato', fetcher, testCredentialsConfirmed: true }), /Only Mercado Pago test credentials/)
+})
