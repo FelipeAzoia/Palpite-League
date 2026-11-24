@@ -1,4 +1,5 @@
 import { requestAuth } from './auth-api.js'
+import { formatPrizePercent } from './pools-form.js'
 
 // SPEC-025 — resultado final do bolão encerrado, somente leitura. O encerramento e os vencedores
 // são decididos pelo backend; a interface só mostra.
@@ -20,4 +21,11 @@ export function winnersHeadline(result) {
   return result.noWinnerReason === 'no_eligible'
     ? 'Sem vencedor: nenhum participante confirmado no encerramento.'
     : 'Sem vencedor: ninguém pontuou no bolão.'
+}
+
+// Marca de premiado com a porcentagem do montante, só nos bolões com pódio (SPEC-030): no
+// "vencedor leva tudo" a marca de vencedor já diz tudo.
+export function prizeTag(result, row) {
+  if (!row.awarded || !result.prizeModel || result.prizeModel === 'winner_takes_all') return ''
+  return `premiado · ${formatPrizePercent(row.prizePercent)}`
 }

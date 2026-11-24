@@ -1,6 +1,6 @@
 # SPEC-025 — Encerramento automático e determinação do vencedor
 
-- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-134 a OPEN-141 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13. Em particular, a OPEN-136 foi aprovada mantendo a SPEC-023 como está (pedidos de devolução pendentes não podem mais ser decididos após o encerramento).
+- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-134 a OPEN-141 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13. Em particular, a OPEN-136 foi aprovada mantendo a SPEC-023 como está (pedidos de devolução pendentes não podem mais ser decididos após o encerramento). Alterada pela SPEC-030 em 24/11/2026: o resultado final passa a informar o modelo de premiação, os premiados e a porcentagem de cada um; o vencedor continua sendo o 1º lugar.
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 

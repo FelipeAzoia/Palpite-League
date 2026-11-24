@@ -1,5 +1,24 @@
+// Modelos de premiação (SPEC-030, RB69). As porcentagens são decididas pelo backend; aqui só os textos.
 export const prizeModelLabels = {
   winner_takes_all: 'Vencedor leva tudo sobre o montante arrecadado',
+  podium_50_30_20: 'Pódio: 1º 50% · 2º 30% · 3º 20%',
+  podium_60_30_10: 'Pódio: 1º 60% · 2º 30% · 3º 10%',
+  podium_70_20_10: 'Pódio: 1º 70% · 2º 20% · 3º 10%',
+}
+
+const podiumNote = 'Empatados somam as porcentagens das colocações que ocupam e dividem por igual. Se menos de três pessoas pontuarem, a sobra é repartida entre os premiados.'
+
+export const prizeModelDescriptions = {
+  winner_takes_all: 'Todo o montante arrecadado vai para o 1º lugar. Em caso de empate, os vencedores dividem por igual.',
+  podium_50_30_20: `O montante é dividido entre os três primeiros: 50%, 30% e 20%. ${podiumNote}`,
+  podium_60_30_10: `O montante é dividido entre os três primeiros: 60%, 30% e 10%. ${podiumNote}`,
+  podium_70_20_10: `O montante é dividido entre os três primeiros: 70%, 20% e 10%. ${podiumNote}`,
+}
+
+// Porcentagem do montante, no formato brasileiro: 37.5 → "37,5%".
+export function formatPrizePercent(percent) {
+  if (typeof percent !== 'number' || !Number.isFinite(percent)) return ''
+  return `${percent.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
 }
 
 export const tiebreakerLabels = {

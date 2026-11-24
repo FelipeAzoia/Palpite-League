@@ -10,6 +10,7 @@ import { createPool, fetchCreationAvailability, fetchPools } from './pools-api.j
 import {
   buildPoolRequest,
   poolStatusLabels,
+  prizeModelDescriptions,
   prizeModelLabels,
   roleLabels,
   tiebreakerLabels,
@@ -240,9 +241,10 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
 
           <label className="field">
             <span>Modelo de premiação</span>
-            <select name="prizeModel" value={values.prizeModel} onChange={change('prizeModel')}>
+            <select name="prizeModel" value={values.prizeModel} onChange={change('prizeModel')} aria-describedby={fieldErrors.prizeModel ? 'pool-prize-error' : 'pool-prize-hint'}>
               {Object.entries(prizeModelLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
+            <small id="pool-prize-hint" className="field-hint">{prizeModelDescriptions[values.prizeModel]} O modelo não pode ser alterado depois da criação.</small>
             <FieldError id="pool-prize-error" message={fieldErrors.prizeModel} />
           </label>
 

@@ -1,13 +1,16 @@
 import { AppError } from '../../shared/app-error.js'
+import { computePrizeShares } from '../pools-participations/prize-models.js'
 import { formatCents } from './financial-core.js'
 
 // SPEC-026 — solicitação e processamento da premiação.
-// - só o vencedor registrado no resultado final congelado (SPEC-025) pede, e só para si, sem
-//   aprovação administrativa (INV-001, INV-015);
-// - modelo "vencedor leva tudo sobre o montante arrecadado" (SPEC-007, OPEN-13): o montante é a soma
-//   das taxas de entrada confirmadas do bolão menos as devoluções concluídas, fixado uma única vez na
-//   primeira solicitação; co-vencedores dividem por igual, com o resto dos centavos distribuído na
-//   ordem da classificação final (INV-003, INV-004, OPEN-144);
+// - só quem tem parte da premiação pela classificação final congelada (SPEC-025) pede, e só para si,
+//   sem aprovação administrativa (INV-001, INV-015);
+// - o montante é a soma das taxas de entrada confirmadas do bolão menos as devoluções concluídas;
+//   ele e a parte de cada premiado são fixados uma única vez, na primeira solicitação (INV-004);
+// - a parte de cada premiado segue o modelo de premiação do bolão (SPEC-030, RB69): "vencedor leva
+//   tudo" ou pódio com porcentagens prontas; empatados somam as porcentagens das colocações que
+//   ocupam e dividem por igual; colocações vazias são repartidas proporcionalmente; o resto dos
+//   centavos vai na ordem da classificação final (OPEN-144);
 // - o repasse é uma movimentação nova do núcleo financeiro, pendente até confirmação verificável;
 //   nova tentativa só pelo vencedor depois de uma recusa (INV-005 a INV-007);
 // - o simulador é sempre identificado e a integração de premiação consta como não atendida enquanto
@@ -29,7 +32,7 @@ const systemActor = Object.freeze({ type: 'system' })
 
 const messages = {
   pool_not_ended: 'A premiação fica disponível quando o bolão for encerrado.',
-  not_winner: 'Só o vencedor registrado no resultado final pode solicitar a premiação.',
+  not_winner: 'Só os premiados no resultado final podem solicitar a premiação.',
   no_winner: 'Este bolão terminou sem vencedor; não há premiação a pagar.',
   nothing_to_pay: 'Este bolão não tem montante a pagar.',
   waiting_refunds: 'Há devoluções aprovadas em processamento neste bolão. A premiação poderá ser solicitada quando elas terminarem.',
@@ -62,15 +65,27 @@ export function createPrizePayoutService(database, { auditStore, financialCore, 
     return row
   }
 
-  // Vencedores na ordem estável da classificação final congelada.
-  const winners = (poolId) => database.prepare(`
-    SELECT s.participation_id, u.id AS user_id, u.name
+  // Classificação final congelada, na ordem estável usada também para distribuir os centavos.
+  const standings = (poolId) => database.prepare(`
+    SELECT s.participation_id, s.position, s.total_points, s.winner, u.id AS user_id, u.name
     FROM pool_final_standings s
     JOIN pool_participations part ON part.id = s.participation_id
     JOIN users u ON u.id = part.user_id
-    WHERE s.pool_id = ? AND s.winner = 1
+    WHERE s.pool_id = ?
     ORDER BY s.position, u.name COLLATE NOCASE, s.participation_id
   `).all(poolId)
+
+  // Partes calculadas, sem gravar, a partir do modelo do bolão e de um montante (SPEC-030).
+  function computedShares(pool, amountCents) {
+    const rows = standings(pool.pool_id)
+    const byId = new Map(rows.map((row) => [row.participation_id, row]))
+    const input = rows.map((row) => ({ participationId: row.participation_id, position: row.position, totalPoints: row.total_points }))
+    return computePrizeShares(pool.prize_model, input, amountCents).map((share) => ({
+      ...share,
+      userId: byId.get(share.participationId).user_id,
+      name: byId.get(share.participationId).name,
+    }))
+  }
 
   // Montante arrecadado: taxas confirmadas (sem pagamentos tardios sinalizados, que não confirmaram
   // participação) menos devoluções concluídas.
@@ -104,18 +119,66 @@ export function createPrizePayoutService(database, { auditStore, financialCore, 
 
   const fixedPrize = (poolId) => database.prepare('SELECT * FROM pool_prize_pools WHERE pool_id = ?').get(poolId)
 
-  // Fixa o montante na primeira solicitação, uma única vez (INV-004).
-  function fixPrize(poolId, winnerCount) {
-    database.prepare(`
+  // Fixa o montante e a parte de cada premiado na primeira solicitação, uma única vez (INV-004;
+  // SPEC-030 INV-007). Chamado dentro de uma transação.
+  function fixPrize(pool) {
+    const amountCents = collectedCents(pool.pool_id)
+    const shares = computedShares(pool, amountCents)
+    const inserted = database.prepare(`
       INSERT INTO pool_prize_pools (pool_id, amount_cents, currency, winner_count, fixed_at)
       VALUES (?, ?, 'BRL', ?, ?) ON CONFLICT(pool_id) DO NOTHING
-    `).run(poolId, collectedCents(poolId), winnerCount, nowIso())
-    return fixedPrize(poolId)
+    `).run(pool.pool_id, amountCents, shares.length, nowIso())
+    if (inserted.changes !== 1) return
+    const insertShare = database.prepare(`
+      INSERT INTO pool_prize_shares (pool_id, participation_id, place, percent_basis_points, amount_cents)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    for (const share of shares) {
+      insertShare.run(pool.pool_id, share.participationId, share.place, share.percentBasisPoints, share.amountCents)
+    }
   }
 
-  function shareOf(prize, winnerList, participationId) {
-    const index = winnerList.findIndex(({ participation_id: id }) => id === participationId)
-    return index < 0 ? null : splitPrize(prize.amount_cents, prize.winner_count)[index]
+  // Partes de todos os premiados: as gravadas, quando o montante já foi fixado; senão, as calculadas
+  // com o montante atual. Montante fixado antes da SPEC-030, sem partes gravadas, mantém a divisão
+  // igual entre os vencedores (SPEC-030 INV-008).
+  function currentShares(pool) {
+    const prize = fixedPrize(pool.pool_id)
+    if (!prize) return { prize: null, shares: computedShares(pool, collectedCents(pool.pool_id)) }
+    const stored = database.prepare(`
+      SELECT sh.participation_id, sh.place, sh.percent_basis_points, sh.amount_cents, u.id AS user_id, u.name
+      FROM pool_prize_shares sh
+      JOIN pool_participations part ON part.id = sh.participation_id
+      JOIN users u ON u.id = part.user_id
+      JOIN pool_final_standings s ON s.pool_id = sh.pool_id AND s.participation_id = sh.participation_id
+      WHERE sh.pool_id = ?
+      ORDER BY s.position, u.name COLLATE NOCASE, sh.participation_id
+    `).all(pool.pool_id)
+    if (stored.length > 0) {
+      return {
+        prize,
+        shares: stored.map((row) => ({
+          participationId: row.participation_id,
+          place: row.place,
+          percentBasisPoints: row.percent_basis_points,
+          amountCents: row.amount_cents,
+          userId: row.user_id,
+          name: row.name,
+        })),
+      }
+    }
+    const legacy = standings(pool.pool_id).filter(({ winner }) => winner === 1)
+    const amounts = legacy.length > 0 ? splitPrize(prize.amount_cents, legacy.length) : []
+    return {
+      prize,
+      shares: legacy.map((row, index) => ({
+        participationId: row.participation_id,
+        place: 1,
+        percentBasisPoints: Math.round(10000 / legacy.length),
+        amountCents: amounts[index],
+        userId: row.user_id,
+        name: row.name,
+      })),
+    }
   }
 
   const latestPayout = (participationId) => database.prepare(`
@@ -129,19 +192,25 @@ export function createPrizePayoutService(database, { auditStore, financialCore, 
     return { pending: 'processing', confirmed: 'completed', refused: 'refused' }[movement.status]
   }
 
-  // Situação para um vencedor, sem gravar nada (consulta).
-  function situation(pool, participationId) {
+  // Situação para um premiado, sem gravar nada (consulta).
+  function situation(pool, participationId, current = currentShares(pool)) {
     if (pool.status !== 'ended') return { state: 'pool_not_ended' }
-    const list = winners(pool.pool_id)
-    if (list.length === 0) return { state: 'no_winner' }
-    if (!list.some(({ participation_id: id }) => id === participationId)) return { state: 'not_winner' }
+    const { prize, shares } = current
+    if (shares.length === 0) return { state: 'no_winner' }
+    const own = shares.find((share) => share.participationId === participationId)
+    if (!own) return { state: 'not_winner' }
     const movement = latestPayout(participationId)
-    const prize = fixedPrize(pool.pool_id)
     const amount = prize ? prize.amount_cents : collectedCents(pool.pool_id)
     if (!movement && amount <= 0) return { state: 'nothing_to_pay' }
     if (!movement && !prize && refundsInProgress(pool.pool_id)) return { state: 'waiting_refunds' }
-    const share = prize ? shareOf(prize, list, participationId) : splitPrize(amount, list.length)[list.findIndex(({ participation_id: id }) => id === participationId)]
-    return { state: payoutState(movement), shareCents: share, movement, fixed: Boolean(prize) }
+    return {
+      state: payoutState(movement),
+      shareCents: own.amountCents,
+      place: own.place,
+      percentBasisPoints: own.percentBasisPoints,
+      movement,
+      fixed: Boolean(prize),
+    }
   }
 
   function view(pool, userId) {
@@ -156,6 +225,8 @@ export function createPrizePayoutService(database, { auditStore, financialCore, 
       integration: { attended: false, reason: 'sandbox_not_validated' },
       prizeModel: pool.prize_model,
       state: current.state,
+      place: current.place ?? null,
+      sharePercent: current.percentBasisPoints === undefined ? null : current.percentBasisPoints / 100,
       shareCents: current.shareCents ?? null,
       share: current.shareCents === undefined ? null : formatCents(current.shareCents),
       amountFixed: current.fixed ?? false,
@@ -172,12 +243,14 @@ export function createPrizePayoutService(database, { auditStore, financialCore, 
         }
         : null,
     }
-    // A administração vê só o estado por vencedor, sem dados do provedor (OPEN-148).
+    // A administração vê só a colocação e o estado por premiado, sem dados do provedor (OPEN-148).
     if (['administrator', 'coadministrator'].includes(pool.role) && pool.status === 'ended') {
-      result.winners = winners(pool.pool_id).map((winner) => ({
-        name: winner.name,
-        state: situation(pool, winner.participation_id).state,
-        isRequester: winner.user_id === userId,
+      const all = currentShares(pool)
+      result.awardees = all.shares.map((share) => ({
+        name: share.name,
+        place: share.place,
+        state: situation(pool, share.participationId, all).state,
+        isRequester: share.userId === userId,
       }))
     }
     return result
@@ -229,10 +302,10 @@ export function createPrizePayoutService(database, { auditStore, financialCore, 
     if (current.state === 'completed') throw new AppError(409, 'prize_completed', messages.prize_completed)
     if (!['available', 'refused'].includes(current.state)) throw new AppError(409, current.state, messages[current.state])
 
-    // Fixa o montante (uma vez por bolão) e calcula a parte deste vencedor.
-    const list = winners(pool.pool_id)
-    const prize = database.transaction(() => fixPrize(pool.pool_id, list.length))()
-    const amountCents = shareOf(prize, list, pool.participation_id)
+    // Fixa o montante e as partes (uma vez por bolão) e usa a parte deste premiado.
+    database.transaction(() => fixPrize(pool))()
+    const own = currentShares(pool).shares.find((share) => share.participationId === pool.participation_id)
+    const amountCents = own?.amountCents
     if (!amountCents || amountCents <= 0) throw new AppError(409, 'nothing_to_pay', messages.nothing_to_pay)
 
     const { movement, created } = await financialCore.startMovement({

@@ -1,6 +1,6 @@
 # SPEC-026 — Solicitação e processamento da premiação
 
-- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-142 a OPEN-150 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13.
+- **Status:** aprovada em 31/10/2026 e conferida contra a baseline em 23/11/2026. As questões OPEN-142 a OPEN-150 foram resolvidas com a aprovação desta Spec, nos termos das propostas da seção 13. Alterada pela SPEC-030 em 24/11/2026: a elegibilidade passa de "vencedor" para "premiado" (qualquer colocação com parte no modelo do bolão), a primeira solicitação fixa também a parte de cada premiado, e a divisão igual entre co-vencedores vira o caso "vencedor leva tudo" da SPEC-030.
 - **Etapa:** Spec-Driven Development, geração de Spec individual. Nenhum código, banco de dados, endpoint ou tecnologia nova é definido aqui.
 - **Fonte de verdade:** `mapa-de-specs.md` (aprovado) e artefatos de `docs/`.
 
