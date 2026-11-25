@@ -162,6 +162,8 @@ function configuredPaymentsProvider() {
       backUrl: process.env.APP_BASE_URL || '',
       // Assinaturas do Mercado Pago só depois dos smoke tests aprovados pela equipe (OPEN-26, SPEC-019).
       subscriptionsProofApproved: process.env.MERCADO_PAGO_SUBSCRIPTIONS_PROOF_APPROVED === 'true',
+      // Chaves APP_USR- só com a confirmação explícita de que são credenciais de teste (ADR-0003, RNF15).
+      testCredentialsConfirmed: process.env.MERCADO_PAGO_TEST_CREDENTIALS_CONFIRMED === 'true',
     })
   }
   throw new Error('Unsupported payments provider')
