@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowRight, ChevronRight, LoaderCircle, Plus } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import MatchCatalog from './MatchCatalog.jsx'
@@ -9,6 +9,9 @@ import PoolView from './PoolView.jsx'
 import { createPool, fetchCreationAvailability, fetchPools } from './pools-api.js'
 import {
   buildPoolRequest,
+  centsFromMaskedInput,
+  entryFeeErrors,
+  formatCentsInput,
   periodErrors,
   poolStatusLabels,
   prizeModelLabels,
@@ -20,6 +23,37 @@ import {
 
 function FieldError({ id, message }) {
   return message ? <small id={id} className="field-error">{message}</small> : null
+}
+
+// Campo de valor com máscara de banco: só dígitos, cada um entra pela direita, com "R$" fixo na
+// frente. O cursor fica sempre no fim, onde os dígitos entram.
+function MoneyInput({ cents, onChange, ...props }) {
+  const input = useRef(null)
+  const text = formatCentsInput(cents)
+
+  function moveCaretToEnd() {
+    const element = input.current
+    if (element) requestAnimationFrame(() => element.setSelectionRange(element.value.length, element.value.length))
+  }
+
+  useEffect(moveCaretToEnd, [text])
+
+  return (
+    <span className="money-field">
+      <span className="money-prefix" aria-hidden="true">R$</span>
+      <input
+        {...props}
+        ref={input}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        value={text}
+        onChange={(event) => onChange(centsFromMaskedInput(event.target.value, cents))}
+        onFocus={moveCaretToEnd}
+        onClick={moveCaretToEnd}
+      />
+    </span>
+  )
 }
 
 function useGuardedRequest(onSessionRejected) {
@@ -114,7 +148,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
     name: '',
     startsOn: todayInSaoPaulo(),
     endsOn: '',
-    entryFee: '0',
+    entryFeeCents: 0,
     prizeModel: 'winner_takes_all',
     tiebreaker: 'exact_scores',
     matchIds: [],
@@ -180,10 +214,10 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
 
   async function submit(event) {
     event.preventDefault()
-    const dateErrors = periodErrors(values)
-    if (Object.keys(dateErrors).length > 0) {
-      setFieldErrors(dateErrors)
-      setMessage('Confira as datas do bolão.')
+    const localErrors = { ...periodErrors(values), ...entryFeeErrors(values.entryFeeCents) }
+    if (Object.keys(localErrors).length > 0) {
+      setFieldErrors(localErrors)
+      setMessage('Confira os campos destacados.')
       return
     }
     setSaving(true)
@@ -252,8 +286,17 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
 
           <label className="field">
             <span>Taxa de entrada (R$)</span>
-            <input name="entryFee" type="text" inputMode="decimal" value={values.entryFee} onChange={change('entryFee')} aria-describedby={fieldErrors.entryFee ? 'pool-fee-error' : 'pool-fee-hint'} />
-            <small id="pool-fee-hint" className="field-hint">Use 0 para um bolão sem taxa. Com taxa: de R$ 1,00 a R$ 500,00.</small>
+            <MoneyInput
+              name="entryFee"
+              cents={values.entryFeeCents}
+              onChange={(cents) => {
+                setValues((current) => ({ ...current, entryFeeCents: cents }))
+                clearError('entryFee')
+              }}
+              aria-invalid={Boolean(fieldErrors.entryFee)}
+              aria-describedby={fieldErrors.entryFee ? 'pool-fee-error' : 'pool-fee-hint'}
+            />
+            <small id="pool-fee-hint" className="field-hint">Deixe R$ 0,00 para um bolão sem taxa. Com taxa: de R$ 1,00 a R$ 500,00.</small>
             <FieldError id="pool-fee-error" message={fieldErrors.entryFee} />
           </label>
 
