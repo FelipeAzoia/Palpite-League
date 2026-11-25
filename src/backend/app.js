@@ -3,6 +3,7 @@ import express from 'express'
 import { createAuthService, createProfileService, AuthError } from './modules/auth-users/index.js'
 import { createAuditStore, createNotificationsService } from './modules/notifications-audit/index.js'
 import {
+  createApiFootballShowcase,
   createLiveResultsService,
   createResultsSyncService,
   createSportsCatalogService,
@@ -141,6 +142,14 @@ function configuredSportsProvider(now) {
   throw new Error('Unsupported sports catalog source')
 }
 
+// Consulta da API-Football 2024 (SPEC-031): só existe com a chave no .env; é independente da fonte
+// do catálogo dos bolões e da prova técnica, porque não alimenta bolão nenhum.
+function configuredShowcaseProvider() {
+  const apiKey = process.env.API_FOOTBALL_API_KEY || ''
+  if (!apiKey) return null
+  return createApiFootballSportsProvider({ apiKey, timeoutMs: Number(process.env.SPORTS_PROVIDER_TIMEOUT_MS || 10000) })
+}
+
 // Provedor de pagamentos por configuração (SPEC-018): o simulador é o padrão; o Mercado Pago só em
 // ambiente de teste, com a chave fora do repositório.
 function configuredPaymentsProvider() {
@@ -169,6 +178,7 @@ export function createApp(database, {
   premiumAnnualPriceCents = Number(process.env.PREMIUM_TEST_ANNUAL_PRICE_CENTS || defaultPremiumAnnualPriceCents),
   sportsSeason = Number(process.env.SPORTS_SEASON || 2026),
   sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
+  showcaseProvider = configuredShowcaseProvider(),
 } = {}) {
   const app = express()
   const auditStore = createAuditStore(database, { logger, detailSchemasByAction: auditDetailSchemas })
@@ -210,6 +220,7 @@ export function createApp(database, {
     season: sportsSeason,
     ttlMs: sportsCatalogTtlMs,
   })
+  const showcase = createApiFootballShowcase({ provider: showcaseProvider, now, logger })
   const poolsService = createPoolsService(database, { auditStore, sportsCatalog: sportsCatalogService, now })
   const invitesService = createInvitesService(database, {
     auditStore,
@@ -481,6 +492,27 @@ export function createApp(database, {
   app.get('/catalog/rounds', authenticateRequest, async (_request, response, next) => {
     try {
       response.json(await sportsCatalogService.listRounds())
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  app.get('/catalog/teams', authenticateRequest, async (_request, response, next) => {
+    try {
+      response.json(await sportsCatalogService.listTeams())
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // SPEC-031: consulta somente leitura do Brasileirão 2024 pela API-Football.
+  app.get('/catalog/showcase', authenticateRequest, (_request, response) => {
+    response.json(showcase.status())
+  })
+
+  app.get('/catalog/showcase/api-football-2024', authenticateRequest, async (_request, response, next) => {
+    try {
+      response.json(await showcase.getShowcase())
     } catch (error) {
       next(error)
     }

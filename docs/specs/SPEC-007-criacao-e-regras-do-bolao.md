@@ -1,6 +1,6 @@
 # SPEC-007 — Criação, configuração e consulta das regras do bolão
 
-- **Status:** aprovada. As propostas OPEN-61 a OPEN-63 foram aprovadas e incorporadas; liberada para implementação após as SPEC-001 a SPEC-003, SPEC-005 e SPEC-006.
+- **Status:** aprovada. As propostas OPEN-61 a OPEN-63 foram aprovadas e incorporadas; liberada para implementação após as SPEC-001 a SPEC-003, SPEC-005 e SPEC-006. Alterada pela SPEC-031 em 24/11/2026: a escolha de partidas ganha o modo "todas as rodadas do período" e o filtro de times (entra o jogo em que ao menos um time escolhido joga); o formato anterior continua aceito.
 - **Tipo:** Spec funcional.
 - **Baseline:** artefatos de `docs/` (incluindo `matriz-de-permissoes.md` e o modelo de domínio atualizado), `docs/specs/mapa-de-specs.md`, `docs/specs/proposta-resolucao-questoes-em-aberto.md` e SPEC-001 a SPEC-006.
 - **Escopo deste documento:** somente a SPEC-007. Nenhum código, tabela ou endpoint.

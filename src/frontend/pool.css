@@ -432,3 +432,47 @@
 .history-round-head .block-title { margin: 0; }
 .history-round-figures { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; color: var(--muted); font-size: 12px; }
 .history-round-figures b { color: var(--ink); }
+
+/* SPEC-031 — criação do bolão: fonte do campeonato, modos de escolha, times e consulta 2024. */
+.create-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px 20px; }
+.create-head h2 { margin-bottom: 0; }
+.source-switch { display: inline-flex; flex: none; padding: 3px; border: 1px solid #ccd7cd; border-radius: 99px; background: #fff; }
+.source-switch button { padding: 7px 14px; border: 0; border-radius: 99px; color: #55655a; background: transparent; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.source-switch button.is-active { color: #f8faef; background: var(--forest); }
+.source-switch button:disabled { cursor: not-allowed; opacity: .5; }
+.source-note { margin: 6px 0 0; text-align: right; }
+.pool-selection { display: grid; gap: 12px; }
+.pool-selection > .field-hint { margin: -4px 0 0; }
+.selection-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.selection-modes button { min-height: 40px; padding: 6px 10px; border: 1px solid #ccd7cd; border-radius: 6px; color: #3e4d43; background: #fff; font-size: 12px; font-weight: 700; }
+.selection-modes button.is-active { border-color: var(--forest); color: var(--forest); background: #eef3e4; box-shadow: inset 0 0 0 1px var(--forest); }
+.team-filter, .round-choice { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcf8; }
+.team-filter-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.team-filter-head h4 { margin: 0; color: #3e4d43; font-size: 13px; }
+.team-filter-head small { color: var(--muted); font-weight: 500; }
+.team-search { display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid #ccd7cd; border-radius: 5px; color: var(--muted); background: #fff; }
+.team-search input { width: 100%; min-height: 34px; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 12px; }
+.team-chips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 168px; overflow-y: auto; }
+.team-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid #ccd7cd; border-radius: 99px; color: #3e4d43; background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+.team-chip input { position: absolute; opacity: 0; pointer-events: none; }
+.team-chip.is-checked { border-color: var(--forest); color: #f8faef; background: var(--forest); }
+.team-chip:focus-within { outline: 2px solid rgb(82 119 93 / 45%); outline-offset: 1px; }
+.team-chip img { border-radius: 50%; }
+.round-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; max-height: 220px; overflow-y: auto; }
+.round-cell { position: relative; display: grid; gap: 1px; padding: 7px 8px; border: 1px solid #ccd7cd; border-radius: 6px; background: #fff; cursor: pointer; }
+.round-cell input { position: absolute; opacity: 0; pointer-events: none; }
+.round-cell strong { color: #3e4d43; font-size: 13px; }
+.round-cell small { color: var(--muted); font-size: 10px; }
+.round-cell.is-checked { border-color: var(--forest); background: #eef3e4; box-shadow: inset 0 0 0 1px var(--forest); }
+.round-cell:focus-within { outline: 2px solid rgb(82 119 93 / 45%); outline-offset: 1px; }
+.showcase { display: grid; gap: 12px; margin-top: 12px; }
+.showcase-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; font-size: 13px; font-weight: 700; }
+.showcase-team { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.showcase-team-away { justify-content: flex-end; text-align: right; }
+.showcase-score { padding: 3px 10px; border-radius: 5px; color: #f8faef; background: var(--forest); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.showcase-crest { flex: none; width: 22px; height: 22px; object-fit: contain; }
+.showcase-crest-empty { display: inline-grid; place-items: center; border-radius: 50%; color: #55655a; background: #e7ece7; font-size: 11px; }
+@media (max-width: 560px) {
+  .selection-modes { grid-template-columns: 1fr; }
+  .source-note { text-align: left; }
+}

@@ -7,6 +7,7 @@ import { SportsProviderError } from './sports-provider.js'
 export const moduleName = 'matches-results'
 export { createResultsSyncService, resultsAuditDetailSchemas } from './results-sync.js'
 export { createLiveResultsService, validateLiveReading } from './live-results.js'
+export { createApiFootballShowcase, defaultShowcaseTtlMs, showcaseSeason } from './showcase.js'
 
 const matchStatuses = new Set(['scheduled', 'in_progress', 'finished', 'postponed', 'cancelled'])
 const reschedulableStatuses = new Set(['scheduled', 'postponed', 'cancelled'])
@@ -332,8 +333,8 @@ export function createSportsCatalogService(database, provider, {
     }
 
     const matches = database.prepare(`
-      SELECT m.id, home.name AS home_name, home.crest AS home_crest,
-        away.name AS away_name, away.crest AS away_crest,
+      SELECT m.id, home.id AS home_id, home.name AS home_name, home.crest AS home_crest,
+        away.id AS away_id, away.name AS away_name, away.crest AS away_crest,
         m.starts_at, m.status
       FROM sports_matches m
       JOIN sports_teams home ON home.id = m.home_team_id
@@ -342,8 +343,8 @@ export function createSportsCatalogService(database, provider, {
       ORDER BY m.starts_at IS NULL, m.starts_at, m.id
     `).all(round.id, status ?? null, status ?? null).map((match) => ({
       id: match.id,
-      home: { name: match.home_name, crest: match.home_crest },
-      away: { name: match.away_name, crest: match.away_crest },
+      home: { id: match.home_id, name: match.home_name, crest: match.home_crest },
+      away: { id: match.away_id, name: match.away_name, crest: match.away_crest },
       startsAt: match.starts_at,
       status: match.status,
     }))
@@ -357,14 +358,21 @@ export function createSportsCatalogService(database, provider, {
   }
 
   function toMatchRow(row) {
-    return { id: row.id, roundNumber: row.round_number, startsAt: row.starts_at, status: row.status }
+    return {
+      id: row.id,
+      roundNumber: row.round_number,
+      startsAt: row.starts_at,
+      status: row.status,
+      homeTeamId: row.home_team_id,
+      awayTeamId: row.away_team_id,
+    }
   }
 
   // Leitura para a seleção de partidas de bolões (SPEC-007).
   function findMatchesByIds(ids) {
     if (ids.length === 0) return []
     return database.prepare(`
-      SELECT m.id, r.number AS round_number, m.starts_at, m.status
+      SELECT m.id, r.number AS round_number, m.starts_at, m.status, m.home_team_id, m.away_team_id
       FROM sports_matches m JOIN sports_rounds r ON r.id = m.round_id
       WHERE m.id IN (${ids.map(() => '?').join(',')})
     `).all(...ids).map(toMatchRow)
@@ -374,10 +382,32 @@ export function createSportsCatalogService(database, provider, {
     const round = database.prepare('SELECT id, number FROM sports_rounds WHERE number = ?').get(roundNumber)
     if (!round) return null
     return database.prepare(`
-      SELECT m.id, r.number AS round_number, m.starts_at, m.status
+      SELECT m.id, r.number AS round_number, m.starts_at, m.status, m.home_team_id, m.away_team_id
       FROM sports_matches m JOIN sports_rounds r ON r.id = m.round_id
       WHERE m.round_id = ?
     `).all(round.id).map(toMatchRow)
+  }
+
+  // Todas as partidas do catálogo, para o modo "todas as rodadas do período" (SPEC-031).
+  function findAllMatches() {
+    return database.prepare(`
+      SELECT m.id, r.number AS round_number, m.starts_at, m.status, m.home_team_id, m.away_team_id
+      FROM sports_matches m JOIN sports_rounds r ON r.id = m.round_id
+      ORDER BY m.starts_at IS NULL, m.starts_at, m.id
+    `).all().map(toMatchRow)
+  }
+
+  function findTeamsByIds(ids) {
+    if (ids.length === 0) return []
+    return database.prepare(`SELECT id FROM sports_teams WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids)
+  }
+
+  // Times do catálogo, para o filtro de times da criação do bolão (SPEC-031).
+  async function listTeams() {
+    await ensureFresh()
+    requireCatalog()
+    const teams = database.prepare('SELECT id, name, crest FROM sports_teams ORDER BY name COLLATE NOCASE, id').all()
+    return { teams, ...metadataView(database) }
   }
 
   function describeMatches(ids) {
@@ -403,5 +433,15 @@ export function createSportsCatalogService(database, provider, {
     }))
   }
 
-  return { listRounds, listMatches, ensureCatalogAvailable, findMatchesByIds, findRoundMatches, describeMatches }
+  return {
+    listRounds,
+    listMatches,
+    listTeams,
+    ensureCatalogAvailable,
+    findMatchesByIds,
+    findRoundMatches,
+    findAllMatches,
+    findTeamsByIds,
+    describeMatches,
+  }
 }

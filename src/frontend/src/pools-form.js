@@ -1,3 +1,5 @@
+import { buildSelection } from './pool-selection.js'
+
 // Modelos de premiação (SPEC-030, RB69). As porcentagens são decididas pelo backend; aqui só os textos.
 export const prizeModelLabels = {
   winner_takes_all: 'Vencedor leva tudo sobre o montante arrecadado',
@@ -106,9 +108,12 @@ export function buildPoolRequest(values) {
       : String(values.entryFee ?? '').trim().replace(',', '.'),
     prizeModel: values.prizeModel,
     tiebreaker: values.tiebreaker,
-    selection: {
-      matchIds: [...values.matchIds],
-      roundNumbers: [...values.roundNumbers].sort((first, second) => first - second),
-    },
+    // Com modo (SPEC-031), só o que vale nele; sem modo, o formato da SPEC-007.
+    selection: values.selectionMode
+      ? buildSelection(values)
+      : {
+        matchIds: [...values.matchIds],
+        roundNumbers: [...values.roundNumbers].sort((first, second) => first - second),
+      },
   }
 }

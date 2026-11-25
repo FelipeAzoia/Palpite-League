@@ -1,6 +1,6 @@
 # Mapa de Specs — Palpite League
 
-- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: acrescentada a SPEC-029 (renovação recorrente, plano anual e pagamento em atraso), aprovada pela equipe nesta data, totalizando 29 Specs; as 29 Specs estão implementadas e integradas ao `main` (situação na seção 5); OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Atualizado em 24/11/2026: acrescentada a SPEC-030 (premiação por pódio), aprovada pela equipe nesta data, totalizando 30 Specs. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
+- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: acrescentada a SPEC-029 (renovação recorrente, plano anual e pagamento em atraso), aprovada pela equipe nesta data, totalizando 29 Specs; as 29 Specs estão implementadas e integradas ao `main` (situação na seção 5); OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Atualizado em 24/11/2026: acrescentadas a SPEC-030 (premiação por pódio) e a SPEC-031 (escolha de partidas por rodadas e times, e consulta da API-Football 2024), aprovadas pela equipe nesta data, totalizando 31 Specs. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
 - **Etapa:** Spec-Driven Development, decomposição do projeto em Specs (prompt principal).
 - **Escopo deste documento:** somente o índice ordenado de Specs, as análises que o sustentam e as questões em aberto. Nenhuma Spec individual, código, banco de dados, endpoint ou escolha tecnológica nova foi produzida.
 - **Fonte de verdade:** artefatos de `docs/` (visão, personas, RF, RB, RNF, modelo de domínio, casos de uso, drivers, ADRs, arquitetura consolidada e validação do Mercado Pago).
@@ -144,6 +144,7 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 | SPEC-028 | Histórico do bolão | 012, 013, 014, 015 |
 | SPEC-029 | Renovação recorrente, plano anual e pagamento em atraso | 018, 019, 020 |
 | SPEC-030 | Premiação por pódio | 007, 025, 026 |
+| SPEC-031 | Escolha de partidas por rodadas e times, e consulta da API-Football 2024 | 006, 007, 030 |
 
 ---
 
@@ -598,6 +599,21 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 - **Justificativa da posição:** estende a criação do bolão, o resultado final e a premiação; altera partes delas, indicadas na própria Spec.
 - **Questões em aberto relacionadas:** OPEN-29 (repasse real da premiação).
 
+### SPEC-031 — Escolha de partidas por rodadas e times, e consulta da API-Football 2024
+
+- **Acrescentada em 24/11/2026** por decisão da equipe.
+- **Objetivo:** escolher as partidas do bolão por "todas as rodadas do período", por rodadas ou jogo a jogo, com filtro opcional de times; e consultar, só para leitura, o Brasileirão 2024 real pela API-Football, para demonstrar a integração.
+- **Valor entregue:** criação de bolão mais rápida ("bolão dos meus times") e demonstração da integração real sem o plano pago da temporada atual.
+- **RF:** RF09, RF10, RF18.
+- **RB:** RB15, RB23, RB64.
+- **RNF:** RNF07, RNF08, RNF15, RNF18.
+- **Caso de uso/fluxo:** UC03 (criação do bolão).
+- **Entidades:** Bolao, PartidaDoBolao, Time, Rodada, Partida.
+- **ADRs:** ADR-0002.
+- **Dependências:** SPEC-006, SPEC-007, SPEC-030.
+- **Justificativa da posição:** estende a escolha de partidas da criação do bolão e o catálogo; altera partes deles, indicadas na própria Spec.
+- **Questões em aberto relacionadas:** OPEN-01 (a temporada atual da API-Football continua dependendo do plano pago).
+
 ---
 
 ## 3. Cobertura dos requisitos
@@ -859,6 +875,7 @@ Atualizado em 23/11/2026. As 29 Specs estão implementadas e integradas ao `main
 | SPEC-028 | Histórico do bolão | PR #56 | — |
 | SPEC-029 | Renovação recorrente, plano anual e pagamento em atraso | PR #47 | Smoke tests das Assinaturas (OPEN-26) |
 | SPEC-030 | Premiação por pódio | em revisão | Validação do repasse no sandbox (OPEN-29), como na SPEC-026 |
+| SPEC-031 | Escolha de partidas e consulta da API-Football 2024 | em revisão | A temporada atual da API-Football exige o plano pago (OPEN-01) |
 
 Enquanto as pendências externas não forem resolvidas, os provedores simulados ficam ativos e são sempre identificados como simulação, conforme ADR-0002 e ADR-0003.
 
