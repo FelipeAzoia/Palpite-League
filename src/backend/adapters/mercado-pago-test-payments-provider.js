@@ -1,8 +1,10 @@
 import { PaymentsProviderError } from '../modules/payments-subscriptions/payments-provider.js'
 
 // SPEC-018 — adaptador do Mercado Pago em ambiente de teste (ADR-0003, RNF15).
-// - só aceita credenciais de teste (prefixo TEST-); a chave vem da configuração, nunca do repositório,
-//   e nunca aparece em respostas, registros técnicos ou auditoria (INV-011);
+// - só aceita credenciais de teste: o prefixo legado TEST- ou, como o painel do Mercado Pago passou a
+//   emitir credenciais de teste com o mesmo prefixo APP_USR- das de produção, uma chave APP_USR- com
+//   confirmação explícita de que vem de "Credenciais de teste" (ADR-0003, RNF15);
+// - a chave vem da configuração, nunca do repositório, e nunca aparece em respostas, registros técnicos ou auditoria (INV-011);
 // - cliente HTTP isolado, com tempo limite e erros classificados; nenhuma chamada é repetida
 //   automaticamente (INV-007);
 // - a operação genérica inicia um checkout com a chave de operação como referência externa e como
@@ -12,6 +14,11 @@ import { PaymentsProviderError } from '../modules/payments-subscriptions/payment
 
 const apiBaseUrl = 'https://api.mercadopago.com'
 
+function isAllowedTestCredential(accessToken, testCredentialsConfirmed) {
+  if (accessToken.startsWith('TEST-')) return true
+  return testCredentialsConfirmed === true && accessToken.startsWith('APP_USR-')
+}
+
 export function createMercadoPagoTestPaymentsProvider({
   accessToken,
   timeoutMs = 10000,
@@ -19,9 +26,10 @@ export function createMercadoPagoTestPaymentsProvider({
   baseUrl = apiBaseUrl,
   backUrl = '',
   subscriptionsProofApproved = false,
+  testCredentialsConfirmed = false,
 } = {}) {
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) throw new RangeError('payments provider timeout must be positive')
-  if (accessToken !== undefined && accessToken !== '' && !String(accessToken).startsWith('TEST-')) {
+  if (accessToken !== undefined && accessToken !== '' && !isAllowedTestCredential(String(accessToken), testCredentialsConfirmed)) {
     throw new Error('Only Mercado Pago test credentials are allowed')
   }
 
