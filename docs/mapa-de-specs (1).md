@@ -811,6 +811,8 @@ Formato do prompt: `OPEN-XX - decisão necessária: descrição`. Cada item cita
 
 Atualizado em 23/11/2026. As 29 Specs estão implementadas e integradas ao `main`, cada uma com os critérios de aceitação cobertos por testes automatizados (suíte do backend com `node:test` e do frontend com Vitest, ESLint sem avisos e build do Vite, executados pela pipeline de CI). Nas questões em aberto de cada Spec, a implementação seguiu as propostas aprovadas na seção 13 da própria Spec.
 
+Os testes manuais de responsividade em 360 px, 768 px e 1366 px (RNF13 e RNF14) foram concluídos em 23/11/2026. Todas as larguras avaliadas funcionaram corretamente, sem alterações necessárias no código ou nas Specs.
+
 | ID | Nome | Integração ao `main` | Pendência externa |
 | --- | --- | --- | --- |
 | SPEC-001 | Fundação técnica do monólito modular | PR #25 e #26 | — |
@@ -863,10 +865,10 @@ Mudanças de código que uma Spec precisou fazer em módulos de Specs anteriores
 
 ## 6. Próximo passo
 
-Mapa aprovado, questões em aberto resolvidas e as 29 Specs geradas, aprovadas e implementadas (SPEC-001 a SPEC-028 aprovadas em outubro de 2026 e SPEC-029 em 23/11/2026; implementação concluída em 23/11/2026). Nenhuma questão em aberto: a OPEN-48 foi resolvida em 05/11/2026 (Node.js v24.16.0). Pendências, todas da equipe:
+Mapa aprovado, questões em aberto resolvidas e as 29 Specs geradas, aprovadas e implementadas (SPEC-001 a SPEC-028 aprovadas em outubro de 2026 e SPEC-029 em 23/11/2026; implementação concluída em 23/11/2026). Nenhuma questão em aberto: a OPEN-48 foi resolvida em 05/11/2026 (Node.js v24.16.0). Pendências externas da equipe e trabalhos concluídos nesta etapa:
 
 1. as validações externas (OPEN-01, OPEN-26, OPEN-27 e OPEN-29), que permitem trocar os provedores simulados pelos reais, conforme a seção 5;
 2. todas as conferências da baseline foram concluídas em 23/11/2026: OPEN-88, 97, 107, 116, 125, 134, 142, 151 e 159 foram conferidas contra os requisitos, casos de uso e regras de negócio atuais;
-3. os roteiros manuais de navegadores e larguras de tela (RNF13 e RNF14), executados somente após confirmação da equipe.
+3. concluído em 23/11/2026: os testes manuais de responsividade nos navegadores nas larguras de 360 px, 768 px e 1366 px (RNF13 e RNF14) foram executados e aprovados, sem alterações necessárias.
 
 Qualquer divergência entre código, Spec e baseline encontrada nessas etapas é registrada e decidida pela equipe humana.
