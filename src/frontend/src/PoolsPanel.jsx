@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowRight, ChevronRight, LoaderCircle, Plus } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import MatchCatalog from './MatchCatalog.jsx'
@@ -9,6 +9,10 @@ import PoolView from './PoolView.jsx'
 import { createPool, fetchCreationAvailability, fetchPools } from './pools-api.js'
 import {
   buildPoolRequest,
+  centsFromMaskedInput,
+  entryFeeErrors,
+  formatCentsInput,
+  periodErrors,
   poolStatusLabels,
   prizeModelLabels,
   roleLabels,
@@ -19,6 +23,37 @@ import {
 
 function FieldError({ id, message }) {
   return message ? <small id={id} className="field-error">{message}</small> : null
+}
+
+// Campo de valor com máscara de banco: só dígitos, cada um entra pela direita, com "R$" fixo na
+// frente. O cursor fica sempre no fim, onde os dígitos entram.
+function MoneyInput({ cents, onChange, ...props }) {
+  const input = useRef(null)
+  const text = formatCentsInput(cents)
+
+  function moveCaretToEnd() {
+    const element = input.current
+    if (element) requestAnimationFrame(() => element.setSelectionRange(element.value.length, element.value.length))
+  }
+
+  useEffect(moveCaretToEnd, [text])
+
+  return (
+    <span className="money-field">
+      <span className="money-prefix" aria-hidden="true">R$</span>
+      <input
+        {...props}
+        ref={input}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        value={text}
+        onChange={(event) => onChange(centsFromMaskedInput(event.target.value, cents))}
+        onFocus={moveCaretToEnd}
+        onClick={moveCaretToEnd}
+      />
+    </span>
+  )
 }
 
 function useGuardedRequest(onSessionRejected) {
@@ -113,7 +148,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
     name: '',
     startsOn: todayInSaoPaulo(),
     endsOn: '',
-    entryFee: '0',
+    entryFeeCents: 0,
     prizeModel: 'winner_takes_all',
     tiebreaker: 'exact_scores',
     matchIds: [],
@@ -152,6 +187,18 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
     }
   }
 
+  // Datas são conferidas a cada mudança, para o erro aparecer antes do envio.
+  function changeDate(field) {
+    return (event) => {
+      const next = { ...values, [field]: event.target.value }
+      setValues(next)
+      const errors = periodErrors(next)
+      setFieldErrors((current) => ({ ...current, startsOn: errors.startsOn, endsOn: errors.endsOn }))
+      setMessage('')
+      setGuidance('')
+    }
+  }
+
   const selection = {
     matchIds: values.matchIds,
     roundNumbers: values.roundNumbers,
@@ -167,6 +214,12 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
 
   async function submit(event) {
     event.preventDefault()
+    const localErrors = { ...periodErrors(values), ...entryFeeErrors(values.entryFeeCents) }
+    if (Object.keys(localErrors).length > 0) {
+      setFieldErrors(localErrors)
+      setMessage('Confira os campos destacados.')
+      return
+    }
     setSaving(true)
     setMessage('')
     setGuidance('')
@@ -211,7 +264,7 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
       )}
 
       {availability?.canCreate && (
-        <form className="auth-form" onSubmit={submit} noValidate>
+        <form className="auth-form pool-create-form" onSubmit={submit} noValidate>
           <label className="field">
             <span>Nome do bolão</span>
             <input name="name" type="text" maxLength={100} value={values.name} onChange={change('name')} aria-describedby={fieldErrors.name ? 'pool-name-error' : undefined} />
@@ -221,20 +274,29 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
           <div className="field-row">
             <label className="field">
               <span>Início</span>
-              <input name="startsOn" type="date" value={values.startsOn} onChange={change('startsOn')} aria-describedby={fieldErrors.startsOn ? 'pool-start-error' : undefined} />
+              <input name="startsOn" type="date" min={todayInSaoPaulo()} value={values.startsOn} onChange={changeDate('startsOn')} aria-invalid={Boolean(fieldErrors.startsOn)} aria-describedby={fieldErrors.startsOn ? 'pool-start-error' : undefined} />
               <FieldError id="pool-start-error" message={fieldErrors.startsOn} />
             </label>
             <label className="field">
               <span>Fim</span>
-              <input name="endsOn" type="date" value={values.endsOn} onChange={change('endsOn')} aria-describedby={fieldErrors.endsOn ? 'pool-end-error' : undefined} />
+              <input name="endsOn" type="date" min={values.startsOn || todayInSaoPaulo()} value={values.endsOn} onChange={changeDate('endsOn')} aria-invalid={Boolean(fieldErrors.endsOn)} aria-describedby={fieldErrors.endsOn ? 'pool-end-error' : undefined} />
               <FieldError id="pool-end-error" message={fieldErrors.endsOn} />
             </label>
           </div>
 
           <label className="field">
             <span>Taxa de entrada (R$)</span>
-            <input name="entryFee" type="text" inputMode="decimal" value={values.entryFee} onChange={change('entryFee')} aria-describedby={fieldErrors.entryFee ? 'pool-fee-error' : 'pool-fee-hint'} />
-            <small id="pool-fee-hint" className="field-hint">Use 0 para um bolão sem taxa. Com taxa: de R$ 1,00 a R$ 500,00.</small>
+            <MoneyInput
+              name="entryFee"
+              cents={values.entryFeeCents}
+              onChange={(cents) => {
+                setValues((current) => ({ ...current, entryFeeCents: cents }))
+                clearError('entryFee')
+              }}
+              aria-invalid={Boolean(fieldErrors.entryFee)}
+              aria-describedby={fieldErrors.entryFee ? 'pool-fee-error' : 'pool-fee-hint'}
+            />
+            <small id="pool-fee-hint" className="field-hint">Deixe R$ 0,00 para um bolão sem taxa. Com taxa: de R$ 1,00 a R$ 500,00.</small>
             <FieldError id="pool-fee-error" message={fieldErrors.entryFee} />
           </label>
 
