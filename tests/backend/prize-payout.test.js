@@ -3,7 +3,7 @@ import test from 'node:test'
 import { createSimulatedPaymentsProvider } from '../../src/backend/adapters/simulated-payments-provider.js'
 import { createSimulatedSportsProvider } from '../../src/backend/adapters/simulated-sports-provider.js'
 import { prizeActions, splitPrize } from '../../src/backend/modules/payments-subscriptions/index.js'
-import { periodEndMs } from '../../src/backend/modules/pools-participations/index.js'
+import { computePrizeShares, periodEndMs } from '../../src/backend/modules/pools-participations/index.js'
 import { expectCommonFormat, withHttpApp } from './support/app-harness.js'
 
 // SPEC-026 — solicitação e processamento da premiação, com provedores simulados e relógio controlado.
@@ -47,11 +47,12 @@ async function finish(context, matchId) {
 }
 
 // Bolão com taxa de R$ 10,00 e três pagantes. winners: quem acerta o placar (2 a 1).
-async function setup(context, { winners = ['Bruno'], fee = 10, extra = [] } = {}) {
+// predictions: palpites extras por nome, para pontuações diferentes (SPEC-030).
+async function setup(context, { winners = ['Bruno'], fee = 10, extra = [], prizeModel = 'winner_takes_all', predictions = {} } = {}) {
   const admin = await context.signUp('Ana')
   const bruno = await context.signUp('Bruno')
   const caio = await context.signUp('Caio')
-  const created = await context.createPool(admin, { matchCount: 1, endsOn, entryFee: fee })
+  const created = await context.createPool(admin, { matchCount: 1, endsOn, entryFee: fee, prizeModel })
   const { poolId } = created
   const [match] = created.matches
   const users = { Ana: admin, Bruno: bruno, Caio: caio }
@@ -61,6 +62,10 @@ async function setup(context, { winners = ['Bruno'], fee = 10, extra = [] } = {}
     if (fee > 0) await payFee(context, user, poolId)
   }
   for (const name of winners) await predict(context, users[name], poolId, match.id, 2, 1)
+  for (const [name, body] of Object.entries(predictions)) {
+    const response = await context.call('PUT', `/pools/${poolId}/matches/${match.id}/prediction`, { token: users[name].token, body })
+    assert.equal(response.status, 200, response.text)
+  }
   for (const step of extra) await step({ ...users, poolId, match })
   await finish(context, match.id)
   return { admin, bruno, caio, poolId, match }
@@ -288,10 +293,10 @@ test('CT-16 e CT-17: sem vínculo recebe 404; a administração só vê o estado
     }
     await request(context, bruno, poolId)
     const adminView = (await prize(context, admin, poolId)).json
-    assert.deepEqual(adminView.winners, [{ name: 'Bruno', state: 'completed', isRequester: false }])
+    assert.deepEqual(adminView.awardees, [{ name: 'Bruno', place: 1, state: 'completed', isRequester: false }])
     assert.equal(adminView.payment, null)
     assert.equal(JSON.stringify(adminView).includes(payouts(context)[0].operation_key), false)
-    assert.equal((await prize(context, bruno, poolId)).json.winners, undefined)
+    assert.equal((await prize(context, bruno, poolId)).json.awardees, undefined)
   })
 })
 
@@ -330,5 +335,115 @@ test('CT-20: bolão sem taxa não tem valor a pagar e não cria movimentação',
     assert.equal((await prize(context, bruno, poolId)).json.state, 'nothing_to_pay')
     expectCommonFormat(await request(context, bruno, poolId), 409, 'nothing_to_pay')
     assert.equal(payouts(context).length, 0)
+  })
+})
+
+// SPEC-030 — premiação por pódio.
+
+test('SPEC-030 TC-01 a TC-05: partes por modelo, empates, colocações vazias e centavos', () => {
+  const row = (participationId, position, totalPoints = 10) => ({ participationId, position, totalPoints })
+  const summary = (model, rows, amount) => computePrizeShares(model, rows, amount)
+    .map(({ participationId, place, amountCents, percentBasisPoints }) => [participationId, place, amountCents, percentBasisPoints])
+  const values = (model, rows, amount) => computePrizeShares(model, rows, amount).map(({ amountCents }) => amountCents)
+
+  // TC-01: cada modelo, sem empate; o 4º não recebe.
+  const four = [row('a', 1), row('b', 2), row('c', 3), row('d', 4)]
+  assert.deepEqual(summary('podium_50_30_20', four, 10000), [['a', 1, 5000, 5000], ['b', 2, 3000, 3000], ['c', 3, 2000, 2000]])
+  assert.deepEqual(values('podium_60_30_10', four, 10000), [6000, 3000, 1000])
+  assert.deepEqual(values('podium_70_20_10', four, 10000), [7000, 2000, 1000])
+
+  // TC-02: empates no 1º, no 2º e no 3º.
+  assert.deepEqual(summary('podium_50_30_20', [row('a', 1), row('b', 1), row('c', 3), row('d', 4)], 10000),
+    [['a', 1, 4000, 4000], ['b', 1, 4000, 4000], ['c', 3, 2000, 2000]])
+  assert.deepEqual(values('podium_50_30_20', [row('a', 1), row('b', 1), row('c', 1), row('d', 4)], 9000), [3000, 3000, 3000])
+  assert.deepEqual(summary('podium_50_30_20', [row('a', 1), row('b', 2), row('c', 2), row('d', 4)], 10000),
+    [['a', 1, 5000, 5000], ['b', 2, 2500, 2500], ['c', 2, 2500, 2500]])
+  assert.deepEqual(values('podium_60_30_10', [row('a', 1), row('b', 2), row('c', 3), row('d', 3)], 10000), [6000, 3000, 500, 500])
+
+  // TC-03: menos de três premiados; quem tem zero ponto não recebe.
+  assert.deepEqual(summary('podium_50_30_20', [row('a', 1), row('b', 2), row('c', 3, 0)], 8000),
+    [['a', 1, 5000, 6250], ['b', 2, 3000, 3750]])
+  assert.deepEqual(values('podium_70_20_10', [row('a', 1)], 1234), [1234])
+  assert.deepEqual(computePrizeShares('podium_50_30_20', [row('a', 1, 0)], 1000), [])
+
+  // TC-04: a soma fecha com o montante e o resto vai na ordem da classificação.
+  const odd = values('podium_50_30_20', [row('a', 1), row('b', 2), row('c', 2)], 1001)
+  assert.equal(odd.reduce((sum, value) => sum + value, 0), 1001)
+  assert.deepEqual(odd, [501, 250, 250])
+
+  // TC-05: "vencedor leva tudo" é a divisão igual de antes.
+  assert.deepEqual(values('winner_takes_all', [row('a', 1), row('b', 1), row('c', 1), row('d', 4)], 1000), splitPrize(1000, 3))
+})
+
+test('SPEC-030 TC-07, TC-08 e TC-10: 2º colocado recebe a sua parte; quem não pontuou é recusado; partes fixas', async () => {
+  await withPrize(async (context) => {
+    // R$ 30,00 arrecadados; Ana crava o placar, Bruno acerta só o vencedor, Caio erra: dois premiados.
+    const { admin, bruno, caio, poolId } = await setup(context, {
+      winners: ['Ana'],
+      prizeModel: 'podium_50_30_20',
+      predictions: { Bruno: { type: 'result', outcome: 'home' }, Caio: { type: 'result', outcome: 'away' } },
+    })
+    const brunoView = (await prize(context, bruno, poolId)).json
+    assert.equal(brunoView.state, 'available')
+    assert.equal(brunoView.place, 2)
+    assert.equal(brunoView.sharePercent, 37.5)
+    assert.equal(brunoView.shareCents, 1125)
+
+    expectCommonFormat(await request(context, caio, poolId), 403, 'not_winner')
+    const requested = await request(context, bruno, poolId)
+    assert.equal(requested.status, 201, requested.text)
+    assert.equal(requested.json.shareCents, 1125)
+
+    const stored = context.database.prepare('SELECT place, percent_basis_points, amount_cents FROM pool_prize_shares ORDER BY place').all()
+    assert.deepEqual(stored.map((share) => ({ ...share })), [
+      { place: 1, percent_basis_points: 6250, amount_cents: 1875 },
+      { place: 2, percent_basis_points: 3750, amount_cents: 1125 },
+    ])
+    assert.throws(() => context.database.prepare('UPDATE pool_prize_shares SET amount_cents = 1').run(), /prize shares are fixed/)
+
+    const adminView = (await prize(context, admin, poolId)).json
+    assert.equal(adminView.shareCents, 1875)
+    assert.deepEqual(adminView.awardees.map(({ name, place }) => [name, place]), [['Ana', 1], ['Bruno', 2]])
+
+    const final = (await context.call('GET', `/pools/${poolId}/final-result`, { token: caio.token })).json
+    assert.equal(final.prizeModel, 'podium_50_30_20')
+    assert.deepEqual(final.standings.map(({ name, winner, awarded, prizePercent }) => [name, winner, awarded, prizePercent]), [
+      ['Ana', true, true, 62.5], ['Bruno', false, true, 37.5], ['Caio', false, false, null],
+    ])
+  })
+})
+
+test('SPEC-030 TC-09: montante fixado antes da Spec, sem partes gravadas, mantém a divisão igual', async () => {
+  await withPrize(async (context) => {
+    const { admin, bruno, poolId } = await setup(context, { winners: ['Ana', 'Bruno'] })
+    context.database.prepare(`
+      INSERT INTO pool_prize_pools (pool_id, amount_cents, currency, winner_count, fixed_at)
+      VALUES (?, 3001, 'BRL', 2, '2026-11-20T00:00:00.000Z')
+    `).run(poolId)
+    assert.equal((await prize(context, admin, poolId)).json.shareCents, 1501)
+    const requested = await request(context, bruno, poolId)
+    assert.equal(requested.json.shareCents, 1500)
+    assert.equal(context.database.prepare('SELECT COUNT(*) AS n FROM pool_prize_shares').get().n, 0)
+  })
+})
+
+test('SPEC-030 TC-06: a criação aceita os modelos de pódio, que ficam imutáveis, e recusa outro valor', async () => {
+  await withPrize(async (context) => {
+    const owner = await context.signUp('Ana')
+    const { poolId } = await context.createPool(owner, { matchCount: 1, prizeModel: 'podium_70_20_10' })
+    assert.equal(context.database.prepare('SELECT prize_model FROM pools WHERE id = ?').get(poolId).prize_model, 'podium_70_20_10')
+    assert.throws(() => context.database.prepare("UPDATE pools SET prize_model = 'winner_takes_all' WHERE id = ?").run(poolId), /immutable/)
+
+    const other = await context.signUp('Bruno')
+    const matches = (await context.call('GET', '/catalog/rounds/2/matches?status=scheduled', { token: other.token })).json.matches
+    const refused = await context.call('POST', '/pools', {
+      token: other.token,
+      body: {
+        name: 'Bolão', startsOn: '2026-11-14', endsOn, entryFee: 0, prizeModel: 'podium_40_40_20',
+        tiebreaker: 'exact_scores', selection: { matchIds: [matches[0].id] },
+      },
+    })
+    assert.equal(refused.status, 400, refused.text)
+    assert.ok(refused.json.fields.prizeModel)
   })
 })

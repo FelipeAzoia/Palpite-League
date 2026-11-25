@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { AppError } from '../../shared/app-error.js'
 import { saoPauloDate } from '../../shared/sao-paulo-date.js'
 import { getPlan, simultaneousPoolLimit } from '../auth-users/index.js'
+import { prizeModels } from './prize-models.js'
 
 export const moduleName = 'pools-participations'
 export { createInvitesService } from './invites.js'
@@ -12,7 +13,7 @@ export { createParticipationExitService, exitAuditDetailSchemas } from './partic
 export { closingActions, closingAuditDetailSchemas, createPoolClosingService, periodEndMs } from './pool-closing.js'
 export { createRefundRequestsService, refundActions, refundAuditDetailSchemas, refundProcessingState } from './refund-requests.js'
 
-export const prizeModels = Object.freeze(['winner_takes_all'])
+export { computePrizeShares, prizeModelPlaces, prizeModels } from './prize-models.js'
 export const tiebreakers = Object.freeze(['exact_scores', 'correct_results', 'last_round_points'])
 
 const memberStatuses = ['approved_awaiting_payment', 'confirmed']

@@ -1,6 +1,6 @@
 # Mapa de Specs — Palpite League
 
-- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: acrescentada a SPEC-029 (renovação recorrente, plano anual e pagamento em atraso), aprovada pela equipe nesta data, totalizando 29 Specs; as 29 Specs estão implementadas e integradas ao `main` (situação na seção 5); OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
+- **Status:** aprovado. Atualizado em 31/10/2026: as 28 Specs foram geradas e aprovadas (SPEC-020 a SPEC-024 em 30/10/2026 e SPEC-025 a SPEC-028 em 31/10/2026) e as questões OPEN-88 a OPEN-166, criadas nessas Specs, foram resolvidas com a aprovação delas. Atualizado em 23/11/2026: acrescentada a SPEC-029 (renovação recorrente, plano anual e pagamento em atraso), aprovada pela equipe nesta data, totalizando 29 Specs; as 29 Specs estão implementadas e integradas ao `main` (situação na seção 5); OPEN-48 resolvida (Node.js v24.16.0 confirmado pela equipe em 05/11/2026, registrado na ADR-0008); não há mais questões em aberto. Atualizado em 24/11/2026: acrescentada a SPEC-030 (premiação por pódio), aprovada pela equipe nesta data, totalizando 30 Specs. Em 23/10/2026 haviam sido incorporadas as decisões da proposta de resolução das questões em aberto (aprovada integralmente).
 - **Etapa:** Spec-Driven Development, decomposição do projeto em Specs (prompt principal).
 - **Escopo deste documento:** somente o índice ordenado de Specs, as análises que o sustentam e as questões em aberto. Nenhuma Spec individual, código, banco de dados, endpoint ou escolha tecnológica nova foi produzida.
 - **Fonte de verdade:** artefatos de `docs/` (visão, personas, RF, RB, RNF, modelo de domínio, casos de uso, drivers, ADRs, arquitetura consolidada e validação do Mercado Pago).
@@ -143,6 +143,7 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 | SPEC-027 | Notificações de eventos | 010, 013, 016, 019, 020, 026 |
 | SPEC-028 | Histórico do bolão | 012, 013, 014, 015 |
 | SPEC-029 | Renovação recorrente, plano anual e pagamento em atraso | 018, 019, 020 |
+| SPEC-030 | Premiação por pódio | 007, 025, 026 |
 
 ---
 
@@ -582,6 +583,21 @@ Convenções: `—` significa que a baseline não traz item correspondente. Spec
 - **Justificativa da posição:** estende a contratação (019) e o ciclo de vida (020) da assinatura; altera partes delas, indicadas na própria Spec.
 - **Questões em aberto relacionadas:** OPEN-26 (integração real).
 
+### SPEC-030 — Premiação por pódio
+
+- **Acrescentada em 24/11/2026** por decisão da equipe.
+- **Objetivo:** permitir escolher, na criação do bolão, entre "vencedor leva tudo" e pódios prontos (50/30/20, 60/30/10, 70/20/10), e pagar a parte de cada premiado.
+- **Valor entregue:** bolões que premiam mais de uma colocação, com a divisão conhecida desde a criação.
+- **RF:** RF09, RF11, RF36, RF37.
+- **RB:** RB51, RB69 (nova), RB63, RB64.
+- **RNF:** RNF09, RNF11, RNF15, RNF16.
+- **Caso de uso/fluxo:** UC03 (criação do bolão) e UC07 (premiação).
+- **Entidades:** Bolao, ClassificacaoFinal, MontantePremiacao, PartePremiacao (nova), MovimentacaoFinanceira.
+- **ADRs:** ADR-0003, ADR-0005.
+- **Dependências:** SPEC-007, SPEC-025, SPEC-026.
+- **Justificativa da posição:** estende a criação do bolão, o resultado final e a premiação; altera partes delas, indicadas na própria Spec.
+- **Questões em aberto relacionadas:** OPEN-29 (repasse real da premiação).
+
 ---
 
 ## 3. Cobertura dos requisitos
@@ -844,6 +860,7 @@ Os testes manuais de responsividade em 360 px, 768 px e 1366 px (RNF13 e RNF14) 
 | SPEC-027 | Notificações de eventos | PR #55 | — |
 | SPEC-028 | Histórico do bolão | PR #56 | — |
 | SPEC-029 | Renovação recorrente, plano anual e pagamento em atraso | PR #47 | Smoke tests das Assinaturas (OPEN-26) |
+| SPEC-030 | Premiação por pódio | em revisão | Validação do repasse no sandbox (OPEN-29), como na SPEC-026 |
 
 Enquanto as pendências externas não forem resolvidas, os provedores simulados ficam ativos e são sempre identificados como simulação, conforme ADR-0002 e ADR-0003.
 

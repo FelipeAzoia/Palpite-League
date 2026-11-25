@@ -1,10 +1,10 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { isSessionRejected } from './account-api.js'
 import { formatBrl } from './financial-view.js'
-import { fetchPrize, prizeSituation, prizeStateLabels, requestPrize } from './prize-api.js'
+import { awardeeLabel, fetchPrize, prizeSituation, prizeStateLabels, requestPrize, shareLabel } from './prize-api.js'
 
-// SPEC-026 — premiação do bolão encerrado: o vencedor vê a própria parte e solicita; a administração
-// vê só o estado por vencedor. Não há aprovação administrativa.
+// SPEC-026 e SPEC-030 — premiação do bolão encerrado: cada premiado vê a própria parte e solicita; a
+// administração vê só a colocação e o estado por premiado. Não há aprovação administrativa.
 export default function PrizeSection({ token, poolId, onSessionRejected }) {
   const [view, setView] = useState(null)
   const [error, setError] = useState('')
@@ -50,6 +50,7 @@ export default function PrizeSection({ token, poolId, onSessionRejected }) {
       {isWinner ? (
         <div className="prize-card">
           <p className="prize-amount">{formatBrl(view.shareCents)}</p>
+          {shareLabel(view) && <p className="prize-state">{shareLabel(view)}</p>}
           <p className="prize-state">{prizeSituation(view)}</p>
           {view.canRequest && (
             <button type="button" className="small-button small-button-solid" disabled={busy} onClick={ask}>
@@ -61,11 +62,11 @@ export default function PrizeSection({ token, poolId, onSessionRejected }) {
         <p className="empty-state">{prizeStateLabels[view.state] ?? view.state}.</p>
       )}
       {error && <p className="form-message" role="alert">{error}</p>}
-      {view.winners && (
+      {view.awardees && (
         <ul className="plain-rows">
-          {view.winners.map((winner) => (
-            <li key={winner.name}>
-              <span className="plain-rows-main">{winner.name}<small>{prizeStateLabels[winner.state] ?? winner.state}</small></span>
+          {view.awardees.map((awardee) => (
+            <li key={`${awardee.place}-${awardee.name}`}>
+              <span className="plain-rows-main">{awardeeLabel(view, awardee)}<small>{prizeStateLabels[awardee.state] ?? awardee.state}</small></span>
             </li>
           ))}
         </ul>

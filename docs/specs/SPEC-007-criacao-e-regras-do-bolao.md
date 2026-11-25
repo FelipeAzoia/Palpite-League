@@ -71,7 +71,7 @@
 1. O usuário solicita a criação de um bolão.
 2. O sistema informa o plano, o limite e quantos bolões ativos o usuário já criou, e verifica se pode criar.
 3. O sistema apresenta as rodadas e partidas disponíveis (SPEC-006).
-4. O usuário informa nome, período (data de início e de fim), taxa de entrada, critério de desempate e escolhe as partidas, individualmente, por rodada ou combinando; o modelo de premiação é o único disponível.
+4. O usuário informa nome, período (data de início e de fim), taxa de entrada, critério de desempate e escolhe as partidas, individualmente, por rodada ou combinando; o usuário escolhe o modelo de premiação entre os disponíveis (RB69; alterado pela SPEC-030 em 24/11/2026).
 5. Em uma única transação, o sistema reverifica o limite, valida as regras e registra o bolão (status ativo, recurso ao vivo conforme o plano), as partidas selecionadas, a participação do criador como administrador e o registro de auditoria de sucesso.
 6. O sistema devolve o bolão criado com suas regras e a participação do criador.
 
@@ -113,7 +113,7 @@
 - **INV-006:** a data de início do período não é anterior ao dia da criação, a data de fim não é anterior à de início e todas as partidas selecionadas têm data e hora dentro do período, em dias de America/Sao_Paulo (OPEN-11, OPEN-61).
 - **INV-007:** o bolão tem ao menos uma partida; cada partida selecionada existe no catálogo, está agendada e tem data e hora futuras no momento da criação; não há partida duplicada (OPEN-61).
 - **INV-008:** a taxa é maior ou igual a zero, em BRL, com no máximo duas casas decimais; se maior que zero, está entre R$ 1,00 e R$ 500,00 (OPEN-15).
-- **INV-009:** o modelo de premiação é "vencedor leva tudo sobre o montante arrecadado" (OPEN-13).
+- **INV-009:** o modelo de premiação é um dos modelos da RB69: "vencedor leva tudo sobre o montante arrecadado" (decisão original da OPEN-13) ou um dos pódios acrescentados pela SPEC-030 em 24/11/2026.
 - **INV-010:** o critério de desempate é um de mais placares exatos, mais resultados corretos ou maior pontuação na última rodada do bolão (OPEN-14).
 - **INV-011:** o recurso ao vivo do bolão é verdadeiro se, e somente se, o plano do criador na criação inclui resultados ao vivo (RB06, RB58).
 - **INV-012:** a criação do bolão, das partidas selecionadas, da participação do criador e do registro de auditoria é atômica (RNF02).

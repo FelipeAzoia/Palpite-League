@@ -314,7 +314,7 @@ Ao encerramento do bolão, o sistema deverá determinar o vencedor ou vencedores
 
 ## RB51 — Modelo de premiação
 
-O valor ou modelo de distribuição da premiação deverá ser definido pelo administrador no momento da criação do bolão e não poderá ser alterado posteriormente.
+O valor ou modelo de distribuição da premiação deverá ser definido pelo administrador no momento da criação do bolão e não poderá ser alterado posteriormente. Os modelos disponíveis estão na RB69.
 
 ---
 
@@ -417,3 +417,9 @@ Ao fim de cada período, a assinatura será renovada por mais um ciclo quando a 
 ## RB68 — Cancelamento ao fim do período pago
 
 O cancelamento da assinatura interromperá as próximas cobranças, sem reembolso do período já pago. Os recursos Premium continuarão disponíveis até o fim do período pago, quando o usuário retornará ao plano Gratuito.
+
+---
+
+## RB69 — Modelos de premiação disponíveis
+
+Ao criar o bolão, o administrador escolherá um dos modelos de premiação prontos: "vencedor leva tudo" (100% do montante arrecadado para o 1º lugar) ou pódio, com o montante dividido entre os três primeiros colocados em 50%, 30% e 20%; 60%, 30% e 10%; ou 70%, 20% e 10%. Só participantes elegíveis com pontuação maior que zero são premiados. Empatados em colocações premiadas somam as porcentagens das colocações que ocupam e dividem por igual. Se menos de três colocações premiadas forem ocupadas, a porcentagem restante é repartida entre os premiados, na proporção do que cada um recebeu, de modo que todo o montante seja distribuído.

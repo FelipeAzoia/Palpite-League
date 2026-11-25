@@ -1,6 +1,7 @@
 import { AppError } from '../../shared/app-error.js'
 import { createLogger } from '../../shared/logger.js'
 import { poolNotFound } from './pool-access.js'
+import { computePrizeShares } from './prize-models.js'
 
 // SPEC-025 — encerramento automático e determinação do vencedor.
 // - só a tarefa agendada encerra; não existe operação manual (INV-001);
@@ -145,7 +146,7 @@ export function createPoolClosingService(database, { auditStore, ranking, logger
   function getFinalResult(userId, poolId) {
     const member = typeof poolId === 'string' && poolId.length <= 100
       ? database.prepare(`
-        SELECT p.id, p.name, p.status, part.id AS participation_id, part.status AS participation_status
+        SELECT p.id, p.name, p.status, p.prize_model, part.id AS participation_id, part.status AS participation_status
         FROM pools p JOIN pool_participations part ON part.pool_id = p.id AND part.user_id = ?
         WHERE p.id = ?
       `).get(userId, poolId)
@@ -163,8 +164,13 @@ export function createPoolClosingService(database, { auditStore, ranking, logger
       WHERE s.pool_id = ?
       ORDER BY s.position, u.name COLLATE NOCASE, s.participation_id
     `).all(member.id)
+    // Premiados e porcentagem efetiva de cada um pelo modelo do bolão (SPEC-030).
+    const shares = new Map(computePrizeShares(member.prize_model, standings.map((row) => ({
+      participationId: row.participation_id, position: row.position, totalPoints: row.total_points,
+    })), 0).map((share) => [share.participationId, share]))
     return {
       pool: { id: member.id, name: member.name, status: member.status },
+      prizeModel: member.prize_model,
       endedAt: result.ended_at,
       tiebreaker: result.tiebreaker,
       hasWinner: result.winner_count > 0,
@@ -176,6 +182,8 @@ export function createPoolClosingService(database, { auditStore, ranking, logger
         totalPoints: row.total_points,
         tiebreakValue: row.tiebreak_value,
         winner: row.winner === 1,
+        awarded: shares.has(row.participation_id),
+        prizePercent: shares.has(row.participation_id) ? shares.get(row.participation_id).percentBasisPoints / 100 : null,
         isRequester: row.participation_id === member.participation_id,
       })),
     }

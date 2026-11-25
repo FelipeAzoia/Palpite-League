@@ -1,7 +1,8 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { LoaderCircle, Trophy } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
-import { fetchFinalResult, formatEndedAt, winnersHeadline } from './final-result-api.js'
+import { fetchFinalResult, formatEndedAt, prizeTag, winnersHeadline } from './final-result-api.js'
+import { prizeModelLabels } from './pools-form.js'
 
 // SPEC-025 — resultado final congelado do bolão encerrado: vencedores (ou a ausência deles) e a
 // classificação final registrada no encerramento.
@@ -33,6 +34,7 @@ export default function FinalResultSection({ token, poolId, onSessionRejected })
         <div>
           <h3 id="final-result-title" className="block-title">Resultado final</h3>
           <p className={result.hasWinner ? 'final-winners' : 'final-winners final-winners-none'}>{winnersHeadline(result)}</p>
+          {result.prizeModel && <p className="fine-print fine-print-top">Premiação: {prizeModelLabels[result.prizeModel] ?? result.prizeModel}</p>}
           <p className="fine-print fine-print-top">Bolão encerrado automaticamente em {formatEndedAt(result.endedAt)}. O resultado não muda mais.</p>
         </div>
       </div>
@@ -45,6 +47,7 @@ export default function FinalResultSection({ token, poolId, onSessionRejected })
                 {row.name}
                 {row.isRequester && <span className="you-tag">você</span>}
                 {row.winner && <span className="winner-tag">vencedor</span>}
+                {prizeTag(result, row) && <span className="winner-tag prize-tag">{prizeTag(result, row)}</span>}
               </span>
               <strong className="mini-points">{row.totalPoints}<small> pts</small></strong>
             </li>
