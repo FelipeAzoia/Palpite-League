@@ -12,6 +12,7 @@ import {
   situationLabels,
 } from './predictions-api.js'
 import RoundPicker from './RoundPicker.jsx'
+import { TeamLabel } from './TeamCrest.jsx'
 
 const outcomeShort = { home: 'Mandante', draw: 'Empate', away: 'Visitante' }
 
@@ -196,9 +197,9 @@ export default function PredictionsPage({ token, poolId, onSessionRejected, onCh
           return (
             <li key={match.id} className={editing ? 'mrow mrow-editing' : 'mrow'}>
               <span className="mrow-when"><b>{time}</b>{day}</span>
-              <span className="mrow-home">{match.home.name}</span>
+              <span className="mrow-home"><TeamLabel team={match.home} side="home" /></span>
               <span className="mrow-center"><PredictionMark prediction={match.prediction} /></span>
-              <span className="mrow-away">{match.away.name}</span>
+              <span className="mrow-away"><TeamLabel team={match.away} side="away" /></span>
               <span className="mrow-side">
                 {isOpen && !editing && (
                   <button className="small-button" type="button" onClick={() => edit(match.id)}>{match.prediction ? 'Editar' : 'Palpitar'}</button>

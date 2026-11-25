@@ -1,18 +1,19 @@
 import { SportsProviderError } from '../modules/matches-results/sports-provider.js'
 
-// Campeonato simulado com os nomes dos 20 clubes da Série A do Brasileirão (SPEC-031), para que o
-// filtro de times da criação do bolão faça sentido. Os identificadores sim-team-N não mudam.
-export const simulatedTeamNames = Object.freeze([
-  'Athletico-PR', 'Atlético-GO', 'Atlético-MG', 'Bahia', 'Botafogo',
-  'Corinthians', 'Criciúma', 'Cruzeiro', 'Cuiabá', 'Flamengo',
-  'Fluminense', 'Fortaleza', 'Grêmio', 'Internacional', 'Juventude',
-  'Palmeiras', 'Red Bull Bragantino', 'São Paulo', 'Vasco da Gama', 'Vitória',
+// Campeonato simulado com os 20 clubes da Série A do Brasileirão (SPEC-031), para que o filtro de
+// times da criação do bolão faça sentido. Os escudos são os mesmos que a API-Football devolve para
+// esses clubes (identificador do time na API). Os identificadores sim-team-N não mudam.
+const simulatedClubs = Object.freeze([
+  ['Athletico-PR', 134], ['Atlético-GO', 144], ['Atlético-MG', 1062], ['Bahia', 118], ['Botafogo', 120],
+  ['Corinthians', 131], ['Criciúma', 140], ['Cruzeiro', 135], ['Cuiabá', 1193], ['Flamengo', 127],
+  ['Fluminense', 124], ['Fortaleza', 154], ['Grêmio', 130], ['Internacional', 119], ['Juventude', 152],
+  ['Palmeiras', 121], ['Red Bull Bragantino', 794], ['São Paulo', 126], ['Vasco da Gama', 133], ['Vitória', 136],
 ])
-const teamNames = simulatedTeamNames
-const teams = teamNames.map((name, index) => ({
+export const simulatedTeamNames = Object.freeze(simulatedClubs.map(([name]) => name))
+const teams = simulatedClubs.map(([name, apiFootballId], index) => ({
   id: `sim-team-${index + 1}`,
   name,
-  crest: null,
+  crest: `https://media.api-sports.io/football/teams/${apiFootballId}.png`,
 }))
 
 function createFixtures(season) {

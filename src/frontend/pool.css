@@ -471,10 +471,17 @@
 .showcase-team { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .showcase-team-away { justify-content: flex-end; text-align: right; }
 .showcase-score { padding: 3px 10px; border-radius: 5px; color: #f8faef; background: var(--forest); font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.showcase-crest { flex: none; width: 22px; height: 22px; object-fit: contain; }
-.showcase-crest-empty { display: inline-grid; place-items: center; border-radius: 50%; color: #55655a; background: #e7ece7; font-size: 11px; }
 @media (max-width: 560px) {
   .selection-modes { grid-template-columns: 1fr; }
   .source-switch-wrap { justify-items: start; }
   .source-note { text-align: left; }
 }
+
+/* Escudos dos times nos placares (SPEC-031): simulado e API-Football. */
+.team-crest { display: inline-block; flex: none; object-fit: contain; vertical-align: -4px; }
+.mrow-home .team-crest { margin-left: 7px; }
+.mrow-away .team-crest { margin-right: 7px; }
+.team-crest-empty { display: inline-grid; place-items: center; border-radius: 50%; color: #55655a; background: #e7ece7; font-weight: 750; line-height: 1; }
+.team-label { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.team-label-home { justify-content: flex-start; }
+.team-label-away { justify-content: flex-end; }

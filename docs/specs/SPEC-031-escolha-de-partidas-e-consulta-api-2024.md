@@ -33,6 +33,7 @@
 - Filtro opcional de **times**, válido nos três modos: entra no bolão todo jogo em que **ao menos um** dos times escolhidos jogue.
 - Lista de times do catálogo para o filtro.
 - **Nomes reais dos clubes no campeonato simulado:** os 20 times simulados passam a usar nomes de clubes do Brasileirão, para que o filtro de times faça sentido na demonstração.
+- **Escudos nos placares:** os times simulados usam os escudos que a API-Football devolve para esses clubes, e todas as telas com placar (resultados, palpites, pontos, histórico, jogos do bolão, convite, catálogo e consulta de 2024) mostram o escudo ao lado do nome; sem imagem, aparece a inicial do time.
 - Chave **"Campeonato simulado / API-Football · Brasileirão 2024"** no canto superior direito da criação do bolão. Na segunda opção, a tela mostra só a consulta de 2024 (rodadas, jogos, escudos e placares reais), sem formulário de criação.
 - Consulta de 2024 pelo backend, separada do catálogo usado pelos bolões, com cache.
 

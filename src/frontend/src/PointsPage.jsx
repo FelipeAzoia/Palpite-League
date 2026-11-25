@@ -5,6 +5,7 @@ import { formatKickoff } from './match-format.js'
 import { blockedMessages } from './predictions-api.js'
 import { fetchMyPoints } from './points-api.js'
 import { PredictionMark } from './PredictionsPage.jsx'
+import { TeamLabel } from './TeamCrest.jsx'
 
 function pointsBadge({ points, prediction }) {
   if (!prediction) return <span className="muted-text">—</span>
@@ -66,9 +67,9 @@ export default function PointsPage({ token, poolId, onSessionRejected }) {
             return (
               <li key={match.id} className="mrow">
                 <span className="mrow-when"><b>{day}</b>{time} · R{match.roundNumber}</span>
-                <span className="mrow-home">{match.home.name}</span>
+                <span className="mrow-home"><TeamLabel team={match.home} side="home" /></span>
                 <span className="mrow-center"><span className="score-box">{match.officialScore.home}<i>–</i>{match.officialScore.away}</span></span>
-                <span className="mrow-away">{match.away.name}</span>
+                <span className="mrow-away"><TeamLabel team={match.away} side="away" /></span>
                 <span className="mrow-pick">{match.prediction ? <PredictionMark prediction={match.prediction} /> : <span className="muted-text">sem palpite</span>}</span>
                 <span className="mrow-side">{pointsBadge(match)}</span>
               </li>
