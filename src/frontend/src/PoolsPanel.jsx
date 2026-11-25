@@ -2,8 +2,8 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ArrowRight, ChevronRight, LoaderCircle, Plus } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import ApiFootballShowcase from './ApiFootballShowcase.jsx'
-import { fetchShowcaseStatus } from './match-catalog-api.js'
 import PoolMatchSelection from './PoolMatchSelection.jsx'
+import SourceSwitch from './SourceSwitch.jsx'
 import RefundsSection from './RefundsSection.jsx'
 import HistoryPage from './HistoryPage.jsx'
 import LeftPoolsSection from './LeftPoolsSection.jsx'
@@ -161,7 +161,6 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
   // SPEC-031: a chave do canto superior direito alterna entre o formulário (campeonato simulado) e a
   // consulta somente leitura da API-Football 2024. O que já foi preenchido continua guardado.
   const [source, setSource] = useState('simulated')
-  const [showcaseConfigured, setShowcaseConfigured] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
   const [message, setMessage] = useState('')
   const [guidance, setGuidance] = useState('')
@@ -177,11 +176,6 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
       if (active) setAvailability(result)
     }).catch((requestError) => {
       if (active) handleLoadError(requestError)
-    })
-    fetchShowcaseStatus(token).then((result) => {
-      if (active) setShowcaseConfigured(result.apiFootball2024.configured)
-    }).catch(() => {
-      if (active) setShowcaseConfigured(false)
     })
     return () => { active = false }
   }, [token])
@@ -254,24 +248,8 @@ function PoolCreate({ token, onSessionRejected, onCreated, onBack, onUpgrade }) 
           <p className="eyebrow">NOVO BOLÃO</p>
           <h2 id="auth-title">Criar bolão</h2>
         </div>
-        <div className="source-switch" role="radiogroup" aria-label="Fonte do campeonato">
-          <button type="button" role="radio" aria-checked={source === 'simulated'} className={source === 'simulated' ? 'is-active' : undefined} onClick={() => setSource('simulated')}>
-            Campeonato simulado
-          </button>
-          <button
-            type="button"
-            role="radio"
-            aria-checked={source === 'api-football-2024'}
-            className={source === 'api-football-2024' ? 'is-active' : undefined}
-            disabled={showcaseConfigured === false}
-            title={showcaseConfigured === false ? 'API-Football não configurada neste ambiente' : 'Dados reais de 2024, só para consulta'}
-            onClick={() => setSource('api-football-2024')}
-          >
-            API-Football · 2024
-          </button>
-        </div>
+        <SourceSwitch token={token} value={source} onChange={setSource} />
       </div>
-      {showcaseConfigured === false && <p className="field-hint source-note">API-Football não configurada neste ambiente: a consulta de 2024 fica indisponível.</p>}
 
       {source === 'api-football-2024' && <ApiFootballShowcase token={token} onSessionRejected={onSessionRejected} />}
 

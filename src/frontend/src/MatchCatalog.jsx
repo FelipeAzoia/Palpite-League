@@ -31,7 +31,7 @@ function isSelectable(match) {
 
 // Sem `selection`, é a consulta da SPEC-006. Com `selection`, o mesmo componente apoia a escolha
 // de partidas na criação do bolão (SPEC-007): a validação definitiva é do backend.
-export default function MatchCatalog({ token, onSessionRejected, selection }) {
+export default function MatchCatalog({ token, onSessionRejected, selection, showHeader = true }) {
   const [catalog, setCatalog] = useState(null)
   const [selectedRound, setSelectedRound] = useState('')
   const [matches, setMatches] = useState([])
@@ -113,7 +113,7 @@ export default function MatchCatalog({ token, onSessionRejected, selection }) {
 
   return (
     <>
-      {!selection && (
+      {!selection && showHeader && (
         <>
           <p className="eyebrow">CATÁLOGO ESPORTIVO</p>
           <h2 id="auth-title">Rodadas e partidas</h2>

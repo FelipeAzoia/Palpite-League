@@ -440,7 +440,8 @@
 .source-switch button { padding: 7px 14px; border: 0; border-radius: 99px; color: #55655a; background: transparent; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .source-switch button.is-active { color: #f8faef; background: var(--forest); }
 .source-switch button:disabled { cursor: not-allowed; opacity: .5; }
-.source-note { margin: 6px 0 0; text-align: right; }
+.source-switch-wrap { display: grid; justify-items: end; gap: 4px; }
+.source-note { margin: 0; text-align: right; }
 .pool-selection { display: grid; gap: 12px; }
 .pool-selection > .field-hint { margin: -4px 0 0; }
 .selection-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -474,5 +475,6 @@
 .showcase-crest-empty { display: inline-grid; place-items: center; border-radius: 50%; color: #55655a; background: #e7ece7; font-size: 11px; }
 @media (max-width: 560px) {
   .selection-modes { grid-template-columns: 1fr; }
+  .source-switch-wrap { justify-items: start; }
   .source-note { text-align: left; }
 }
