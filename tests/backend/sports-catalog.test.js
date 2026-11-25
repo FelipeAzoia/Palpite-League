@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import test from 'node:test'
 import { createApiFootballSportsProvider } from '../../src/backend/adapters/api-football-sports-provider.js'
-import { createSimulatedSportsProvider } from '../../src/backend/adapters/simulated-sports-provider.js'
+import { createSimulatedSportsProvider, simulatedTeamNames } from '../../src/backend/adapters/simulated-sports-provider.js'
 import { createApp } from '../../src/backend/app.js'
 import { createSportsCatalogService } from '../../src/backend/modules/matches-results/index.js'
 import { SportsProviderError } from '../../src/backend/modules/matches-results/sports-provider.js'
@@ -88,7 +88,8 @@ test('TC-01/18: primeira consulta persiste 20 times, 38 rodadas e 380 partidas s
     const roundOne = JSON.parse((await call('/catalog/rounds/1/matches', token)).text)
     assert.equal(roundOne.matches.length, 10)
     assert.equal(roundOne.matches.find(({ status }) => status === 'postponed').startsAt, null)
-    assert.equal(roundOne.matches[0].home.name.startsWith('Clube Simulado '), true)
+    assert.equal(simulatedTeamNames.includes(roundOne.matches[0].home.name), true)
+    assert.equal(typeof roundOne.matches[0].home.id, 'string')
     const cancelled = JSON.parse((await call('/catalog/rounds/20/matches?status=cancelled', token)).text)
     assert.equal(cancelled.matches.length, 1)
     assert.equal(cancelled.matches[0].status, 'cancelled')

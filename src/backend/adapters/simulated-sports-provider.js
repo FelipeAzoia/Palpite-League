@@ -1,6 +1,14 @@
 import { SportsProviderError } from '../modules/matches-results/sports-provider.js'
 
-const teamNames = Array.from({ length: 20 }, (_, index) => `Clube Simulado ${String(index + 1).padStart(2, '0')}`)
+// Campeonato simulado com os nomes dos 20 clubes da Série A do Brasileirão (SPEC-031), para que o
+// filtro de times da criação do bolão faça sentido. Os identificadores sim-team-N não mudam.
+export const simulatedTeamNames = Object.freeze([
+  'Athletico-PR', 'Atlético-GO', 'Atlético-MG', 'Bahia', 'Botafogo',
+  'Corinthians', 'Criciúma', 'Cruzeiro', 'Cuiabá', 'Flamengo',
+  'Fluminense', 'Fortaleza', 'Grêmio', 'Internacional', 'Juventude',
+  'Palmeiras', 'Red Bull Bragantino', 'São Paulo', 'Vasco da Gama', 'Vitória',
+])
+const teamNames = simulatedTeamNames
 const teams = teamNames.map((name, index) => ({
   id: `sim-team-${index + 1}`,
   name,

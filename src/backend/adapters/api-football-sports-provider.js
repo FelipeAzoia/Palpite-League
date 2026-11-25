@@ -67,6 +67,50 @@ function parseResponse(body) {
   }
 }
 
+function showcaseTeam(team, goals, scored) {
+  if (!team || typeof team.name !== 'string' || team.name.trim() === '') throw new SportsProviderError('invalid_response')
+  return {
+    name: team.name,
+    crest: typeof team.logo === 'string' && team.logo !== '' ? team.logo : null,
+    score: scored && Number.isInteger(goals) ? goals : null,
+  }
+}
+
+function parseShowcase(body) {
+  if (!body || !Array.isArray(body.response)) throw new SportsProviderError('invalid_response')
+  const rounds = new Map()
+  for (const fixture of body.response) {
+    const number = Number(/(\d+)$/.exec(fixture?.league?.round ?? '')?.[1])
+    if (!Number.isInteger(number) || number < 1 || fixture?.fixture?.id === undefined || fixture?.fixture?.id === null) {
+      throw new SportsProviderError('invalid_response')
+    }
+    let status
+    try {
+      status = mapStatus(fixture?.fixture?.status?.short)
+    } catch {
+      status = null
+    }
+    const scored = status === 'finished' || status === 'in_progress'
+    const matches = rounds.get(number) ?? []
+    matches.push({
+      id: String(fixture.fixture.id),
+      startsAt: typeof fixture?.fixture?.date === 'string' ? fixture.fixture.date : null,
+      status,
+      home: showcaseTeam(fixture?.teams?.home, fixture?.goals?.home, scored),
+      away: showcaseTeam(fixture?.teams?.away, fixture?.goals?.away, scored),
+    })
+    rounds.set(number, matches)
+  }
+  return {
+    rounds: [...rounds.entries()]
+      .sort(([first], [second]) => first - second)
+      .map(([number, matches]) => ({
+        number,
+        matches: matches.sort((first, second) => String(first.startsAt).localeCompare(String(second.startsAt)) || first.id.localeCompare(second.id)),
+      })),
+  }
+}
+
 export function createApiFootballSportsProvider({
   apiKey,
   timeoutMs = 10000,
@@ -115,6 +159,11 @@ export function createApiFootballSportsProvider({
     source: 'api-football',
     async fetchCatalog(season) {
       return parseResponse(await requestFixtures(season))
+    },
+    // Consulta somente leitura de uma temporada inteira (SPEC-031): times com escudo, rodadas, data,
+    // situação e placar. Uma única chamada à API; nada é gravado no catálogo dos bolões.
+    async fetchSeasonShowcase(season) {
+      return parseShowcase(await requestFixtures(season))
     },
     // Porta ao vivo (SPEC-021): uma partida por consulta, com o placar parcial em andamento. O
     // instante da leitura é o da resposta; a validação do domínio decide se a leitura serve.

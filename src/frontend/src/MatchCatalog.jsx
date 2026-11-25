@@ -2,6 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { CalendarDays, LoaderCircle, RefreshCw } from 'lucide-react'
 import { fetchRoundMatches, fetchRounds } from './match-catalog-api.js'
 import { isSessionRejected } from './account-api.js'
+import { matchesForTeams } from './pool-selection.js'
 
 const statusLabels = {
   scheduled: 'Agendada',
@@ -30,7 +31,7 @@ function isSelectable(match) {
 
 // Sem `selection`, é a consulta da SPEC-006. Com `selection`, o mesmo componente apoia a escolha
 // de partidas na criação do bolão (SPEC-007): a validação definitiva é do backend.
-export default function MatchCatalog({ token, onSessionRejected, selection }) {
+export default function MatchCatalog({ token, onSessionRejected, selection, showHeader = true }) {
   const [catalog, setCatalog] = useState(null)
   const [selectedRound, setSelectedRound] = useState('')
   const [matches, setMatches] = useState([])
@@ -107,9 +108,12 @@ export default function MatchCatalog({ token, onSessionRejected, selection }) {
     }
   }
 
+  // Filtro de times da criação do bolão (SPEC-031): só reduz a lista exibida.
+  const visibleMatches = matchesForTeams(matches, selection?.teamIds)
+
   return (
     <>
-      {!selection && (
+      {!selection && showHeader && (
         <>
           <p className="eyebrow">CATÁLOGO ESPORTIVO</p>
           <h2 id="auth-title">Rodadas e partidas</h2>
@@ -158,7 +162,7 @@ export default function MatchCatalog({ token, onSessionRejected, selection }) {
           {catalog.lastUpdatedAt && (
             <p className="catalog-updated">Última atualização: {dateFormatter.format(new Date(catalog.lastUpdatedAt))}</p>
           )}
-          {selection && selectedRound && (
+          {selection?.onToggleRound && selectedRound && (
             <label className="check-field">
               <input
                 type="checkbox"
@@ -170,8 +174,8 @@ export default function MatchCatalog({ token, onSessionRejected, selection }) {
             </label>
           )}
           <div className="match-list" aria-live="polite">
-            {!loading && matches.length === 0 && <p className="form-copy">Nenhuma partida encontrada para este filtro.</p>}
-            {matches.map((match, index) => (
+            {!loading && visibleMatches.length === 0 && <p className="form-copy">Nenhuma partida encontrada para este filtro.</p>}
+            {visibleMatches.map((match, index) => (
               <article className="match-card" key={match.id ?? `${selectedRound}-${match.home.name}-${match.away.name}-${index}`}>
                 <div className="match-teams">
                   <span>{match.home.name}</span>
@@ -183,7 +187,7 @@ export default function MatchCatalog({ token, onSessionRejected, selection }) {
                   <span className={`match-status status-${match.status}`}>{statusLabels[match.status]}</span>
                 </div>
                 {selection && (() => {
-                  const roundIncluded = selection.roundNumbers.includes(Number(selectedRound))
+                  const roundIncluded = (selection.roundNumbers ?? []).includes(Number(selectedRound))
                   const selectable = isSelectable(match)
                   return (
                     <label className="check-field match-pick">

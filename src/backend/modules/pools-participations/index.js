@@ -19,6 +19,10 @@ export const tiebreakers = Object.freeze(['exact_scores', 'correct_results', 'la
 const memberStatuses = ['approved_awaiting_payment', 'confirmed']
 const maxSelectedIds = 500
 const maxSelectedRounds = 100
+const maxSelectedTeams = 40
+// Modos de escolha das partidas (SPEC-031). Sem modo, vale o formato da SPEC-007 (matchIds e/ou
+// roundNumbers).
+export const selectionModes = Object.freeze(['all_in_period', 'rounds', 'matches'])
 const minFeeCents = 100
 const maxFeeCents = 50000
 
@@ -158,33 +162,68 @@ export function createPoolsService(database, { auditStore, sportsCatalog, now = 
     const selection = body.selection
     let matchIds = []
     let roundNumbers = []
+    let teamIds = []
+    let mode = null
+    const isIdList = (list, max) => Array.isArray(list) && list.length <= max
+      && list.every((id) => typeof id === 'string' && id.length > 0 && id.length <= 100)
     const validSelection = selection !== null && typeof selection === 'object' && !Array.isArray(selection)
-      && (selection.matchIds === undefined || (Array.isArray(selection.matchIds)
-        && selection.matchIds.length <= maxSelectedIds
-        && selection.matchIds.every((id) => typeof id === 'string' && id.length > 0 && id.length <= 100)))
+      && (selection.mode === undefined || selectionModes.includes(selection.mode))
+      && (selection.matchIds === undefined || isIdList(selection.matchIds, maxSelectedIds))
+      && (selection.teamIds === undefined || isIdList(selection.teamIds, maxSelectedTeams))
       && (selection.roundNumbers === undefined || (Array.isArray(selection.roundNumbers)
         && selection.roundNumbers.length <= maxSelectedRounds
         && selection.roundNumbers.every((number) => Number.isSafeInteger(number) && number > 0)))
     if (!validSelection) {
       fields.selection = 'Selecione ao menos uma partida ou rodada.'
     } else {
-      matchIds = [...new Set(selection.matchIds ?? [])]
-      roundNumbers = [...new Set(selection.roundNumbers ?? [])]
-      if (matchIds.length === 0 && roundNumbers.length === 0) fields.selection = 'Selecione ao menos uma partida ou rodada.'
+      mode = selection.mode ?? null
+      matchIds = mode === 'all_in_period' || mode === 'rounds' ? [] : [...new Set(selection.matchIds ?? [])]
+      roundNumbers = mode === 'all_in_period' || mode === 'matches' ? [] : [...new Set(selection.roundNumbers ?? [])]
+      teamIds = mode === 'matches' ? [] : [...new Set(selection.teamIds ?? [])]
+      if (mode === 'rounds' && roundNumbers.length === 0) fields.selection = 'Selecione ao menos uma rodada.'
+      else if (mode === 'matches' && matchIds.length === 0) fields.selection = 'Selecione ao menos uma partida.'
+      else if (mode === null && matchIds.length === 0 && roundNumbers.length === 0) fields.selection = 'Selecione ao menos uma partida ou rodada.'
     }
 
     return {
       fields,
       rules: { name, startsOn, endsOn, entryFeeCents, prizeModel: body.prizeModel, tiebreaker: body.tiebreaker },
+      mode,
       matchIds,
       roundNumbers,
+      teamIds,
     }
   }
 
-  function resolveSelection({ matchIds, roundNumbers, startsOn, endsOn }, fields) {
+  function resolveSelection({ mode, matchIds, roundNumbers, teamIds = [], startsOn, endsOn }, fields) {
     const nowMs = now()
     const isEligible = (match) => match.status === 'scheduled' && match.startsAt && Date.parse(match.startsAt) > nowMs
     const selected = new Map()
+
+    // Filtro de times (SPEC-031): entra o jogo em que ao menos um dos times escolhidos joga.
+    if (teamIds.length > 0 && sportsCatalog.findTeamsByIds(teamIds).length !== teamIds.length) {
+      fields.selection = 'Alguns times escolhidos não existem no catálogo.'
+      return []
+    }
+    const teams = new Set(teamIds)
+    const hasTeam = (match) => teams.size === 0 || teams.has(match.homeTeamId) || teams.has(match.awayTeamId)
+    const teamNote = teams.size > 0 ? ' com os times escolhidos' : ''
+
+    // Todas as rodadas do período: as partidas elegíveis cujo dia está dentro do período (SPEC-031).
+    if (mode === 'all_in_period') {
+      if (!startsOn || !endsOn) {
+        fields.selection ??= 'Informe o período do bolão para incluir todas as rodadas dele.'
+        return []
+      }
+      const inPeriod = sportsCatalog.findAllMatches().filter((match) => {
+        if (!isEligible(match)) return false
+        const day = saoPauloDate(match.startsAt)
+        return day >= startsOn && day <= endsOn
+      }).filter(hasTeam)
+      if (inPeriod.length === 0) fields.selection = `Não há partidas agendadas${teamNote} dentro do período do bolão.`
+      else if (inPeriod.length > maxSelectedIds) fields.selection = `A escolha resulta em ${inPeriod.length} partidas; o limite é ${maxSelectedIds}.`
+      return fields.selection ? [] : inPeriod
+    }
 
     if (matchIds.length > 0) {
       const found = sportsCatalog.findMatchesByIds(matchIds)
@@ -209,8 +248,15 @@ export function createPoolsService(database, { auditStore, sportsCatalog, now = 
           fields.selection = `A rodada ${roundNumber} não tem partidas elegíveis.`
           break
         }
-        for (const match of eligible) selected.set(match.id, match)
+        for (const match of eligible.filter(hasTeam)) selected.set(match.id, match)
       }
+    }
+
+    if (!fields.selection && selected.size === 0) {
+      fields.selection = `As rodadas escolhidas não têm partidas agendadas${teamNote}.`
+    }
+    if (!fields.selection && selected.size > maxSelectedIds) {
+      fields.selection = `A escolha resulta em ${selected.size} partidas; o limite é ${maxSelectedIds}.`
     }
 
     if (!fields.selection && startsOn && endsOn) {

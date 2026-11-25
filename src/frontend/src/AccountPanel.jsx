@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { ArrowRight, LoaderCircle, LogOut } from 'lucide-react'
 import { fetchFinancialHistory, fetchProfile, isSessionRejected, updateProfileName } from './account-api.js'
 import { openMovementsSummary } from './financial-view.js'
-import MatchCatalog from './MatchCatalog.jsx'
+import MatchesArea from './MatchesArea.jsx'
 import PlanArea from './PlanArea.jsx'
 import PoolsPanel from './PoolsPanel.jsx'
 import FinancialHistory from './FinancialHistory.jsx'
@@ -230,7 +230,7 @@ export default function AccountPanel({ token, user, pending, area, onAreaChange,
       )}
 
       {area === 'matches' && (
-        <MatchCatalog token={token} onSessionRejected={onSessionRejected} />
+        <MatchesArea token={token} onSessionRejected={onSessionRejected} />
       )}
 
       {area === 'pools' && (
