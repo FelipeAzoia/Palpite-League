@@ -28,6 +28,17 @@ export function todayInSaoPaulo(now = new Date()) {
   }).format(now)
 }
 
+// Conferência das datas já na tela, com as mesmas regras do backend (SPEC-007 INV-006): o início
+// não pode ser anterior a hoje (dia de America/Sao_Paulo) e o fim não pode ser anterior ao início.
+// O backend valida de novo no envio.
+export function periodErrors({ startsOn, endsOn }, today = todayInSaoPaulo()) {
+  const errors = {}
+  if (!startsOn) errors.startsOn = 'Informe a data de início.'
+  else if (startsOn < today) errors.startsOn = 'A data de início não pode ser anterior a hoje.'
+  if (endsOn && startsOn && endsOn < startsOn) errors.endsOn = 'A data de fim não pode ser anterior à data de início.'
+  return errors
+}
+
 // "25.00" -> "R$ 25,00"
 export function formatBrl(amount) {
   return `R$ ${String(amount).replace('.', ',')}`
