@@ -42,3 +42,14 @@ As escolhas usam apenas recursos do Node e do SQLite já adotados (ADR-0004), pr
 - Segredos (senhas, tokens e hashes) nunca aparecem em registros técnicos nem em respostas de erro (RNF20).
 - Não há renovação de sessão: após 8 horas o usuário precisa fazer login novamente.
 - Os parâmetros do `scrypt` são os padrão do Node e ficam guardados com cada hash, o que permite a evolução futura dos parâmetros.
+
+## Atualização de 26/11/2026 — modo demonstração da recuperação no deploy
+
+**Contexto.** No deploy de apresentação (Railway), o arquivo do canal simulado fica dentro do volume do servidor e não pode ser lido pela equipe, e as contas de teste não têm caixas de e-mail reais. Sem acesso à mensagem, a recuperação de acesso não pode ser demonstrada.
+
+**Decisão.** Com a variável `RECOVERY_DEMO_REVEAL=true`, a resposta do pedido de recuperação de uma conta existente traz também a mensagem simulada (destinatário, link e horário), e a tela a mostra como "caixa de entrada simulada". O canal simulado continua recebendo a mensagem. A variável vem desligada por padrão e só deve ser ligada no deploy de apresentação.
+
+**Consequências.**
+
+- Enquanto a variável estiver ligada, quem souber um e-mail cadastrado consegue redefinir a senha dessa conta, e a resposta deixa de ser idêntica para e-mails cadastrados e não cadastrados. Por isso o modo serve só a contas de teste, durante a apresentação.
+- Com a variável desligada, continuam valendo a SPEC-004 e o CA-14: nenhuma operação HTTP expõe o conteúdo do canal simulado.

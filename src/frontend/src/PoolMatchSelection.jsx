@@ -4,6 +4,7 @@ import { isSessionRejected } from './account-api.js'
 import { fetchRounds, fetchTeams } from './match-catalog-api.js'
 import MatchCatalog from './MatchCatalog.jsx'
 import { modeHint, selectionModes, selectionSummary } from './pool-selection.js'
+import { TeamCrest } from './TeamCrest.jsx'
 
 const roundDay = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit' })
 const roundPeriod = (round) => (round.startsOn
@@ -86,7 +87,7 @@ export default function PoolMatchSelection({ token, onSessionRejected, values, o
               return (
                 <label key={team.id} className={checked ? 'team-chip is-checked' : 'team-chip'}>
                   <input type="checkbox" checked={checked} onChange={() => onChange({ teamIds: toggle(values.teamIds, team.id) })} />
-                  {team.crest && <img src={team.crest} alt="" width="16" height="16" loading="lazy" />}
+                  <TeamCrest team={team} size={16} />
                   <span>{team.name}</span>
                 </label>
               )

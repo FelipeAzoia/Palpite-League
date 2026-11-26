@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { crestSource } from './crests.js'
 
 // Escudo do time nos placares (SPEC-031), para o campeonato simulado e para a API-Football. Sem escudo
 // ou com a imagem indisponível, mostra a inicial do time no mesmo espaço, para não desalinhar a linha.
@@ -14,7 +15,7 @@ export function TeamCrest({ team, size = 18 }) {
   return (
     <img
       className="team-crest"
-      src={team.crest}
+      src={crestSource(team.crest)}
       alt=""
       width={size}
       height={size}
