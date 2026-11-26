@@ -4,6 +4,7 @@ import { isSessionRejected } from './account-api.js'
 import { canLeave, confirmExit, discardedLabel, fetchExitPreview } from './exit-api.js'
 import { formatKickoff } from './match-format.js'
 import { PredictionMark } from './PredictionsPage.jsx'
+import { TeamLabel } from './TeamCrest.jsx'
 
 const visibleDiscarded = 5
 
@@ -15,9 +16,9 @@ function DiscardedRows({ items }) {
         return (
           <li key={match.id} className="mrow">
             <span className="mrow-when"><b>{time}</b>{day}</span>
-            <span className="mrow-home">{match.home.name}</span>
+            <span className="mrow-home"><TeamLabel team={match.home} side="home" /></span>
             <span className="mrow-center"><PredictionMark prediction={prediction} /></span>
-            <span className="mrow-away">{match.away.name}</span>
+            <span className="mrow-away"><TeamLabel team={match.away} side="away" /></span>
           </li>
         )
       })}

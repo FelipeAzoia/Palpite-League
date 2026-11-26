@@ -23,6 +23,7 @@ import RefundRequestsSection from './RefundRequestsSection.jsx'
 import RequestsSection from './RequestsSection.jsx'
 import { fetchPendingRequests } from './requests-api.js'
 import ResultsPage from './ResultsPage.jsx'
+import { TeamLabel } from './TeamCrest.jsx'
 
 const tabs = [
   { id: 'overview', label: 'Visão geral' },
@@ -173,9 +174,9 @@ function OverviewTab({ summary, onTab, leave }) {
                   return (
                     <li key={match.id} className="mrow">
                       <span className="mrow-when"><b>{time}</b>{day}</span>
-                      <span className="mrow-home">{match.home.name}</span>
+                      <span className="mrow-home"><TeamLabel team={match.home} side="home" /></span>
                       <span className="mrow-center"><PredictionMark prediction={match.prediction} /></span>
-                      <span className="mrow-away">{match.away.name}</span>
+                      <span className="mrow-away"><TeamLabel team={match.away} side="away" /></span>
                     </li>
                   )
                 })}

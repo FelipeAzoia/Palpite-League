@@ -12,6 +12,7 @@ import {
   syncNotice,
 } from './results-api.js'
 import RoundPicker from './RoundPicker.jsx'
+import { TeamLabel } from './TeamCrest.jsx'
 
 const statusTone = { finished: 'done', in_progress: 'live', postponed: 'muted', cancelled: 'muted', scheduled: 'muted' }
 
@@ -107,7 +108,7 @@ export default function ResultsPage({ token, poolId, onSessionRejected }) {
           return (
             <li key={match.id} className={liveState ? 'mrow mrow-live' : 'mrow'}>
               <span className="mrow-when"><b>{time}</b>{day}</span>
-              <span className="mrow-home">{match.home.name}</span>
+              <span className="mrow-home"><TeamLabel team={match.home} side="home" /></span>
               <span className="mrow-center">
                 {match.score && <span className="score-box">{match.score.home}<i>–</i>{match.score.away}</span>}
                 {!match.score && liveState?.score && (
@@ -117,7 +118,7 @@ export default function ResultsPage({ token, poolId, onSessionRejected }) {
                 )}
                 {!match.score && !liveState?.score && <span className="mrow-vs">×</span>}
               </span>
-              <span className="mrow-away">{match.away.name}</span>
+              <span className="mrow-away"><TeamLabel team={match.away} side="away" /></span>
               <span className="mrow-side">
                 <span className={`state state-${statusTone[shownStatus] ?? 'muted'}`}>
                   {liveState && shownStatus === 'in_progress' ? 'Ao vivo' : matchStatusLabels[shownStatus] ?? shownStatus}

@@ -3,6 +3,7 @@ import { CalendarDays, LoaderCircle, RefreshCw } from 'lucide-react'
 import { fetchRoundMatches, fetchRounds } from './match-catalog-api.js'
 import { isSessionRejected } from './account-api.js'
 import { matchesForTeams } from './pool-selection.js'
+import { TeamLabel } from './TeamCrest.jsx'
 
 const statusLabels = {
   scheduled: 'Agendada',
@@ -178,9 +179,9 @@ export default function MatchCatalog({ token, onSessionRejected, selection, show
             {visibleMatches.map((match, index) => (
               <article className="match-card" key={match.id ?? `${selectedRound}-${match.home.name}-${match.away.name}-${index}`}>
                 <div className="match-teams">
-                  <span>{match.home.name}</span>
+                  <span className="team-label team-label-home"><TeamLabel team={match.home} side="home" /></span>
                   <strong aria-hidden="true">×</strong>
-                  <span>{match.away.name}</span>
+                  <span className="team-label team-label-away"><TeamLabel team={match.away} side="away" /></span>
                 </div>
                 <div className="match-details">
                   <span><CalendarDays size={14} /> {match.startsAt ? dateFormatter.format(new Date(match.startsAt)) : 'Data a definir'}</span>

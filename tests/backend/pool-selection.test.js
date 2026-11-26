@@ -30,6 +30,9 @@ test('TC-05: o catálogo lista os 20 clubes em ordem alfabética', async () => {
     const response = await context.call('GET', '/catalog/teams', { token: owner.token })
     assert.equal(response.status, 200, response.text)
     assert.deepEqual(response.json.teams.map(({ name }) => name), [...simulatedTeamNames].sort((a, b) => a.localeCompare(b, 'pt-BR')))
+    // Escudos dos clubes simulados: os mesmos da API-Football.
+    assert.ok(response.json.teams.every(({ crest }) => /^https:\/\/media\.api-sports\.io\/football\/teams\/\d+\.png$/.test(crest)))
+    assert.equal(response.json.teams.find(({ name }) => name === 'Flamengo').crest, 'https://media.api-sports.io/football/teams/127.png')
     assert.equal((await context.call('GET', '/catalog/teams')).status, 401)
   })
 })

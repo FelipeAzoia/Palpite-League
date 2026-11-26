@@ -3,15 +3,10 @@ import { CalendarDays, LoaderCircle, RefreshCw } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { fetchApiFootball2024 } from './match-catalog-api.js'
 import { showcaseScore } from './pool-selection.js'
+import { TeamCrest } from './TeamCrest.jsx'
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo' })
-
-function Crest({ team }) {
-  return team.crest
-    ? <img className="showcase-crest" src={team.crest} alt="" width="22" height="22" loading="lazy" />
-    : <span className="showcase-crest showcase-crest-empty" aria-hidden="true">{team.name.slice(0, 1)}</span>
-}
-
+const Crest = ({ team }) => <TeamCrest team={team} size={22} />
 // SPEC-031 — dados reais do Brasileirão 2024 obtidos da API-Football, só para consulta. Não há
 // criação de bolão aqui: todos esses jogos já aconteceram.
 export default function ApiFootballShowcase({ token, onSessionRejected }) {

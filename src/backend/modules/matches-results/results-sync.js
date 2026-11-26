@@ -296,6 +296,7 @@ export function createResultsSyncService(database, provider, {
 
     const rows = database.prepare(`
       SELECT m.id, r.number AS round_number, home.name AS home_name, away.name AS away_name,
+        home.crest AS home_crest, away.crest AS away_crest,
         m.starts_at, m.status, m.home_score, m.away_score
       FROM pool_matches pm
       JOIN sports_matches m ON m.id = pm.match_id
@@ -312,8 +313,8 @@ export function createResultsSyncService(database, provider, {
       rounds.get(row.round_number).push({
         id: row.id,
         roundNumber: row.round_number,
-        home: { name: row.home_name },
-        away: { name: row.away_name },
+        home: { name: row.home_name, crest: row.home_crest },
+        away: { name: row.away_name, crest: row.away_crest },
         startsAt: row.starts_at,
         status: row.status,
         score: row.status === 'finished' && row.home_score !== null

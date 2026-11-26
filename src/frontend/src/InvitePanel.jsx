@@ -3,6 +3,7 @@ import { ArrowRight, CalendarDays, LoaderCircle } from 'lucide-react'
 import { isSessionRejected } from './account-api.js'
 import { canRequestEntry, canSubmitEntry, openInvite, requestEntry, situationLabels } from './invite-link.js'
 import { formatBrl, formatDay, poolStatusLabels, prizeModelLabels, tiebreakerLabels } from './pools-form.js'
+import { TeamLabel } from './TeamCrest.jsx'
 
 const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
   dateStyle: 'short',
@@ -14,9 +15,9 @@ function MatchItem({ match }) {
   return (
     <article className="match-card">
       <div className="match-teams">
-        <span>{match.home.name}</span>
+        <span className="team-label team-label-home"><TeamLabel team={match.home} side="home" /></span>
         <strong aria-hidden="true">×</strong>
-        <span>{match.away.name}</span>
+        <span className="team-label team-label-away"><TeamLabel team={match.away} side="away" /></span>
       </div>
       <div className="match-details">
         <span><CalendarDays size={14} /> {match.startsAt ? dateFormatter.format(new Date(match.startsAt)) : 'Data a definir'}</span>

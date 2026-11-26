@@ -4,6 +4,7 @@ import { isSessionRejected } from './account-api.js'
 import { fetchHistory, historyStatusLabels, matchPointsLabel, summaryHeadline } from './history-api.js'
 import { formatKickoff } from './match-format.js'
 import { PredictionMark } from './PredictionsPage.jsx'
+import { TeamLabel } from './TeamCrest.jsx'
 
 const pageSize = 10
 
@@ -65,13 +66,13 @@ export default function HistoryPage({ token, poolId, onSessionRejected, onBack }
               return (
                 <li key={match.id} className="mrow">
                   <span className="mrow-when"><b>{time}</b>{day}</span>
-                  <span className="mrow-home">{match.home.name}</span>
+                  <span className="mrow-home"><TeamLabel team={match.home} side="home" /></span>
                   <span className="mrow-center">
                     {match.result
                       ? <span className="score-box">{match.result.home}<i>–</i>{match.result.away}</span>
                       : <span className="state">{historyStatusLabels[match.status] ?? match.status}</span>}
                   </span>
-                  <span className="mrow-away">{match.away.name}</span>
+                  <span className="mrow-away"><TeamLabel team={match.away} side="away" /></span>
                   <span className="mrow-pick">{match.prediction ? <PredictionMark prediction={match.prediction} /> : <span className="muted-text">sem palpite</span>}</span>
                   <span className="mrow-side"><strong>{matchPointsLabel(match)}</strong></span>
                 </li>

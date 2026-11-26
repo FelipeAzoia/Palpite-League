@@ -51,6 +51,7 @@ export function createHistoryService(database, { ranking }) {
     const left = member.status === 'left'
     return database.prepare(`
       SELECT m.id, r.number AS round_number, home.name AS home_name, away.name AS away_name,
+        home.crest AS home_crest, away.crest AS away_crest,
         m.starts_at, m.status, m.home_score, m.away_score,
         pr.type AS prediction_type, pr.predicted_outcome, pr.home_goals, pr.away_goals, pr.points
       FROM pool_matches pm
@@ -77,8 +78,8 @@ export function createHistoryService(database, { ranking }) {
         : { type: 'exact_score', homeGoals: row.home_goals, awayGoals: row.away_goals }
     return {
       id: row.id,
-      home: { name: row.home_name },
-      away: { name: row.away_name },
+      home: { name: row.home_name, crest: row.home_crest },
+      away: { name: row.away_name, crest: row.away_crest },
       startsAt: row.starts_at,
       // Adiada, cancelada ou em andamento: só o status, sem placar parcial (A3, A4).
       status: row.status,
