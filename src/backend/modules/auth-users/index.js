@@ -103,6 +103,11 @@ export function createAuthService(database, auditStore, {
 	logger = createLogger(),
 	recoveryChannel,
 	interfaceBaseUrl = process.env.APP_BASE_URL || defaultInterfaceBaseUrl,
+	// Modo demonstração (SPEC-004, exceção registrada em 26/11/2026): com RECOVERY_DEMO_REVEAL=true,
+	// a resposta do pedido de recuperação também traz a mensagem simulada, porque no deploy não há
+	// acesso ao arquivo do canal simulado. Só para contas de teste em apresentação: enquanto ligado,
+	// quem souber um e-mail cadastrado consegue redefinir a senha dessa conta.
+	recoveryDemoReveal = process.env.RECOVERY_DEMO_REVEAL === 'true',
 } = {}) {
 	let channel = recoveryChannel
 
@@ -277,18 +282,23 @@ export function createAuthService(database, auditStore, {
 		})
 
 		// A mensagem só é entregue depois de confirmada a transação (OPEN-54).
+		const delivery = {
+			recipient: user.email,
+			link: `${interfaceBaseUrl.replace(/\/+$/, '')}/#token=${token}`,
+			sentAt: createdAt,
+		}
 		try {
 			channel ??= createSimulatedRecoveryChannel()
-			await channel.deliver({
-				recipient: user.email,
-				link: `${interfaceBaseUrl.replace(/\/+$/, '')}/#token=${token}`,
-				sentAt: createdAt,
-			})
+			await channel.deliver(delivery)
 		} catch {
 			logger.error('recovery-delivery', 'delivery_failed')
 		}
 
-		return { message: recoveryRequestMessage }
+		if (!recoveryDemoReveal) return { message: recoveryRequestMessage }
+		return {
+			message: recoveryRequestMessage,
+			simulatedDelivery: { recipient: delivery.recipient, link: delivery.link, sentAt: new Date(createdAt).toISOString() },
+		}
 	}
 
 	async function resetPassword(input) {

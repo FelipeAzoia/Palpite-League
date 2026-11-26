@@ -42,6 +42,8 @@ function App() {
   const [pending, setPending] = useState(false)
   const [recoveryToken, setRecoveryToken] = useState(initialRecoveryToken)
   const [recoverySent, setRecoverySent] = useState(false)
+  // Modo demonstração do deploy: a mensagem simulada de recuperação vem na própria resposta.
+  const [simulatedDelivery, setSimulatedDelivery] = useState(null)
   const [accountArea, setAccountArea] = useState('home')
   // Contagem de não lidas informada pela própria aba Avisos enquanto ela está aberta (SPEC-027).
   const [unreadOverride, setUnreadOverride] = useState(null)
@@ -101,6 +103,7 @@ function App() {
         setEmail(values.email)
         setRecoverySent(true)
         setMessage(result.message)
+        setSimulatedDelivery(result.simulatedDelivery ?? null)
       } else if (view === 'reset') {
         await requestAuth('/auth/password-reset', { method: 'POST', body: { token: recoveryToken, password: values.password } })
         sessionStorage.removeItem(tokenKey)
@@ -157,6 +160,7 @@ function App() {
     setMessage('')
     setFieldErrors({})
     setRecoverySent(false)
+    setSimulatedDelivery(null)
     if (nextView !== 'reset') setRecoveryToken(null)
     setView(nextView)
   }
@@ -278,6 +282,20 @@ function App() {
 
                 {message && (
                   <p className={recoverySent ? 'form-message form-message-success' : 'form-message'} role={recoverySent ? 'status' : 'alert'}>{message}</p>
+                )}
+
+                {view === 'forgot' && simulatedDelivery && (
+                  <div className="simulated-mail" role="note">
+                    <p className="simulated-mail-badge">SIMULAÇÃO · CAIXA DE ENTRADA</p>
+                    <p>
+                      Mensagem que seria enviada por e-mail para <strong>{simulatedDelivery.recipient}</strong>. Nesta
+                      demonstração não há envio real, então ela aparece aqui.
+                    </p>
+                    <a className="small-button small-button-solid" href={simulatedDelivery.link} onClick={() => setSimulatedDelivery(null)}>
+                      Abrir link de redefinição de senha
+                    </a>
+                    <small>O link vale por 30 minutos e só pode ser usado uma vez.</small>
+                  </div>
                 )}
 
                 <button className="primary-button" type="submit" disabled={pending}>

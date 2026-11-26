@@ -174,6 +174,7 @@ export function createApp(database, {
   now = Date.now,
   recoveryChannel,
   interfaceBaseUrl,
+  recoveryDemoReveal,
   sportsProvider = configuredSportsProvider(now),
   paymentsProvider = configuredPaymentsProvider(),
   premiumPriceCents = Number(process.env.PREMIUM_TEST_PRICE_CENTS || defaultPremiumPriceCents),
@@ -192,6 +193,7 @@ export function createApp(database, {
     logger,
     ...(recoveryChannel ? { recoveryChannel } : {}),
     ...(interfaceBaseUrl ? { interfaceBaseUrl } : {}),
+    ...(recoveryDemoReveal === undefined ? {} : { recoveryDemoReveal }),
   })
   const profileService = createProfileService(database)
   const financialCore = createFinancialCoreService(database, {

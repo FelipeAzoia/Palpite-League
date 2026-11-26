@@ -403,3 +403,9 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+/* Recuperação de senha no modo demonstração do deploy: a mensagem simulada aparece na tela. */
+.simulated-mail { display: grid; justify-items: start; gap: 8px; padding: 12px 14px; border: 1px dashed #d7be78; border-radius: 6px; color: #4a3f1f; background: #fffaea; font-size: 12px; line-height: 1.5; }
+.simulated-mail p { margin: 0; }
+.simulated-mail-badge { color: #6b5317; font-size: 10px; font-weight: 800; letter-spacing: .6px; }
+.simulated-mail a.small-button { display: inline-flex; align-items: center; text-decoration: none; }
+.simulated-mail small { color: #7b6a3a; font-size: 11px; }

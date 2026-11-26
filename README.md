@@ -117,6 +117,7 @@ Um serviço só: o back (Express) serve a API e o front compilado pelo Vite, com
    | `APP_BASE_URL` | o endereço público do serviço, com `https://` (ex.: `https://palpite-league.up.railway.app`) |
    | `PAYMENTS_PROVIDER` | `simulator` |
    | `RECOVERY_CHANNEL_PATH` | `/data/simulated-recovery-channel.txt` |
+   | `RECOVERY_DEMO_REVEAL` | `true` só na apresentação: a tela de "esqueci minha senha" mostra a mensagem simulada com o link (sem acesso ao arquivo do canal simulado no servidor) |
    | `API_FOOTBALL_API_KEY` | chave da API-Football (opcional; sem ela a consulta de 2024 fica desabilitada) |
 
 4. **Domínio:** *Settings → Networking → Generate Domain*, e use esse endereço em `APP_BASE_URL`.

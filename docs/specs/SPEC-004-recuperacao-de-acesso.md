@@ -1,6 +1,6 @@
 # SPEC-004 — Recuperação de acesso
 
-- **Status:** aprovada. As propostas OPEN-54 e OPEN-55 foram aprovadas e incorporadas; liberada para implementação após as SPEC-001 a SPEC-003.
+- **Status:** aprovada. As propostas OPEN-54 e OPEN-55 foram aprovadas e incorporadas; liberada para implementação após as SPEC-001 a SPEC-003. Exceção de 26/11/2026 para o deploy de apresentação: com RECOVERY_DEMO_REVEAL=true, a resposta do pedido de recuperação traz a mensagem simulada, que a tela mostra como caixa de entrada simulada (ADR-0007, atualização de 26/11/2026); desligada, o CA-14 continua valendo.
 - **Tipo:** Spec funcional.
 - **Baseline:** artefatos de `docs/` (incluindo ADR-0007 e ADR-0008), `docs/specs/mapa-de-specs.md`, `docs/specs/proposta-resolucao-questoes-em-aberto.md` e SPEC-001 a SPEC-003.
 - **Escopo deste documento:** somente a SPEC-004. Nenhum código, tabela ou endpoint.

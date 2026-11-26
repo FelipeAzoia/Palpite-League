@@ -36,6 +36,36 @@ test('os dados de demonstração são montados pela API só com o banco sem usu�
   })
 })
 
+test('modo demonstração da recuperação: a resposta traz a mensagem simulada e o link funciona', async () => {
+  const delivered = []
+  const recoveryChannel = { deliver: (message) => delivered.push(message) }
+
+  await withHttpApp(async (context) => {
+    const ana = await context.signUp('Ana', 'ana@example.com')
+    const response = await context.call('POST', '/auth/password-recovery', { body: { email: 'ana@example.com' } })
+    assert.equal(response.status, 200, response.text)
+    assert.equal(response.json.simulatedDelivery.recipient, ana.email)
+    assert.equal(response.json.simulatedDelivery.link, delivered[0].link)
+    assert.match(response.json.simulatedDelivery.link, /^http:\/\/localhost:5173\/#token=/)
+
+    // O canal simulado continua recebendo a mensagem, e o link redefine a senha.
+    const token = response.json.simulatedDelivery.link.split('#token=')[1]
+    const reset = await context.call('POST', '/auth/password-reset', { body: { token, password: 'nova-senha-123' } })
+    assert.equal(reset.status, 200, reset.text)
+    assert.equal((await context.call('POST', '/auth/login', { body: { email: 'ana@example.com', password: 'nova-senha-123' } })).status, 200)
+
+    const unknown = await context.call('POST', '/auth/password-recovery', { body: { email: 'ninguem@example.com' } })
+    assert.equal(unknown.json.simulatedDelivery, undefined)
+  }, { recoveryChannel, recoveryDemoReveal: true })
+
+  // Sem o modo demonstração (padrão), a resposta continua só com a mensagem genérica (SPEC-004 CA-14).
+  await withHttpApp(async (context) => {
+    await context.signUp('Ana', 'ana@example.com')
+    const response = await context.call('POST', '/auth/password-recovery', { body: { email: 'ana@example.com' } })
+    assert.deepEqual(Object.keys(response.json), ['message'])
+  }, { recoveryChannel, recoveryDemoReveal: false })
+})
+
 test('com a pasta do front, o back serve a interface e mantém a API e o 404', async () => {
   const frontendDir = fs.mkdtempSync(path.join(os.tmpdir(), 'palpite-front-'))
   fs.mkdirSync(path.join(frontendDir, 'assets'))
