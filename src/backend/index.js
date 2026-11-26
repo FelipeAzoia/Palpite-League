@@ -10,7 +10,10 @@ import {
   defaultScoringIntervalMs,
   defaultSubscriptionPeriodsIntervalMs,
 } from './app.js'
-import { createDatabase } from './shared/database.js'
+import fs from 'node:fs'
+import path from 'node:path'
+import { needsDemoSeed, seedDemoData } from './demo-seed.js'
+import { createDatabase, frontendDistPath } from './shared/database.js'
 import { runMigrations } from './shared/migrations.js'
 import { createLogger } from './shared/logger.js'
 import { createScheduler } from './shared/scheduler.js'
@@ -27,7 +30,13 @@ try {
   process.exit(1)
 }
 
-const app = createApp(database, { logger })
+// Deploy num serviço só: com SERVE_FRONTEND=true o back também entrega o front compilado.
+const frontendDir = process.env.SERVE_FRONTEND === 'true' && fs.existsSync(path.join(frontendDistPath, 'index.html'))
+  ? frontendDistPath
+  : null
+if (process.env.SERVE_FRONTEND === 'true' && !frontendDir) logger.warn('startup', 'frontend_build_missing')
+
+const app = createApp(database, { logger, frontendDir })
 
 // Tarefas periódicas em processo (ADR-0006): cada uma roda logo após a inicialização e depois
 // a cada intervalo, sem sobreposição.
@@ -78,8 +87,18 @@ scheduler.register(
   app.locals.tasks.processSubscriptions,
 )
 
-const server = app.listen(port, () => {
+const server = app.listen(port, async () => {
   logger.info('http', 'server_started')
+  // Deploy de demonstração: com SEED_DEMO_DATA=true e o banco sem usuários, monta os dados de
+  // demonstração pela própria API antes de ligar as tarefas periódicas.
+  if (process.env.SEED_DEMO_DATA === 'true' && needsDemoSeed(database)) {
+    try {
+      const result = await seedDemoData({ baseUrl: `http://127.0.0.1:${port}` })
+      logger.info('demo-seed', `done:${result.accounts}-accounts:${result.pools}-pools:${result.predictions}-predictions`)
+    } catch (error) {
+      logger.error('demo-seed', `failed:${error.message}`)
+    }
+  }
   scheduler.start()
 })
 

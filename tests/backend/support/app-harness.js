@@ -121,7 +121,7 @@ export async function withHttpApp(callback, appOptions = {}) {
   try {
     await callback({
       call, signUp, createPool, inviteCode, requestEntry, joinPool, startMatch, participation,
-      database, events, responses, clock, auditStore, logger, app,
+      database, events, responses, clock, auditStore, logger, app, origin,
     })
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))

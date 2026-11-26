@@ -3,12 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "npm --prefix src/frontend run dev",
     "dev:server": "npm --prefix src/backend run dev",
     "build": "npm --prefix src/frontend run build",
     "preview": "npm --prefix src/frontend run preview",
     "start": "npm --prefix src/backend start",
+    "start:prod": "node src/backend/index.js",
     "test:backend": "npm --prefix src/backend test",
     "test:frontend": "npm --prefix src/frontend test",
     "test": "npm run test:backend && npm run test:frontend",

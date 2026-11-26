@@ -101,4 +101,27 @@ npm run build
 npm test
 ```
 
+## ☁️ Deploy (Railway)
+
+Um serviço só: o back (Express) serve a API e o front compilado pelo Vite, com o banco SQLite num volume persistente. A configuração de build e start está em [railway.json](railway.json).
+
+1. **Novo projeto** no Railway → *Deploy from GitHub repo* → este repositório (branch `main`).
+2. **Volume:** no serviço, *Add Volume* com *Mount path* `/data`. O banco precisa dele para não se perder a cada deploy. Use **1 réplica** só (SQLite).
+3. **Variáveis** (aba *Variables*):
+
+   | Variável | Valor |
+   | --- | --- |
+   | `SERVE_FRONTEND` | `true` |
+   | `DATABASE_PATH` | `/data/palpite-league.db` |
+   | `SEED_DEMO_DATA` | `true` (monta os dados de demonstração só na primeira subida, com o banco sem usuários) |
+   | `APP_BASE_URL` | o endereço público do serviço, com `https://` (ex.: `https://palpite-league.up.railway.app`) |
+   | `PAYMENTS_PROVIDER` | `simulator` |
+   | `RECOVERY_CHANNEL_PATH` | `/data/simulated-recovery-channel.txt` |
+   | `API_FOOTBALL_API_KEY` | chave da API-Football (opcional; sem ela a consulta de 2024 fica desabilitada) |
+
+4. **Domínio:** *Settings → Networking → Generate Domain*, e use esse endereço em `APP_BASE_URL`.
+5. O Railway roda `npm ci`, `npm run build` e `npm run start:prod`; o health check usa `GET /health`.
+
+Com `SEED_DEMO_DATA=true`, a primeira subida monta, pela própria API do servidor ([src/backend/demo-seed.js](src/backend/demo-seed.js)), as contas `teste2@gmail.com` a `teste10@gmail.com` (senha `12345678`; a teste2 é Premium), três bolões (pódio 50/30/20, taxa de R$ 10 paga no simulador e pódio 70/20/10 com filtro de times), as entradas e palpites nos jogos abertos. Nenhum dado de conta fica versionado no repositório. Nas subidas seguintes nada é recriado; para recomeçar do zero, apague o volume e faça um novo deploy.
+
 > **Aviso Acadêmico:** Este repositório reflete um projeto de modelagem de sistemas. As integrações financeiras são destinadas exclusivamente a ambiente de teste e simulação, sem movimentação de dinheiro real. O projeto não está preparado para operação financeira em produção.

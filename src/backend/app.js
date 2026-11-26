@@ -181,6 +181,9 @@ export function createApp(database, {
   sportsSeason = Number(process.env.SPORTS_SEASON || 2026),
   sportsCatalogTtlMs = Number(process.env.SPORTS_CATALOG_TTL_MS || 6 * 60 * 60 * 1000),
   showcaseProvider = configuredShowcaseProvider(),
+  // Em produção (deploy num serviço só), a pasta do front compilado pelo Vite; em desenvolvimento
+  // e nos testes fica vazia e o Vite serve o front.
+  frontendDir = null,
 } = {}) {
   const app = express()
   const auditStore = createAuditStore(database, { logger, detailSchemasByAction: auditDetailSchemas })
@@ -907,6 +910,10 @@ export function createApp(database, {
       response.status(503).json({ status: 'unavailable', component: 'persistence' })
     }
   })
+
+  // Front compilado, servido depois de todas as rotas da API: a interface usa um endereço só, sem
+  // rotas próprias além de "/", e os arquivos de assets/ têm nome com hash.
+  if (frontendDir) app.use(express.static(frontendDir, { index: 'index.html' }))
 
   app.use((_request, _response, next) => {
     next(new AuthError(404, 'not_found', 'O recurso solicitado não foi encontrado.'))
