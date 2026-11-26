@@ -6,6 +6,8 @@ import Database from 'better-sqlite3'
 const projectRoot = fileURLToPath(new URL('../../../', import.meta.url))
 export const defaultDatabasePath = path.join(projectRoot, 'data', 'palpite-league.db')
 
+export const frontendDistPath = path.join(projectRoot, 'src', 'frontend', 'dist')
+
 export function createDatabase(filename = process.env.DATABASE_PATH || defaultDatabasePath) {
   const resolvedFilename = filename === ':memory:' ? filename : path.resolve(projectRoot, filename)
   if (resolvedFilename !== ':memory:') {
